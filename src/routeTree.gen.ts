@@ -14,6 +14,13 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as WorkspaceArchitectureRouteImport } from './routes/workspace.architecture'
+import { Route as WorkspaceDataRouteImport } from './routes/workspace.data'
+import { Route as WorkspaceDiscoveryRouteImport } from './routes/workspace.discovery'
+import { Route as WorkspaceNewRouteImport } from './routes/workspace.new'
+import { Route as WorkspaceProcessRouteImport } from './routes/workspace.process'
+import { Route as WorkspaceSolutionRouteImport } from './routes/workspace.solution'
+import { Route as WorkspaceWireframesRouteImport } from './routes/workspace.wireframes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +47,41 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceArchitectureRoute = WorkspaceArchitectureRouteImport.update({
+  id: '/workspace/architecture',
+  path: '/workspace/architecture',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceDataRoute = WorkspaceDataRouteImport.update({
+  id: '/workspace/data',
+  path: '/workspace/data',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceDiscoveryRoute = WorkspaceDiscoveryRouteImport.update({
+  id: '/workspace/discovery',
+  path: '/workspace/discovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceNewRoute = WorkspaceNewRouteImport.update({
+  id: '/workspace/new',
+  path: '/workspace/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceProcessRoute = WorkspaceProcessRouteImport.update({
+  id: '/workspace/process',
+  path: '/workspace/process',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceSolutionRoute = WorkspaceSolutionRouteImport.update({
+  id: '/workspace/solution',
+  path: '/workspace/solution',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceWireframesRoute = WorkspaceWireframesRouteImport.update({
+  id: '/workspace/wireframes',
+  path: '/workspace/wireframes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +89,13 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/workspace/architecture': typeof WorkspaceArchitectureRoute
+  '/workspace/data': typeof WorkspaceDataRoute
+  '/workspace/discovery': typeof WorkspaceDiscoveryRoute
+  '/workspace/new': typeof WorkspaceNewRoute
+  '/workspace/process': typeof WorkspaceProcessRoute
+  '/workspace/solution': typeof WorkspaceSolutionRoute
+  '/workspace/wireframes': typeof WorkspaceWireframesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +103,13 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/workspace/architecture': typeof WorkspaceArchitectureRoute
+  '/workspace/data': typeof WorkspaceDataRoute
+  '/workspace/discovery': typeof WorkspaceDiscoveryRoute
+  '/workspace/new': typeof WorkspaceNewRoute
+  '/workspace/process': typeof WorkspaceProcessRoute
+  '/workspace/solution': typeof WorkspaceSolutionRoute
+  '/workspace/wireframes': typeof WorkspaceWireframesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +118,57 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/workspace/architecture': typeof WorkspaceArchitectureRoute
+  '/workspace/data': typeof WorkspaceDataRoute
+  '/workspace/discovery': typeof WorkspaceDiscoveryRoute
+  '/workspace/new': typeof WorkspaceNewRoute
+  '/workspace/process': typeof WorkspaceProcessRoute
+  '/workspace/solution': typeof WorkspaceSolutionRoute
+  '/workspace/wireframes': typeof WorkspaceWireframesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/login' | '/settings' | '/signup'
+  fullPaths:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/settings'
+    | '/signup'
+    | '/workspace/architecture'
+    | '/workspace/data'
+    | '/workspace/discovery'
+    | '/workspace/new'
+    | '/workspace/process'
+    | '/workspace/solution'
+    | '/workspace/wireframes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/login' | '/settings' | '/signup'
-  id: '__root__' | '/' | '/dashboard' | '/login' | '/settings' | '/signup'
+  to:
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/settings'
+    | '/signup'
+    | '/workspace/architecture'
+    | '/workspace/data'
+    | '/workspace/discovery'
+    | '/workspace/new'
+    | '/workspace/process'
+    | '/workspace/solution'
+    | '/workspace/wireframes'
+  id:
+    | '__root__'
+    | '/'
+    | '/dashboard'
+    | '/login'
+    | '/settings'
+    | '/signup'
+    | '/workspace/architecture'
+    | '/workspace/data'
+    | '/workspace/discovery'
+    | '/workspace/new'
+    | '/workspace/process'
+    | '/workspace/solution'
+    | '/workspace/wireframes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +177,13 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  WorkspaceArchitectureRoute: typeof WorkspaceArchitectureRoute
+  WorkspaceDataRoute: typeof WorkspaceDataRoute
+  WorkspaceDiscoveryRoute: typeof WorkspaceDiscoveryRoute
+  WorkspaceNewRoute: typeof WorkspaceNewRoute
+  WorkspaceProcessRoute: typeof WorkspaceProcessRoute
+  WorkspaceSolutionRoute: typeof WorkspaceSolutionRoute
+  WorkspaceWireframesRoute: typeof WorkspaceWireframesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +223,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workspace/architecture': {
+      id: '/workspace/architecture'
+      path: '/workspace/architecture'
+      fullPath: '/workspace/architecture'
+      preLoaderRoute: typeof WorkspaceArchitectureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/data': {
+      id: '/workspace/data'
+      path: '/workspace/data'
+      fullPath: '/workspace/data'
+      preLoaderRoute: typeof WorkspaceDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/discovery': {
+      id: '/workspace/discovery'
+      path: '/workspace/discovery'
+      fullPath: '/workspace/discovery'
+      preLoaderRoute: typeof WorkspaceDiscoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/new': {
+      id: '/workspace/new'
+      path: '/workspace/new'
+      fullPath: '/workspace/new'
+      preLoaderRoute: typeof WorkspaceNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/process': {
+      id: '/workspace/process'
+      path: '/workspace/process'
+      fullPath: '/workspace/process'
+      preLoaderRoute: typeof WorkspaceProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/solution': {
+      id: '/workspace/solution'
+      path: '/workspace/solution'
+      fullPath: '/workspace/solution'
+      preLoaderRoute: typeof WorkspaceSolutionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/wireframes': {
+      id: '/workspace/wireframes'
+      path: '/workspace/wireframes'
+      fullPath: '/workspace/wireframes'
+      preLoaderRoute: typeof WorkspaceWireframesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +281,13 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  WorkspaceArchitectureRoute: WorkspaceArchitectureRoute,
+  WorkspaceDataRoute: WorkspaceDataRoute,
+  WorkspaceDiscoveryRoute: WorkspaceDiscoveryRoute,
+  WorkspaceNewRoute: WorkspaceNewRoute,
+  WorkspaceProcessRoute: WorkspaceProcessRoute,
+  WorkspaceSolutionRoute: WorkspaceSolutionRoute,
+  WorkspaceWireframesRoute: WorkspaceWireframesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
