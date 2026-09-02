@@ -2,11 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, Lightbulb } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { ThinkingDots, Typewriter } from "@/components/motion/primitives";
 import { AI_SUMMARY, DISCOVERY_SCRIPT, SAMPLE_PROBLEM } from "@/lib/demo-data";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/workspace/discovery")({
   head: () => ({
@@ -23,28 +26,90 @@ export const Route = createFileRoute("/workspace/discovery")({
 type Turn = { role: "user" | "ai"; text: string; hint?: string };
 
 function DiscoveryPage() {
-  const [turns, setTurns] = useState<Turn[]>([{ role: "user", text: SAMPLE_PROBLEM }]);
+  const { user } = useAuth();
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [turns, setTurns] = useState<Turn[]>([]);
   const [step, setStep] = useState(0);
-  const [thinking, setThinking] = useState(true);
+  const [thinking, setThinking] = useState(false);
   const [complete, setComplete] = useState(false);
+
+  useEffect(() => {
+    const id = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
+    setWorkspaceId(id);
+    if (!user || !id) return;
+    async function loadMessages() {
+      const { data, error } = await supabase
+        .from("discovery_messages")
+        .select("role, content")
+        .eq("workspace_id", id)
+        .order("created_at");
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      if (data?.length) {
+        const loadedTurns = data.map((message) => ({ role: message.role as Turn["role"], text: message.content }));
+        setTurns(loadedTurns);
+        const answered = loadedTurns.filter((turn) => turn.role === "user").length - 1;
+        setStep(Math.max(0, answered));
+        setComplete(loadedTurns.some((turn) => turn.text === AI_SUMMARY));
+      } else {
+        const { data: workspace } = await supabase
+          .from("workspaces")
+          .select("problem_statement")
+          .eq("id", id)
+          .single();
+        const text = workspace?.problem_statement || SAMPLE_PROBLEM;
+        const { error: insertError } = await supabase.from("discovery_messages").insert({
+          workspace_id: id,
+          role: "user",
+          content: text,
+        });
+        if (insertError) toast.error(insertError.message);
+        setTurns([{ role: "user", text }]);
+        setThinking(true);
+      }
+    }
+    void loadMessages();
+  }, [user]);
 
   useEffect(() => {
     if (!thinking) return;
     const t = setTimeout(() => {
       if (step < DISCOVERY_SCRIPT.length) {
         const q = DISCOVERY_SCRIPT[step]!;
+        if (workspaceId) {
+          void supabase.from("discovery_messages").insert({
+            workspace_id: workspaceId,
+            role: "ai",
+            content: q.question,
+          });
+        }
         setTurns((prev) => [...prev, { role: "ai", text: q.question, hint: q.hint }]);
       } else {
+        if (workspaceId) {
+          void supabase.from("discovery_messages").insert({
+            workspace_id: workspaceId,
+            role: "ai",
+            content: AI_SUMMARY,
+          });
+        }
         setTurns((prev) => [...prev, { role: "ai", text: AI_SUMMARY }]);
         setComplete(true);
       }
       setThinking(false);
     }, 1400);
     return () => clearTimeout(t);
-  }, [thinking, step]);
+  }, [thinking, step, workspaceId]);
 
   function answer() {
+    if (!workspaceId) return;
     const a = DISCOVERY_SCRIPT[step]!.answer;
+    void supabase.from("discovery_messages").insert({
+      workspace_id: workspaceId,
+      role: "user",
+      content: a,
+    });
     setTurns((prev) => [...prev, { role: "user", text: a }]);
     setStep((s) => s + 1);
     setThinking(true);

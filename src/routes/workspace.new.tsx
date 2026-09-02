@@ -2,11 +2,14 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { FileText, Mic, Upload } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { Reveal } from "@/components/motion/primitives";
 import { EXAMPLE_CHIPS, SAMPLE_PROBLEM } from "@/lib/demo-data";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/workspace/new")({
   head: () => ({
@@ -22,7 +25,33 @@ export const Route = createFileRoute("/workspace/new")({
 
 function IntakePage() {
   const [value, setValue] = useState(SAMPLE_PROBLEM);
+  const [busy, setBusy] = useState(false);
+  const { user } = useAuth();
   const navigate = useNavigate();
+
+  async function createWorkspace() {
+    if (!user || !value.trim()) return;
+    setBusy(true);
+    const { data, error } = await supabase
+      .from("workspaces")
+      .insert({
+        owner_id: user.id,
+        name: `${value.trim().slice(0, 48)}${value.trim().length > 48 ? "…" : ""}`,
+        problem_statement: value.trim(),
+        maturity_score: 0,
+        ai_readiness_score: 0,
+      })
+      .select("id")
+      .single();
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    window.localStorage.setItem("bizzmitra.activeWorkspaceId", data.id);
+    toast.success("Workspace created");
+    navigate({ to: "/workspace/discovery" });
+  }
 
   return (
     <AppShell>
@@ -73,11 +102,11 @@ function IntakePage() {
         </div>
 
         <button
-          onClick={() => navigate({ to: "/workspace/discovery" })}
-          disabled={!value.trim()}
+          onClick={createWorkspace}
+          disabled={!value.trim() || busy || !user}
           className="neu-press mt-8 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
-          Start AI discovery
+          {busy ? "Creating workspace…" : "Start AI discovery"}
         </button>
       </Reveal>
     </AppShell>

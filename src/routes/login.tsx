@@ -46,6 +46,18 @@ function LoginPage() {
     if (error) toast.error(error.message);
   }
 
+  async function resetPassword() {
+    if (!email) {
+      toast.error("Enter your email address first.");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login`,
+    });
+    if (error) toast.error(error.message);
+    else toast.success("Password reset instructions sent.");
+  }
+
   return (
     <div className="grid min-h-screen place-items-center px-5 py-16">
       <Reveal className="w-full max-w-md">
@@ -106,6 +118,13 @@ function LoginPage() {
               className="neu-press w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60"
             >
               {busy ? "Signing in…" : "Sign in"}
+            </button>
+            <button
+              type="button"
+              onClick={resetPassword}
+              className="w-full text-xs font-semibold text-primary hover:underline"
+            >
+              Forgot password?
             </button>
           </form>
 

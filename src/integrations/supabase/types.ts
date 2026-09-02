@@ -19,9 +19,7 @@ export type Database = {
           content: Json
           created_at: string
           id: string
-          kind: string
-          title: string
-          user_id: string
+          module_type: string
           version: number
           workspace_id: string
         }
@@ -29,9 +27,7 @@ export type Database = {
           content?: Json
           created_at?: string
           id?: string
-          kind: string
-          title: string
-          user_id: string
+          module_type: string
           version?: number
           workspace_id: string
         }
@@ -39,9 +35,7 @@ export type Database = {
           content?: Json
           created_at?: string
           id?: string
-          kind?: string
-          title?: string
-          user_id?: string
+          module_type?: string
           version?: number
           workspace_id?: string
         }
@@ -55,13 +49,12 @@ export type Database = {
           },
         ]
       }
-      messages: {
+      discovery_messages: {
         Row: {
           content: string
           created_at: string
           id: string
           role: string
-          user_id: string
           workspace_id: string
         }
         Insert: {
@@ -69,7 +62,6 @@ export type Database = {
           created_at?: string
           id?: string
           role: string
-          user_id: string
           workspace_id: string
         }
         Update: {
@@ -77,7 +69,6 @@ export type Database = {
           created_at?: string
           id?: string
           role?: string
-          user_id?: string
           workspace_id?: string
         }
         Relationships: [
@@ -92,22 +83,22 @@ export type Database = {
       }
       profiles: {
         Row: {
-          company: string | null
           created_at: string
           full_name: string | null
           id: string
+          plan: string
         }
         Insert: {
-          company?: string | null
           created_at?: string
           full_name?: string | null
           id: string
+          plan?: string
         }
         Update: {
-          company?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
+          plan?: string
         }
         Relationships: []
       }
@@ -115,38 +106,84 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          industry: string | null
           maturity_score: number
           name: string
-          problem: string | null
-          readiness_score: number
+          owner_id: string
+          problem_statement: string | null
           status: string
+          ai_readiness_score: number
           updated_at: string
-          user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          industry?: string | null
           maturity_score?: number
           name: string
-          problem?: string | null
-          readiness_score?: number
+          owner_id: string
+          problem_statement?: string | null
           status?: string
-          updated_at?: string
-          user_id: string
+          ai_readiness_score?: number
         }
         Update: {
           created_at?: string
           id?: string
-          industry?: string | null
           maturity_score?: number
           name?: string
-          problem?: string | null
-          readiness_score?: number
+          owner_id?: string
+          problem_statement?: string | null
           status?: string
-          updated_at?: string
+          ai_readiness_score?: number
+        }
+        Relationships: []
+      }
+      workspace_members: {
+        Row: {
+          id: string
+          workspace_id: string
+          user_id: string
+          role: string
+          invited_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          user_id: string
+          role?: string
+          invited_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
           user_id?: string
+          role?: string
+          invited_at?: string
+        }
+        Relationships: []
+      }
+      uploaded_documents: {
+        Row: {
+          id: string
+          workspace_id: string
+          file_name: string
+          storage_path: string
+          file_type: string
+          uploaded_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          file_name: string
+          storage_path: string
+          file_type: string
+          uploaded_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          file_name?: string
+          storage_path?: string
+          file_type?: string
+          uploaded_at?: string
         }
         Relationships: []
       }

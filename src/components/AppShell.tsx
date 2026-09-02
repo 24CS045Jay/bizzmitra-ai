@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
   BarChart3,
@@ -16,8 +16,9 @@ import {
   Sparkles,
   Workflow,
   X,
+  ChevronDown,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
 import { DEMO_WORKSPACE } from "@/lib/demo-data";
@@ -51,12 +52,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <span className="font-display text-lg font-extrabold tracking-tight">BizzMitra</span>
       </Link>
 
-      <div className="neu-sm px-3.5 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          Active workspace
-        </p>
-        <p className="mt-1 text-sm font-semibold leading-tight">{DEMO_WORKSPACE.name}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{DEMO_WORKSPACE.industry}</p>
+      <div className="neu-sm neu-press flex cursor-pointer items-center justify-between gap-3 px-3.5 py-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Active workspace
+          </p>
+          <p className="mt-1 text-sm font-semibold leading-tight">{DEMO_WORKSPACE.name}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{DEMO_WORKSPACE.industry}</p>
+        </div>
+        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto">
@@ -101,6 +105,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const { loading, session } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !session) navigate({ to: "/login" });
+  }, [loading, session, navigate]);
+
+  if (loading || !session) return null;
 
   return (
     <div className="min-h-screen lg:flex">

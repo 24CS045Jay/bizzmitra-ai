@@ -396,6 +396,15 @@ function Footer() {
           <Link to="/signup" className="hover:text-foreground">
             Start free
           </Link>
+          <Link to="/" className="hover:text-foreground">
+            Privacy
+          </Link>
+          <Link to="/" className="hover:text-foreground">
+            Terms
+          </Link>
+          <Link to="/" className="hover:text-foreground">
+            Contact
+          </Link>
         </div>
       </div>
       <p className="mx-auto mt-8 max-w-6xl px-5 text-xs text-muted-foreground sm:px-8">

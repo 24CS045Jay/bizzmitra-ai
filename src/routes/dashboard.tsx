@@ -1,9 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { motion } from "motion/react";
 import { ArrowUpRight, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
-import { DEMO_WORKSPACE } from "@/lib/demo-data";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -16,30 +21,6 @@ export const Route = createFileRoute("/dashboard")({
   }),
   component: DashboardPage,
 });
-
-const WORKSPACES = [
-  {
-    name: DEMO_WORKSPACE.name,
-    industry: DEMO_WORKSPACE.industry,
-    progress: 100,
-    updated: "Updated 4 minutes ago",
-    artifacts: 8,
-  },
-  {
-    name: "Kelder Group — Invoice Reconciliation",
-    industry: "Manufacturing",
-    progress: 45,
-    updated: "Updated yesterday",
-    artifacts: 4,
-  },
-  {
-    name: "Tavara — Field Job Cards",
-    industry: "Field Services",
-    progress: 20,
-    updated: "Updated 3 days ago",
-    artifacts: 2,
-  },
-];
 
 function ProgressRing({ value }: { value: number }) {
   const r = 22;
@@ -66,6 +47,34 @@ function ProgressRing({ value }: { value: number }) {
 }
 
 function DashboardPage() {
+  const { user } = useAuth();
+  const [workspaces, setWorkspaces] = useState<Tables<"workspaces">[]>([]);
+  const [artifactCount, setArtifactCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    async function loadWorkspaces() {
+      const { data, error } = await supabase
+        .from("workspaces")
+        .select("*")
+        .order("updated_at", { ascending: false });
+      if (error) toast.error(error.message);
+      else setWorkspaces(data ?? []);
+
+      const { count } = await supabase
+        .from("artifacts")
+        .select("id", { count: "exact", head: true });
+      setArtifactCount(count ?? 0);
+      setLoading(false);
+    }
+    void loadWorkspaces();
+  }, [user]);
+
+  const averageMaturity = workspaces.length
+    ? Math.round(workspaces.reduce((total, workspace) => total + workspace.maturity_score, 0) / workspaces.length)
+    : 0;
+
   return (
     <AppShell>
       <Reveal>
@@ -78,9 +87,9 @@ function DashboardPage() {
 
       <Stagger className="mt-8 grid gap-4 sm:grid-cols-3">
         {[
-          { label: "Active workspaces", value: 3, suffix: "" },
-          { label: "Artifacts generated", value: 14, suffix: "" },
-          { label: "Avg. maturity score", value: 62, suffix: "%" },
+          { label: "Active workspaces", value: workspaces.length, suffix: "" },
+          { label: "Artifacts generated", value: artifactCount, suffix: "" },
+          { label: "Avg. maturity score", value: averageMaturity, suffix: "%" },
         ].map((s) => (
           <StaggerItem key={s.label} className="neu p-5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -104,30 +113,38 @@ function DashboardPage() {
       </div>
 
       <Stagger className="mt-4 grid gap-4 lg:grid-cols-2">
-        {WORKSPACES.map((w) => (
+        {loading ? <p className="text-sm text-muted-foreground">Loading workspaces…</p> : null}
+        {!loading && workspaces.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No workspaces yet. Start with a new intake.</p>
+        ) : null}
+        {workspaces.map((w) => (
           <StaggerItem key={w.name}>
             <motion.div whileHover={{ y: -4, scale: 1.012 }} transition={{ duration: 0.15 }}>
-              <Link to="/workspace/discovery" className="neu block p-5">
+              <Link
+                to="/workspace/discovery"
+                onClick={() => window.localStorage.setItem("bizzmitra.activeWorkspaceId", w.id)}
+                className="neu block p-5"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h3 className="font-display text-lg font-bold leading-tight">{w.name}</h3>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {w.industry} · {w.artifacts} artifacts · {w.updated}
+                      {w.status} · Updated {new Date(w.updated_at).toLocaleDateString()}
                     </p>
                   </div>
                   <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
                 </div>
                 <div className="mt-5 flex items-center gap-4">
                   <div className="relative grid place-items-center">
-                    <ProgressRing value={w.progress} />
+                    <ProgressRing value={w.maturity_score} />
                     <span className="absolute font-display text-[11px] font-extrabold">
-                      {w.progress}%
+                      {w.maturity_score}%
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] text-muted-foreground">Blueprint completeness</p>
                     <div className="neu-inset mt-2 h-2 overflow-hidden rounded-full p-0">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${w.progress}%` }} />
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${w.maturity_score}%` }} />
                     </div>
                   </div>
                 </div>

@@ -21,6 +21,8 @@ import {
   SWIMLANE_DIAGRAM,
   WIREFRAMES,
 } from "@/lib/demo-data";
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export type ArtifactKind =
   | "framing"
@@ -69,5 +71,28 @@ export async function generateArtifact<T = unknown>(
 ): Promise<T> {
   // Simulated inference latency (1.5–3s) — replace with the real LLM call.
   await delay(1500 + Math.random() * 1500);
-  return PAYLOADS[kind] as T;
+  const payload = PAYLOADS[kind];
+  const workspaceId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
+
+  if (workspaceId && kind !== "summary") {
+    const { data: latest, error: latestError } = await supabase
+      .from("artifacts")
+      .select("version")
+      .eq("workspace_id", workspaceId)
+      .eq("module_type", kind)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (latestError) throw latestError;
+
+    const { error } = await supabase.from("artifacts").insert({
+      workspace_id: workspaceId,
+      module_type: kind,
+      content: payload as Json,
+      version: (latest?.version ?? 0) + 1,
+    });
+    if (error) throw error;
+  }
+
+  return payload as T;
 }

@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
 import { useAuth } from "@/hooks/useAuth";
-import { DEMO_WORKSPACE } from "@/lib/demo-data";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -19,6 +21,53 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsPage() {
   const { user } = useAuth();
+  const [fullName, setFullName] = useState("");
+  const [plan, setPlan] = useState("free");
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [workspace, setWorkspace] = useState<{
+    id: string;
+    name: string;
+    maturity_score: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    async function loadSettings() {
+      const [{ data: profile }, workspaceResult] = await Promise.all([
+        supabase.from("profiles").select("full_name, plan").eq("id", user.id).single(),
+        supabase
+          .from("workspaces")
+          .select("id, name, maturity_score")
+          .eq("id", window.localStorage.getItem("bizzmitra.activeWorkspaceId") ?? "")
+          .maybeSingle(),
+      ]);
+      setFullName(profile?.full_name ?? "");
+      setPlan(profile?.plan ?? "free");
+      setWorkspace(workspaceResult.data);
+      setWorkspaceName(workspaceResult.data?.name ?? "");
+    }
+    void loadSettings();
+  }, [user]);
+
+  async function saveProfile() {
+    if (!user) return;
+    const { error } = await supabase.from("profiles").update({ full_name: fullName }).eq("id", user.id);
+    if (error) toast.error(error.message);
+    else toast.success("Profile updated");
+  }
+
+  async function renameWorkspace() {
+    if (!workspace || !workspaceName.trim()) return;
+    const { error } = await supabase
+      .from("workspaces")
+      .update({ name: workspaceName.trim() })
+      .eq("id", workspace.id);
+    if (error) toast.error(error.message);
+    else {
+      setWorkspace({ ...workspace, name: workspaceName.trim() });
+      toast.success("Workspace renamed");
+    }
+  }
 
   return (
     <AppShell>
@@ -37,31 +86,45 @@ function SettingsPage() {
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Plan</dt>
-              <dd className="font-medium">Pro (demo)</dd>
+              <dd className="font-medium">{plan}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Seats</dt>
               <dd className="font-medium">1 of 1</dd>
             </div>
           </dl>
+          <div className="mt-5 flex gap-2">
+            <input
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              placeholder="Full name"
+              className="neu-inset min-w-0 flex-1 px-3 py-2 text-sm outline-none"
+            />
+            <button onClick={saveProfile} className="neu-sm neu-press px-3 py-2 text-xs font-semibold">
+              Save
+            </button>
+          </div>
         </StaggerItem>
 
         <StaggerItem className="neu p-6">
           <h2 className="font-display text-lg font-bold">Active workspace</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Name</dt>
-              <dd className="text-right font-medium">{DEMO_WORKSPACE.name}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Industry</dt>
-              <dd className="font-medium">{DEMO_WORKSPACE.industry}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Maturity</dt>
-              <dd className="font-medium">{DEMO_WORKSPACE.maturity}%</dd>
+              <dd className="font-medium">{workspace?.maturity_score ?? 0}%</dd>
             </div>
           </dl>
+          <div className="mt-5 flex gap-2">
+            <input
+              value={workspaceName}
+              onChange={(event) => setWorkspaceName(event.target.value)}
+              placeholder="Workspace name"
+              className="neu-inset min-w-0 flex-1 px-3 py-2 text-sm outline-none"
+            />
+            <button onClick={renameWorkspace} className="neu-sm neu-press px-3 py-2 text-xs font-semibold">
+              Rename
+            </button>
+          </div>
         </StaggerItem>
 
         <StaggerItem className="neu p-6 lg:col-span-2">
