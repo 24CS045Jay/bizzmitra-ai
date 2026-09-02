@@ -114,11 +114,13 @@ export function WordReveal({
 export function Typewriter({
   text,
   speed = 18,
+  delay = 0,
   className,
   onDone,
 }: {
   text: string;
   speed?: number;
+  delay?: number;
   className?: string;
   onDone?: () => void;
 }) {
@@ -126,17 +128,24 @@ export function Typewriter({
   useEffect(() => {
     setShown("");
     let i = 0;
-    const id = setInterval(() => {
-      i += 1;
-      setShown(text.slice(0, i));
-      if (i >= text.length) {
-        clearInterval(id);
-        onDone?.();
-      }
-    }, speed);
-    return () => clearInterval(id);
+    let id: ReturnType<typeof setInterval>;
+    const start = setTimeout(() => {
+      id = setInterval(() => {
+        i += 1;
+        setShown(text.slice(0, i));
+        if (i >= text.length) {
+          clearInterval(id);
+          onDone?.();
+        }
+      }, speed);
+    }, delay);
+    return () => {
+      clearTimeout(start);
+      clearInterval(id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, speed]);
+  }, [text, speed, delay]);
+
   return <span className={className}>{shown}</span>;
 }
 
