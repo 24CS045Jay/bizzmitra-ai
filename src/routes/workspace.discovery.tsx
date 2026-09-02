@@ -32,7 +32,7 @@ function DiscoveryPage() {
     if (!thinking) return;
     const t = setTimeout(() => {
       if (step < DISCOVERY_SCRIPT.length) {
-        const q = DISCOVERY_SCRIPT[step];
+        const q = DISCOVERY_SCRIPT[step]!;
         setTurns((prev) => [...prev, { role: "ai", text: q.question, hint: q.hint }]);
       } else {
         setTurns((prev) => [...prev, { role: "ai", text: AI_SUMMARY }]);
@@ -44,7 +44,7 @@ function DiscoveryPage() {
   }, [thinking, step]);
 
   function answer() {
-    const a = DISCOVERY_SCRIPT[step].answer;
+    const a = DISCOVERY_SCRIPT[step]!.answer;
     setTurns((prev) => [...prev, { role: "user", text: a }]);
     setStep((s) => s + 1);
     setThinking(true);
@@ -116,7 +116,7 @@ function DiscoveryPage() {
                 disabled={thinking}
                 className="neu-sm neu-press w-full px-4 py-3 text-left text-sm disabled:opacity-50"
               >
-                {thinking ? "Waiting for the analyst…" : `Reply: “${DISCOVERY_SCRIPT[step].answer}”`}
+                {thinking ? "Waiting for the analyst…" : `Reply: “${DISCOVERY_SCRIPT[step]!.answer}”`}
               </button>
             )}
           </div>
