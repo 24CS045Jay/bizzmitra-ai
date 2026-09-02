@@ -17,8 +17,11 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as WorkspaceArchitectureRouteImport } from './routes/workspace.architecture'
 import { Route as WorkspaceDataRouteImport } from './routes/workspace.data'
 import { Route as WorkspaceDiscoveryRouteImport } from './routes/workspace.discovery'
+import { Route as WorkspaceInsightsRouteImport } from './routes/workspace.insights'
+import { Route as WorkspaceMapRouteImport } from './routes/workspace.map'
 import { Route as WorkspaceNewRouteImport } from './routes/workspace.new'
 import { Route as WorkspaceProcessRouteImport } from './routes/workspace.process'
+import { Route as WorkspaceRoadmapRouteImport } from './routes/workspace.roadmap'
 import { Route as WorkspaceSolutionRouteImport } from './routes/workspace.solution'
 import { Route as WorkspaceWireframesRouteImport } from './routes/workspace.wireframes'
 
@@ -62,6 +65,16 @@ const WorkspaceDiscoveryRoute = WorkspaceDiscoveryRouteImport.update({
   path: '/workspace/discovery',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceInsightsRoute = WorkspaceInsightsRouteImport.update({
+  id: '/workspace/insights',
+  path: '/workspace/insights',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceMapRoute = WorkspaceMapRouteImport.update({
+  id: '/workspace/map',
+  path: '/workspace/map',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceNewRoute = WorkspaceNewRouteImport.update({
   id: '/workspace/new',
   path: '/workspace/new',
@@ -70,6 +83,11 @@ const WorkspaceNewRoute = WorkspaceNewRouteImport.update({
 const WorkspaceProcessRoute = WorkspaceProcessRouteImport.update({
   id: '/workspace/process',
   path: '/workspace/process',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceRoadmapRoute = WorkspaceRoadmapRouteImport.update({
+  id: '/workspace/roadmap',
+  path: '/workspace/roadmap',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceSolutionRoute = WorkspaceSolutionRouteImport.update({
@@ -92,8 +110,11 @@ export interface FileRoutesByFullPath {
   '/workspace/architecture': typeof WorkspaceArchitectureRoute
   '/workspace/data': typeof WorkspaceDataRoute
   '/workspace/discovery': typeof WorkspaceDiscoveryRoute
+  '/workspace/insights': typeof WorkspaceInsightsRoute
+  '/workspace/map': typeof WorkspaceMapRoute
   '/workspace/new': typeof WorkspaceNewRoute
   '/workspace/process': typeof WorkspaceProcessRoute
+  '/workspace/roadmap': typeof WorkspaceRoadmapRoute
   '/workspace/solution': typeof WorkspaceSolutionRoute
   '/workspace/wireframes': typeof WorkspaceWireframesRoute
 }
@@ -106,8 +127,11 @@ export interface FileRoutesByTo {
   '/workspace/architecture': typeof WorkspaceArchitectureRoute
   '/workspace/data': typeof WorkspaceDataRoute
   '/workspace/discovery': typeof WorkspaceDiscoveryRoute
+  '/workspace/insights': typeof WorkspaceInsightsRoute
+  '/workspace/map': typeof WorkspaceMapRoute
   '/workspace/new': typeof WorkspaceNewRoute
   '/workspace/process': typeof WorkspaceProcessRoute
+  '/workspace/roadmap': typeof WorkspaceRoadmapRoute
   '/workspace/solution': typeof WorkspaceSolutionRoute
   '/workspace/wireframes': typeof WorkspaceWireframesRoute
 }
@@ -121,8 +145,11 @@ export interface FileRoutesById {
   '/workspace/architecture': typeof WorkspaceArchitectureRoute
   '/workspace/data': typeof WorkspaceDataRoute
   '/workspace/discovery': typeof WorkspaceDiscoveryRoute
+  '/workspace/insights': typeof WorkspaceInsightsRoute
+  '/workspace/map': typeof WorkspaceMapRoute
   '/workspace/new': typeof WorkspaceNewRoute
   '/workspace/process': typeof WorkspaceProcessRoute
+  '/workspace/roadmap': typeof WorkspaceRoadmapRoute
   '/workspace/solution': typeof WorkspaceSolutionRoute
   '/workspace/wireframes': typeof WorkspaceWireframesRoute
 }
@@ -137,8 +164,11 @@ export interface FileRouteTypes {
     | '/workspace/architecture'
     | '/workspace/data'
     | '/workspace/discovery'
+    | '/workspace/insights'
+    | '/workspace/map'
     | '/workspace/new'
     | '/workspace/process'
+    | '/workspace/roadmap'
     | '/workspace/solution'
     | '/workspace/wireframes'
   fileRoutesByTo: FileRoutesByTo
@@ -151,8 +181,11 @@ export interface FileRouteTypes {
     | '/workspace/architecture'
     | '/workspace/data'
     | '/workspace/discovery'
+    | '/workspace/insights'
+    | '/workspace/map'
     | '/workspace/new'
     | '/workspace/process'
+    | '/workspace/roadmap'
     | '/workspace/solution'
     | '/workspace/wireframes'
   id:
@@ -165,8 +198,11 @@ export interface FileRouteTypes {
     | '/workspace/architecture'
     | '/workspace/data'
     | '/workspace/discovery'
+    | '/workspace/insights'
+    | '/workspace/map'
     | '/workspace/new'
     | '/workspace/process'
+    | '/workspace/roadmap'
     | '/workspace/solution'
     | '/workspace/wireframes'
   fileRoutesById: FileRoutesById
@@ -180,8 +216,11 @@ export interface RootRouteChildren {
   WorkspaceArchitectureRoute: typeof WorkspaceArchitectureRoute
   WorkspaceDataRoute: typeof WorkspaceDataRoute
   WorkspaceDiscoveryRoute: typeof WorkspaceDiscoveryRoute
+  WorkspaceInsightsRoute: typeof WorkspaceInsightsRoute
+  WorkspaceMapRoute: typeof WorkspaceMapRoute
   WorkspaceNewRoute: typeof WorkspaceNewRoute
   WorkspaceProcessRoute: typeof WorkspaceProcessRoute
+  WorkspaceRoadmapRoute: typeof WorkspaceRoadmapRoute
   WorkspaceSolutionRoute: typeof WorkspaceSolutionRoute
   WorkspaceWireframesRoute: typeof WorkspaceWireframesRoute
 }
@@ -244,6 +283,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceDiscoveryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workspace/insights': {
+      id: '/workspace/insights'
+      path: '/workspace/insights'
+      fullPath: '/workspace/insights'
+      preLoaderRoute: typeof WorkspaceInsightsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/map': {
+      id: '/workspace/map'
+      path: '/workspace/map'
+      fullPath: '/workspace/map'
+      preLoaderRoute: typeof WorkspaceMapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workspace/new': {
       id: '/workspace/new'
       path: '/workspace/new'
@@ -256,6 +309,13 @@ declare module '@tanstack/react-router' {
       path: '/workspace/process'
       fullPath: '/workspace/process'
       preLoaderRoute: typeof WorkspaceProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/roadmap': {
+      id: '/workspace/roadmap'
+      path: '/workspace/roadmap'
+      fullPath: '/workspace/roadmap'
+      preLoaderRoute: typeof WorkspaceRoadmapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace/solution': {
@@ -284,8 +344,11 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceArchitectureRoute: WorkspaceArchitectureRoute,
   WorkspaceDataRoute: WorkspaceDataRoute,
   WorkspaceDiscoveryRoute: WorkspaceDiscoveryRoute,
+  WorkspaceInsightsRoute: WorkspaceInsightsRoute,
+  WorkspaceMapRoute: WorkspaceMapRoute,
   WorkspaceNewRoute: WorkspaceNewRoute,
   WorkspaceProcessRoute: WorkspaceProcessRoute,
+  WorkspaceRoadmapRoute: WorkspaceRoadmapRoute,
   WorkspaceSolutionRoute: WorkspaceSolutionRoute,
   WorkspaceWireframesRoute: WorkspaceWireframesRoute,
 }
