@@ -3,6 +3,8 @@ import { motion } from "motion/react";
 import { ArrowRight, Check, Minus } from "lucide-react";
 
 import { MiniDemo } from "@/components/MiniDemo";
+import { useAuth } from "@/hooks/useAuth";
+
 import { Reveal, Stagger, StaggerItem, WordReveal } from "@/components/motion/primitives";
 import { COMPETITOR_ROWS, MODULES, PRICING, TESTIMONIALS } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
@@ -28,7 +30,10 @@ export const Route = createFileRoute("/")({
 });
 
 function Nav() {
+  const { session, signOut } = useAuth();
   return (
+
+
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
         <Link to="/" className="flex items-center gap-2.5">
@@ -49,15 +54,35 @@ function Nav() {
           </a>
         </nav>
         <div className="flex items-center gap-2">
-          <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-medium hover:text-primary">
-            Log in
-          </Link>
-          <Link
-            to="/signup"
-            className="neu-press rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
-          >
-            Start free
-          </Link>
+          {session ? (
+            <>
+              <Link
+                to="/dashboard"
+                className="neu-press rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+              >
+                Go to workspace
+              </Link>
+              <button
+                onClick={() => signOut()}
+                className="rounded-lg px-3 py-2 text-sm font-medium hover:text-primary"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-medium hover:text-primary">
+                Log in
+              </Link>
+              <Link
+                to="/signup"
+                className="neu-press rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+              >
+                Start free
+              </Link>
+            </>
+          )}
+
         </div>
       </div>
     </header>
