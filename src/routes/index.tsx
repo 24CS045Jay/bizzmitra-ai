@@ -49,15 +49,35 @@ function Nav() {
           </a>
         </nav>
         <div className="flex items-center gap-2">
-          <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-medium hover:text-primary">
-            Log in
-          </Link>
-          <Link
-            to="/signup"
-            className="neu-press rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
-          >
-            Start free
-          </Link>
+          {session ? (
+            <>
+              <Link
+                to="/dashboard"
+                className="neu-press rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+              >
+                Go to workspace
+              </Link>
+              <button
+                onClick={() => signOut()}
+                className="rounded-lg px-3 py-2 text-sm font-medium hover:text-primary"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="rounded-lg px-3 py-2 text-sm font-medium hover:text-primary">
+                Log in
+              </Link>
+              <Link
+                to="/signup"
+                className="neu-press rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+              >
+                Start free
+              </Link>
+            </>
+          )}
+
         </div>
       </div>
     </header>
