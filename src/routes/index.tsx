@@ -3,6 +3,8 @@ import { motion } from "motion/react";
 import { ArrowRight, Check, Minus } from "lucide-react";
 
 import { MiniDemo } from "@/components/MiniDemo";
+import { useAuth } from "@/hooks/useAuth";
+
 import { Reveal, Stagger, StaggerItem, WordReveal } from "@/components/motion/primitives";
 import { COMPETITOR_ROWS, MODULES, PRICING, TESTIMONIALS } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
