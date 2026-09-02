@@ -29,6 +29,8 @@ export const Route = createFileRoute("/")({
 
 function Nav() {
   const { session, signOut } = useAuth();
+  return (
+
 
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
