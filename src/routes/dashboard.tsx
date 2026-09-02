@@ -41,10 +41,6 @@ const WORKSPACES = [
   },
 ];
 
-export default function _unused() {
-  return null;
-}
-
 function DashboardPage() {
   return (
     <AppShell>
