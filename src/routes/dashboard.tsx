@@ -41,6 +41,30 @@ const WORKSPACES = [
   },
 ];
 
+function ProgressRing({ value }: { value: number }) {
+  const r = 22;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg viewBox="0 0 56 56" className="size-14 shrink-0 -rotate-90">
+      <circle cx="28" cy="28" r={r} fill="none" strokeWidth="5" className="stroke-border" />
+      <motion.circle
+        cx="28"
+        cy="28"
+        r={r}
+        fill="none"
+        strokeWidth="5"
+        strokeLinecap="round"
+        className="stroke-primary"
+        strokeDasharray={c}
+        initial={{ strokeDashoffset: c }}
+        whileInView={{ strokeDashoffset: c - (c * value) / 100 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+      />
+    </svg>
+  );
+}
+
 function DashboardPage() {
   return (
     <AppShell>
@@ -82,29 +106,37 @@ function DashboardPage() {
       <Stagger className="mt-4 grid gap-4 lg:grid-cols-2">
         {WORKSPACES.map((w) => (
           <StaggerItem key={w.name}>
-            <Link to="/workspace/discovery" className="neu block p-5 transition-transform hover:-translate-y-0.5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="font-display text-lg font-bold leading-tight">{w.name}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {w.industry} · {w.artifacts} artifacts · {w.updated}
-                  </p>
+            <motion.div whileHover={{ y: -4, scale: 1.012 }} transition={{ duration: 0.15 }}>
+              <Link to="/workspace/discovery" className="neu block p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-display text-lg font-bold leading-tight">{w.name}</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {w.industry} · {w.artifacts} artifacts · {w.updated}
+                    </p>
+                  </div>
+                  <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
                 </div>
-                <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
-              </div>
-              <div className="mt-5">
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>Blueprint completeness</span>
-                  <span className="font-semibold text-foreground">{w.progress}%</span>
+                <div className="mt-5 flex items-center gap-4">
+                  <div className="relative grid place-items-center">
+                    <ProgressRing value={w.progress} />
+                    <span className="absolute font-display text-[11px] font-extrabold">
+                      {w.progress}%
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] text-muted-foreground">Blueprint completeness</p>
+                    <div className="neu-inset mt-2 h-2 overflow-hidden rounded-full p-0">
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${w.progress}%` }} />
+                    </div>
+                  </div>
                 </div>
-                <div className="neu-inset mt-2 h-2 overflow-hidden rounded-full p-0">
-                  <div className="h-full rounded-full bg-primary" style={{ width: `${w.progress}%` }} />
-                </div>
-              </div>
-            </Link>
+              </Link>
+            </motion.div>
           </StaggerItem>
         ))}
       </Stagger>
     </AppShell>
   );
 }
+
