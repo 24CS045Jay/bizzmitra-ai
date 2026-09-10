@@ -1,114 +1,704 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { motion } from "motion/react";
-import { FileText, Mic, Upload } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  Cpu,
+  FileSpreadsheet,
+  FileText,
+  Globe,
+  Languages,
+  Mic,
+  MicOff,
+  Sparkles,
+  Upload,
+  Workflow,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
-import { Reveal } from "@/components/motion/primitives";
-import { EXAMPLE_CHIPS, SAMPLE_PROBLEM } from "@/lib/demo-data";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
+import {
+  DOCUMENT_PARSE_TEMPLATES,
+  EXAMPLE_CHIPS,
+  HR_CONSULTANCY_PROBLEM,
+  INTAKE_LANGUAGES,
+  SupportedLanguage,
+  URL_ANALYZER_SAMPLES,
+  VOICE_SAMPLE_TRANSCRIPT,
+} from "@/lib/demo-data";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/workspace/new")({
   head: () => ({
     meta: [
-      { title: "New problem intake — BizzMitra-AI" },
-      { name: "description", content: "Describe a business problem in plain language and let BizzMitra frame it." },
-      { property: "og:title", content: "New problem intake — BizzMitra-AI" },
-      { property: "og:description", content: "Start a workspace from one plain-language problem statement." },
+      { title: "New Problem Intake — BizzMitra-AI" },
+      { name: "description", content: "Multi-modal business intake: enter text, upload documents, analyze URLs or speak." },
+      { property: "og:title", content: "New Problem Intake — BizzMitra-AI" },
+      { property: "og:description", content: "Start a workspace from plain text, documents, URLs, or voice." },
     ],
   }),
   component: IntakePage,
 });
 
+type IntakeTab = "prompt" | "upload" | "url" | "voice" | "legacy";
+type OperatingMode = "know" | "consult";
+
+const INDUSTRIES = [
+  "HR & Recruitment Services",
+  "D2C E-Commerce",
+  "Healthcare & MedTech",
+  "Fintech & Financial Services",
+  "Logistics & Supply Chain",
+  "Manufacturing & Industry 4.0",
+  "Professional & Legal Services",
+  "SaaS & Enterprise Software",
+];
+
 function IntakePage() {
-  const [value, setValue] = useState(SAMPLE_PROBLEM);
-  const [busy, setBusy] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Workspace Metadata State
+  const [lang, setLang] = useState<SupportedLanguage>("en");
+  const [mode, setMode] = useState<OperatingMode>("consult");
+  const [activeTab, setActiveTab] = useState<IntakeTab>("prompt");
+  const [businessName, setBusinessName] = useState("TalentCraft HR Consultancy");
+  const [industry, setIndustry] = useState("HR & Recruitment Services");
+  const [problemStatement, setProblemStatement] = useState(HR_CONSULTANCY_PROBLEM);
+  const [goals, setGoals] = useState("Automate candidate pipeline, track consultant attendance, onboard clients");
+  const [constraints, setConstraints] = useState("6-week phased delivery, non-technical team, GDPR resume compliance");
+  const [busy, setBusy] = useState(false);
+
+  // Document Upload Simulator State
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadedDoc, setUploadedDoc] = useState<{
+    name: string;
+    size: string;
+    type: string;
+    extractedSummary?: string;
+  } | null>(null);
+
+  // URL Analyzer Simulator State
+  const [urlInput, setUrlInput] = useState("https://talentcraft-staffing.in");
+  const [analyzingUrl, setAnalyzingUrl] = useState(false);
+  const [urlExtracted, setUrlExtracted] = useState<boolean>(false);
+
+  // Voice Simulator State
+  const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+  // Legacy Systems State
+  const [legacyTools, setLegacyTools] = useState("Excel spreadsheets (5 sheets), WhatsApp groups, Google Drive folders");
+  const [legacyBottlenecks, setLegacyBottlenecks] = useState("Candidate status lost after round 2, manual daily timesheets, 10-day client contract lag");
+
+  const strings = INTAKE_LANGUAGES[lang];
+
+  // Document Upload Handler (Simulated)
+  function handleSimulateUpload(fileName: string, type: "pdf" | "docx" | "pptx") {
+    setUploading(true);
+    setUploadProgress(15);
+    const interval = setInterval(() => {
+      setUploadProgress((p) => {
+        if (p >= 90) {
+          clearInterval(interval);
+          const template = DOCUMENT_PARSE_TEMPLATES[type] ?? DOCUMENT_PARSE_TEMPLATES.pdf;
+          setUploadedDoc({
+            name: fileName,
+            size: "2.4 MB",
+            type: type.toUpperCase(),
+            extractedSummary: template.summary,
+          });
+          setBusinessName(template.businessName);
+          setIndustry(template.industry);
+          setProblemStatement(template.summary);
+          setUploading(false);
+          toast.success(`Parsed ${fileName} (Prototype Document Intelligence Extractor)`);
+          return 100;
+        }
+        return p + 25;
+      });
+    }, 280);
+  }
+
+  // URL Scraping Handler (Simulated)
+  function handleAnalyzeUrl() {
+    if (!urlInput.trim()) return;
+    setAnalyzingUrl(true);
+    setTimeout(() => {
+      const sampleKey = urlInput.toLowerCase().includes("talentcraft") ? "talentcraft" : "default";
+      const data = URL_ANALYZER_SAMPLES[sampleKey] ?? URL_ANALYZER_SAMPLES.default;
+      setBusinessName(data.businessName);
+      setIndustry(data.industry);
+      setProblemStatement(data.summary);
+      setGoals(data.goals.join(", "));
+      setConstraints(data.constraints.join(", "));
+      setUrlExtracted(true);
+      setAnalyzingUrl(false);
+      toast.success("Extracted business context from URL (Prototype Crawler)");
+    }, 1400);
+  }
+
+  // Voice Recording Simulator
+  function toggleVoiceRecording() {
+    if (!recording) {
+      setRecording(true);
+      setRecordingSeconds(1);
+      const timer = setInterval(() => {
+        setRecordingSeconds((s) => {
+          if (s >= 3) {
+            clearInterval(timer);
+            setRecording(false);
+            setProblemStatement(VOICE_SAMPLE_TRANSCRIPT);
+            toast.success("Voice transcribed into problem context (Prototype Voice Simulator)");
+            return 0;
+          }
+          return s + 1;
+        });
+      }, 1000);
+    } else {
+      setRecording(false);
+    }
+  }
+
+  // Workspace Creation Handler
   async function createWorkspace() {
-    if (!user || !value.trim()) return;
-    setBusy(true);
-    const { data, error } = await supabase
-      .from("workspaces")
-      .insert({
-        owner_id: user.id,
-        name: `${value.trim().slice(0, 48)}${value.trim().length > 48 ? "…" : ""}`,
-        problem_statement: value.trim(),
-        maturity_score: 0,
-        ai_readiness_score: 0,
-      })
-      .select("id")
-      .single();
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
+    if (!problemStatement.trim()) {
+      toast.error("Please provide a business problem or description");
       return;
     }
-    window.localStorage.setItem("bizzmitra.activeWorkspaceId", data.id);
-    toast.success("Workspace created");
-    navigate({ to: "/workspace/discovery" });
+    setBusy(true);
+
+    const contextPayload = {
+      businessName: businessName.trim() || "TalentCraft HR Consultancy",
+      industry,
+      problemStatement: problemStatement.trim(),
+      goals: goals.trim(),
+      constraints: constraints.trim(),
+      intakeMode: mode,
+      intakeMethod: activeTab,
+      language: lang,
+      sourceDetails: {
+        document: uploadedDoc ? uploadedDoc.name : null,
+        url: urlExtracted ? urlInput : null,
+        legacyTools: activeTab === "legacy" ? legacyTools : null,
+      },
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      if (user) {
+        const { data, error } = await supabase
+          .from("workspaces")
+          .insert({
+            owner_id: user.id,
+            name: businessName.trim() || `${problemStatement.trim().slice(0, 40)}…`,
+            problem_statement: problemStatement.trim(),
+            maturity_score: 54,
+            ai_readiness_score: 81,
+            status: "active",
+          })
+          .select("id")
+          .single();
+
+        if (error) throw error;
+
+        if (data?.id) {
+          // If a document was uploaded, register in uploaded_documents table
+          if (uploadedDoc) {
+            await supabase.from("uploaded_documents").insert({
+              workspace_id: data.id,
+              file_name: uploadedDoc.name,
+              file_type: uploadedDoc.type,
+              storage_path: `simulated/${uploadedDoc.name}`,
+            });
+          }
+
+          window.localStorage.setItem("bizzmitra.activeWorkspaceId", data.id);
+          window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
+          window.localStorage.setItem("bizzmitra.language", lang);
+          toast.success("Workspace created in Supabase & context persisted");
+          navigate({ to: "/workspace/discovery" });
+          return;
+        }
+      }
+
+      // Offline / LocalStorage Fallback for reliable demonstration
+      const localId = `ws-${Date.now()}`;
+      window.localStorage.setItem("bizzmitra.activeWorkspaceId", localId);
+      window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
+      window.localStorage.setItem("bizzmitra.language", lang);
+      toast.success("Workspace created & context persisted locally");
+      navigate({ to: "/workspace/discovery" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create workspace";
+      toast.error(msg);
+      // Fallback
+      const localId = `ws-${Date.now()}`;
+      window.localStorage.setItem("bizzmitra.activeWorkspaceId", localId);
+      window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
+      window.localStorage.setItem("bizzmitra.language", lang);
+      navigate({ to: "/workspace/discovery" });
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <AppShell>
-      <ArtifactHeader id="intake" kicker="Step 01" title="Describe the problem" />
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+        <ArtifactHeader id="intake" kicker={strings.kicker} title={strings.title} />
 
-      <Reveal className="max-w-3xl">
+        {/* Multilingual Selector */}
+        <div className="neu-sm flex items-center gap-1.5 p-1 text-xs">
+          <Languages className="ml-1 size-3.5 text-muted-foreground" />
+          <button
+            type="button"
+            onClick={() => setLang("en")}
+            className={`rounded-md px-2.5 py-1 font-semibold transition-colors ${
+              lang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            English
+          </button>
+          <button
+            type="button"
+            onClick={() => setLang("hi")}
+            className={`rounded-md px-2.5 py-1 font-semibold transition-colors ${
+              lang === "hi" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            हिन्दी
+          </button>
+        </div>
+      </div>
+
+      <p className="mt-2 text-sm text-muted-foreground">{strings.subtitle}</p>
+
+      {/* Dual Operating Modes */}
+      <Reveal className="mt-6">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Step 1: Choose Operating Mode
+        </p>
+        <div className="mt-2.5 grid gap-3 sm:grid-cols-2">
+          {/* Mode: I know what to build */}
+          <button
+            type="button"
+            onClick={() => setMode("know")}
+            className={`neu-press text-left p-4 transition-all rounded-xl ${
+              mode === "know" ? "ring-2 ring-primary neu" : "neu opacity-85 hover:opacity-100"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="neu-sm px-2 py-0.5 text-[10px] font-bold text-primary">
+                {strings.modes.know.badge}
+              </span>
+              <Cpu className="size-4 text-muted-foreground" />
+            </div>
+            <h3 className="mt-2 font-display text-base font-bold">{strings.modes.know.title}</h3>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{strings.modes.know.desc}</p>
+          </button>
+
+          {/* Mode: I need recommendations */}
+          <button
+            type="button"
+            onClick={() => setMode("consult")}
+            className={`neu-press text-left p-4 transition-all rounded-xl ${
+              mode === "consult" ? "ring-2 ring-primary neu" : "neu opacity-85 hover:opacity-100"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="neu-sm px-2 py-0.5 text-[10px] font-bold text-primary">
+                {strings.modes.consult.badge}
+              </span>
+              <Sparkles className="size-4 text-primary" />
+            </div>
+            <h3 className="mt-2 font-display text-base font-bold">{strings.modes.consult.title}</h3>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{strings.modes.consult.desc}</p>
+          </button>
+        </div>
+      </Reveal>
+
+      {/* Workspace Basics */}
+      <Reveal className="mt-6">
         <div className="neu p-5 sm:p-6">
-          <div className="neu-inset p-4">
-            <textarea
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              rows={6}
-              aria-label="Business problem"
-              placeholder="What is going wrong in the business? Say it the way you'd say it to a colleague."
-              className="w-full resize-none bg-transparent text-sm leading-relaxed outline-none"
-            />
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button className="neu-sm neu-press flex items-center gap-2 px-3 py-2 text-xs font-medium">
-              <Upload className="size-3.5" /> Upload PDF / DOCX / PPT
-            </button>
-            <button className="neu-sm neu-press flex items-center gap-2 px-3 py-2 text-xs font-medium">
-              <Mic className="size-3.5" /> Voice input
-            </button>
-            <button className="neu-sm neu-press flex items-center gap-2 px-3 py-2 text-xs font-medium">
-              <FileText className="size-3.5" /> Paste from doc
-            </button>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Step 2: Workspace Essentials
+          </p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-semibold text-foreground">{strings.fields.name}</label>
+              <input
+                type="text"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder={strings.fields.namePlaceholder}
+                className="neu-inset mt-1.5 w-full px-3 py-2.5 text-xs outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground">{strings.fields.industry}</label>
+              <select
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                className="neu-inset mt-1.5 w-full px-3 py-2.5 text-xs outline-none bg-background focus:ring-1 focus:ring-primary"
+              >
+                {INDUSTRIES.map((ind) => (
+                  <option key={ind} value={ind}>
+                    {ind}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
+      </Reveal>
 
-        <div className="mt-6">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Or start from an example
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {EXAMPLE_CHIPS.map((c) => (
-              <motion.button
-                key={c}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setValue(c)}
-                className="neu-sm px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+      {/* Multi-Modal Ingestion Tabs */}
+      <Reveal className="mt-6">
+        <div className="neu p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Step 3: Provide Business Context
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setActiveTab("prompt")}
+                className={`neu-sm px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
+                  activeTab === "prompt" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                {c}
-              </motion.button>
-            ))}
+                <FileText className="size-3.5" /> {strings.tabs.prompt}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("upload")}
+                className={`neu-sm px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
+                  activeTab === "upload" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Upload className="size-3.5" /> {strings.tabs.upload}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("url")}
+                className={`neu-sm px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
+                  activeTab === "url" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Globe className="size-3.5" /> {strings.tabs.url}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("voice")}
+                className={`neu-sm px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
+                  activeTab === "voice" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Mic className="size-3.5" /> {strings.tabs.voice}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("legacy")}
+                className={`neu-sm px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
+                  activeTab === "legacy" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Workflow className="size-3.5" /> {strings.tabs.legacy}
+              </button>
+            </div>
           </div>
+
+          <div className="mt-4">
+            {/* Tab 1: Plain Prompt */}
+            {activeTab === "prompt" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                <div className="neu-inset p-4">
+                  <textarea
+                    value={problemStatement}
+                    onChange={(e) => setProblemStatement(e.target.value)}
+                    rows={5}
+                    aria-label="Business Problem Description"
+                    placeholder={strings.fields.descriptionPlaceholder}
+                    className="w-full resize-none bg-transparent text-xs leading-relaxed outline-none"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    {strings.chipsLabel}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {EXAMPLE_CHIPS.map((chip) => (
+                      <button
+                        type="button"
+                        key={chip}
+                        onClick={() => {
+                          setProblemStatement(chip);
+                          if (chip.includes("HR consultancy")) {
+                            setBusinessName("TalentCraft HR Consultancy");
+                            setIndustry("HR & Recruitment Services");
+                          } else if (chip.includes("Support team")) {
+                            setBusinessName("Nexa Retail — Support Deflection");
+                            setIndustry("D2C E-Commerce");
+                          }
+                        }}
+                        className="neu-sm px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+                      >
+                        {chip}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Tab 2: Document Upload */}
+            {activeTab === "upload" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                <div className="neu-inset flex flex-col items-center justify-center p-8 text-center border border-dashed border-border rounded-xl">
+                  <Upload className="size-8 text-primary/80 animate-bounce" />
+                  <p className="mt-3 text-xs font-bold text-foreground">
+                    Drag & Drop Business Requirements (PDF, DOCX, PPTX, BRD)
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Prototype Extractor will parse entities, goals, and constraints into your workspace context.
+                  </p>
+
+                  <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                    <button
+                      type="button"
+                      onClick={() => handleSimulateUpload("TalentCraft_Recruitment_BRD_v2.pdf", "pdf")}
+                      className="neu-sm neu-press px-3 py-1.5 text-xs font-semibold text-primary flex items-center gap-1.5"
+                    >
+                      <FileText className="size-3.5" /> Drop Sample BRD (.PDF)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSimulateUpload("Hiring_Operations_SOP.docx", "docx")}
+                      className="neu-sm neu-press px-3 py-1.5 text-xs font-semibold text-primary flex items-center gap-1.5"
+                    >
+                      <FileText className="size-3.5" /> Drop Sample SOP (.DOCX)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSimulateUpload("Transformation_Strategy.pptx", "pptx")}
+                      className="neu-sm neu-press px-3 py-1.5 text-xs font-semibold text-primary flex items-center gap-1.5"
+                    >
+                      <FileSpreadsheet className="size-3.5" /> Drop Sample Deck (.PPTX)
+                    </button>
+                  </div>
+
+                  {uploading && (
+                    <div className="mt-4 w-full max-w-sm">
+                      <div className="flex justify-between text-[11px] text-muted-foreground">
+                        <span>Extracting business entities...</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="neu-inset mt-1 h-2 w-full overflow-hidden rounded-full">
+                        <div
+                          className="h-full bg-primary transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {uploadedDoc && (
+                  <div className="neu p-4 border border-border/70 rounded-xl bg-card/60">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <CheckCircle2 className="size-4 text-emerald-500" />
+                        <div>
+                          <p className="text-xs font-bold text-foreground">{uploadedDoc.name}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {uploadedDoc.size} • {uploadedDoc.type} • Processed with Structured Document Extractor
+                          </p>
+                        </div>
+                      </div>
+                      <span className="neu-sm px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        Context Ingested
+                      </span>
+                    </div>
+                    {uploadedDoc.extractedSummary && (
+                      <p className="mt-2.5 text-xs text-muted-foreground leading-relaxed neu-inset p-2.5">
+                        <strong className="text-foreground">Extracted Summary:</strong> {uploadedDoc.extractedSummary}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Tab 3: Website URL Analyzer */}
+            {activeTab === "url" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                <div className="neu-inset p-4">
+                  <label className="block text-xs font-semibold text-foreground">Company Website / App URL</label>
+                  <div className="mt-2 flex gap-2">
+                    <input
+                      type="url"
+                      value={urlInput}
+                      onChange={(e) => setUrlInput(e.target.value)}
+                      placeholder="https://your-company.com"
+                      className="w-full bg-transparent text-xs outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAnalyzeUrl}
+                      disabled={analyzingUrl}
+                      className="neu-sm neu-press px-4 py-2 text-xs font-semibold text-primary whitespace-nowrap"
+                    >
+                      {analyzingUrl ? "Crawling & Analyzing..." : "Analyze Website"}
+                    </button>
+                  </div>
+                </div>
+
+                {urlExtracted && (
+                  <div className="neu p-4 border border-border/70 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="size-4 text-emerald-500" />
+                      <p className="text-xs font-bold">Domain Analyzed: {urlInput}</p>
+                      <span className="neu-sm ml-auto px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        Simulated Web Extractor
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Extracted company profile, customer segments, and manual service bottlenecks into workspace context.
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Tab 4: Voice Input */}
+            {activeTab === "voice" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 text-center">
+                <div className="neu-inset p-6 flex flex-col items-center">
+                  <button
+                    type="button"
+                    onClick={toggleVoiceRecording}
+                    className={`grid size-16 place-items-center rounded-full transition-all ${
+                      recording
+                        ? "bg-red-500 text-white shadow-lg animate-pulse ring-4 ring-red-400/30"
+                        : "neu neu-press text-primary hover:scale-105"
+                    }`}
+                  >
+                    {recording ? <MicOff className="size-6" /> : <Mic className="size-6" />}
+                  </button>
+
+                  <p className="mt-3 text-xs font-bold text-foreground">
+                    {recording ? `Recording & Transcribing (${recordingSeconds}s)...` : "Click to Speak Business Idea"}
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Simulates speech-to-text audio ingestion directly into the problem context.
+                  </p>
+
+                  {/* Equalizer animation */}
+                  {recording && (
+                    <div className="mt-3 flex items-center justify-center gap-1">
+                      {[12, 28, 16, 36, 20, 32, 14].map((h, i) => (
+                        <div
+                          key={i}
+                          className="w-1 rounded-full bg-primary animate-pulse"
+                          style={{ height: `${h}px`, animationDelay: `${i * 120}ms` }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {problemStatement && (
+                  <div className="neu text-left p-3.5 text-xs text-muted-foreground">
+                    <strong className="text-foreground">Current Audio Transcript:</strong> {problemStatement}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Tab 5: Existing Systems */}
+            {activeTab === "legacy" && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground">Current Software, Sheets & Tools</label>
+                  <input
+                    type="text"
+                    value={legacyTools}
+                    onChange={(e) => setLegacyTools(e.target.value)}
+                    placeholder="e.g., 5 Excel spreadsheets, WhatsApp group chats, manual paper timesheets"
+                    className="neu-inset mt-1.5 w-full px-3 py-2 text-xs outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-foreground">Operational Bottlenecks & Gaps</label>
+                  <textarea
+                    value={legacyBottlenecks}
+                    onChange={(e) => setLegacyBottlenecks(e.target.value)}
+                    rows={3}
+                    placeholder="Where are delays happening? How many hours are lost?"
+                    className="neu-inset mt-1.5 w-full px-3 py-2 text-xs outline-none resize-none"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Goals & Constraints */}
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 pt-3 border-t border-border">
+            <div>
+              <label className="block text-xs font-semibold text-foreground">{strings.fields.goals}</label>
+              <input
+                type="text"
+                value={goals}
+                onChange={(e) => setGoals(e.target.value)}
+                placeholder={strings.fields.goalsPlaceholder}
+                className="neu-inset mt-1.5 w-full px-3 py-2 text-xs outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-foreground">{strings.fields.constraints}</label>
+              <input
+                type="text"
+                value={constraints}
+                onChange={(e) => setConstraints(e.target.value)}
+                placeholder={strings.fields.constraintsPlaceholder}
+                className="neu-inset mt-1.5 w-full px-3 py-2 text-xs outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      </Reveal>
+
+      {/* Action Footer */}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <AlertCircle className="size-3.5 text-primary" />
+          <span>Context will be locked and carried forward across all 11 blueprint modules.</span>
         </div>
 
         <button
+          type="button"
           onClick={createWorkspace}
-          disabled={!value.trim() || busy || !user}
-          className="neu-press mt-8 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+          disabled={!problemStatement.trim() || busy}
+          className="neu-press rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
         >
-          {busy ? "Creating workspace…" : "Start AI discovery"}
+          {busy ? (
+            <span>{strings.creating}</span>
+          ) : (
+            <>
+              <span>{strings.cta}</span>
+              <ArrowRight className="size-4" />
+            </>
+          )}
         </button>
-      </Reveal>
+      </div>
     </AppShell>
   );
 }
