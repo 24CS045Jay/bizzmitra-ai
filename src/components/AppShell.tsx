@@ -42,6 +42,48 @@ const NAV = [
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, signOut } = useAuth();
+  const [activeWs, setActiveWs] = useState({
+    name: "TalentCraft HR Consultancy",
+    industry: "HR & Recruitment Services",
+    mode: "consult",
+    lang: "en",
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const wsId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
+    const storedLang = window.localStorage.getItem("bizzmitra.language") || "en";
+
+    try {
+      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setActiveWs({
+          name: parsed.businessName || "TalentCraft HR Consultancy",
+          industry: parsed.industry || "HR & Recruitment Services",
+          mode: parsed.intakeMode || "consult",
+          lang: storedLang,
+        });
+        return;
+      }
+    } catch {}
+
+    if (user && wsId && !wsId.startsWith("ws-")) {
+      supabase
+        .from("workspaces")
+        .select("name, problem_statement")
+        .eq("id", wsId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setActiveWs((prev) => ({
+              ...prev,
+              name: data.name,
+            }));
+          }
+        });
+    }
+  }, [user]);
 
   return (
     <div className="flex h-full flex-col gap-6 p-4">
@@ -53,12 +95,17 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </Link>
 
       <div className="neu-sm neu-press flex cursor-pointer items-center justify-between gap-3 px-3.5 py-3">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Active workspace
-          </p>
-          <p className="mt-1 text-sm font-semibold leading-tight">{DEMO_WORKSPACE.name}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{DEMO_WORKSPACE.industry}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Active workspace
+            </p>
+            <span className="neu-sm px-1.5 py-0.5 text-[9px] font-bold text-primary">
+              {activeWs.mode === "know" ? "Direct" : "AI Guided"}
+            </span>
+          </div>
+          <p className="mt-1 text-sm font-semibold leading-tight truncate">{activeWs.name}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground truncate">{activeWs.industry}</p>
         </div>
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
       </div>

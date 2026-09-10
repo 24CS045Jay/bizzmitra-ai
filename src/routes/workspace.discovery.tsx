@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { ThinkingDots, Typewriter } from "@/components/motion/primitives";
-import { AI_SUMMARY, DISCOVERY_SCRIPT, SAMPLE_PROBLEM } from "@/lib/demo-data";
+import { AI_SUMMARY, DISCOVERY_SCRIPT, HR_CONSULTANCY_PROBLEM, SAMPLE_PROBLEM } from "@/lib/demo-data";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -54,18 +54,39 @@ function DiscoveryPage() {
         setStep(Math.max(0, answered));
         setComplete(loadedTurns.some((turn) => turn.text === AI_SUMMARY));
       } else {
-        const { data: workspace } = await supabase
-          .from("workspaces")
-          .select("problem_statement")
-          .eq("id", id)
-          .single();
-        const text = workspace?.problem_statement || SAMPLE_PROBLEM;
-        const { error: insertError } = await supabase.from("discovery_messages").insert({
-          workspace_id: id,
-          role: "user",
-          content: text,
-        });
-        if (insertError) toast.error(insertError.message);
+        let text = "";
+        if (!id.startsWith("ws-")) {
+          const { data: workspace } = await supabase
+            .from("workspaces")
+            .select("problem_statement")
+            .eq("id", id)
+            .maybeSingle();
+          if (workspace?.problem_statement) {
+            text = workspace.problem_statement;
+          }
+        }
+
+        if (!text && typeof window !== "undefined") {
+          try {
+            const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              text = parsed.problemStatement || parsed.summary || "";
+            }
+          } catch {}
+        }
+
+        if (!text) text = HR_CONSULTANCY_PROBLEM;
+
+        if (!id.startsWith("ws-")) {
+          const { error: insertError } = await supabase.from("discovery_messages").insert({
+            workspace_id: id,
+            role: "user",
+            content: text,
+          });
+          if (insertError) console.warn("Supabase message insert:", insertError.message);
+        }
+
         setTurns([{ role: "user", text }]);
         setThinking(true);
       }
