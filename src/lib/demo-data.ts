@@ -6,6 +6,9 @@
 export const SAMPLE_PROBLEM =
   "Our e-commerce support team is overwhelmed — 60% of tickets are repetitive order-status and return questions, average response time is 14 hours, and we're losing repeat customers because of it.";
 
+export const HR_CONSULTANCY_PROBLEM =
+  "I am starting an HR consultancy. I have company, candidate, and client information. We need to track candidates through screening and interview stages, log daily consultant attendance, onboard enterprise clients, and maintain a professional public agency portal.";
+
 export const DEMO_WORKSPACE = {
   name: "Nexa Retail — Support Deflection",
   industry: "D2C E-commerce",
@@ -14,11 +17,19 @@ export const DEMO_WORKSPACE = {
   readiness: 74,
 };
 
+export const HR_DEMO_WORKSPACE = {
+  name: "TalentCraft HR — Recruitment & Operations Suite",
+  industry: "HR & Recruitment Services",
+  problem: HR_CONSULTANCY_PROBLEM,
+  maturity: 54,
+  readiness: 81,
+};
+
 export const EXAMPLE_CHIPS = [
-  "Support team drowning in repetitive tickets",
-  "Manual invoice reconciliation takes 3 days",
-  "Field technicians still using paper job cards",
-  "Sales pipeline data lives in five spreadsheets",
+  "I am starting an HR consultancy with candidate, client & attendance needs",
+  "Support team drowning in repetitive tickets and 14h response times",
+  "Manual invoice reconciliation takes 3 days across finance spreadsheets",
+  "Field technicians still using paper job cards with no GPS validation",
 ];
 
 export const DISCOVERY_SCRIPT: {
@@ -26,25 +37,25 @@ export const DISCOVERY_SCRIPT: {
   hint: string;
   answer: string;
 }[] = [
-  {
-    question:
-      "Got it — repetitive order-status and return tickets at 14h first response. What's your current support volume per day?",
-    hint: "Volume drives whether we automate deflection or just assist agents.",
-    answer: "About 1,200 tickets a day, spiking to 2,000 during sale weeks.",
-  },
-  {
-    question:
-      "1,200/day with 2,000 peaks — that's deflection territory. Do you have an existing helpdesk tool (Zendesk, Freshdesk, or none)?",
-    hint: "An existing helpdesk means we integrate rather than replace.",
-    answer: "Freshdesk, plus Shopify for orders and Shiprocket for logistics.",
-  },
-  {
-    question:
-      "Freshdesk + Shopify + Shiprocket. Last one — what's your support team size, and is it in-house or outsourced?",
-    hint: "Team size sets the ROI baseline and change-management effort.",
-    answer: "18 in-house agents across two shifts.",
-  },
-];
+    {
+      question:
+        "Got it — repetitive order-status and return tickets at 14h first response. What's your current support volume per day?",
+      hint: "Volume drives whether we automate deflection or just assist agents.",
+      answer: "About 1,200 tickets a day, spiking to 2,000 during sale weeks.",
+    },
+    {
+      question:
+        "1,200/day with 2,000 peaks — that's deflection territory. Do you have an existing helpdesk tool (Zendesk, Freshdesk, or none)?",
+      hint: "An existing helpdesk means we integrate rather than replace.",
+      answer: "Freshdesk, plus Shopify for orders and Shiprocket for logistics.",
+    },
+    {
+      question:
+        "Freshdesk + Shopify + Shiprocket. Last one — what's your support team size, and is it in-house or outsourced?",
+      hint: "Team size sets the ROI baseline and change-management effort.",
+      answer: "18 in-house agents across two shifts.",
+    },
+  ];
 
 export const AI_SUMMARY =
   "Here's what I have: 1,200 tickets/day (2,000 at peak), 18 in-house agents on two shifts, Freshdesk + Shopify + Shiprocket, 60% repetitive order-status and return intent, 14h average first response. That's roughly 720 automatable contacts a day. I'll frame the problem, recommend a solution, and generate the full blueprint chain.";
@@ -442,3 +453,220 @@ export const ARTIFACT_EDGES: [string, string][] = [
   ["ux", "roadmap"],
   ["roadmap", "dashboard"],
 ];
+
+/**
+ * Multi-Modal Ingestion Templates & Extraction Simulators
+ * Supports URL scraping, document parsing (PDF/DOCX/PPTX/BRD), voice transcription, and legacy system context.
+ */
+
+export type ExtractedBusinessContext = {
+  businessName: string;
+  industry: string;
+  businessModel: string;
+  summary: string;
+  targetUsers: string[];
+  painPoints: string[];
+  existingTools: string[];
+  goals: string[];
+  constraints: string[];
+  confidence: number;
+  sourceType: "prompt" | "document" | "url" | "voice" | "legacy";
+};
+
+export const DEFAULT_HR_CONTEXT: ExtractedBusinessContext = {
+  businessName: "TalentCraft HR Consultancy",
+  industry: "HR & Recruitment Services",
+  businessModel: "B2B Staffing & Recruitment Retainer",
+  summary:
+    "A growing HR agency scaling from 8 recruiters to 25, currently losing candidate velocity due to disconnected Excel sheets, WhatsApp communications, and delayed client approvals.",
+  targetUsers: ["Internal Recruiters", "Hiring Managers (Clients)", "Job Candidates", "Agency Operations Lead"],
+  painPoints: [
+    "Spreadsheet chaos: candidate data scattered across 5 files",
+    "Candidate drop-off between interview round 1 and offer",
+    "Manual daily consultant attendance logging on paper/chat",
+    "Client contract onboarding takes 10+ days without a self-serve portal",
+  ],
+  existingTools: ["Excel Spreadsheets", "WhatsApp Web", "Google Drive", "Manual email threads"],
+  goals: [
+    "Deploy a unified Candidate Pipeline CRM",
+    "Automate consultant daily check-in and attendance punch log",
+    "Launch a client onboarding portal for contract sign-off",
+    "Establish a professional public agency brand website",
+  ],
+  constraints: [
+    "Non-technical recruiting team; needs intuitive zero-training UI",
+    "Strict candidate resume PII privacy",
+    "Must be delivered within a 6-week phased timeline",
+  ],
+  confidence: 0.94,
+  sourceType: "prompt",
+};
+
+export const URL_ANALYZER_SAMPLES: Record<string, ExtractedBusinessContext> = {
+  "talentcraft": {
+    businessName: "TalentCraft Staffing Solutions",
+    industry: "Executive Search & HR Services",
+    businessModel: "Retained search & contingent technical staffing",
+    summary:
+      "Specialized staffing agency providing senior engineering and leadership talent to venture-backed startups and mid-market enterprises.",
+    targetUsers: ["Talent Acquisition Partners", "Enterprise Clients", "Senior Candidates"],
+    painPoints: [
+      "Inbound talent applications lack automated screening",
+      "Client interview scheduling requires 4+ back-and-forth emails",
+      "Manual client timesheet approvals delay billing cycles",
+    ],
+    existingTools: ["Custom WordPress site", "Google Sheets", "Typeform"],
+    goals: [
+      "Automate candidate pipeline with interactive CRM",
+      "Direct client portal for candidate shortlists",
+      "Automated attendance tracking for placed contract staff",
+    ],
+    constraints: ["Budget-conscious SMB tier", "Mobile-first access for recruiters on the move"],
+    confidence: 0.91,
+    sourceType: "url",
+  },
+  "default": {
+    businessName: "Digital Business Enterprise",
+    industry: "Professional Services",
+    businessModel: "B2B Service Provider",
+    summary:
+      "Organization seeking digital transformation to streamline client intake, operational tracking, and automated service delivery.",
+    targetUsers: ["Operations Lead", "Client Account Executives", "End Customers"],
+    painPoints: ["Fragmented legacy systems", "High manual turnaround time", "Poor cross-department visibility"],
+    existingTools: ["Legacy CRM", "Local Network Drive", "Spreadsheets"],
+    goals: ["Centralized cloud portal", "Automated workflows", "Real-time transformation roadmap"],
+    constraints: ["Strict compliance requirements", "Need phased migration plan"],
+    confidence: 0.88,
+    sourceType: "url",
+  },
+};
+
+export const DOCUMENT_PARSE_TEMPLATES: Record<string, ExtractedBusinessContext> = {
+  "pdf": {
+    businessName: "TalentCraft HR Transformation BRD",
+    industry: "Human Capital Management",
+    businessModel: "B2B Recruitment & Staffing",
+    summary:
+      "Extracted from uploaded BRD: Business requires an end-to-end recruitment management system with automated screening, client approvals, and attendance logging.",
+    targetUsers: ["Recruitment Consultants", "HR Managers", "Client Stakeholders"],
+    painPoints: ["Lack of central candidate database", "Delayed feedback loops", "Unmonitored consultant billing hours"],
+    existingTools: ["Microsoft Excel", "Outlook", "Zoho Mail"],
+    goals: ["Build interactive candidate CRM", "Client onboarding workflow", "Attendance & leave tracker"],
+    constraints: ["GDPR / DPDP compliance for applicant resumes", "Cloud-native scalable setup"],
+    confidence: 0.96,
+    sourceType: "document",
+  },
+  "docx": {
+    businessName: "Standard Operating Procedure — Talent Intake",
+    industry: "Staffing & Staff Augmentation",
+    businessModel: "Contract-to-hire staffing",
+    summary:
+      "Extracted from SOP Document: Process outlines a 4-stage candidate vetting cycle that currently incurs 32 hours of manual coordinator effort per hiring cycle.",
+    targetUsers: ["Talent Sourcers", "Interview Panelists", "Accounts Team"],
+    painPoints: ["No automated stage movement alerts", "Manual feedback collation"],
+    existingTools: ["Word templates", "Email attachments"],
+    goals: ["Standardized candidate workflow", "Integrated interview status tracker"],
+    constraints: ["Must support mobile review for hiring managers"],
+    confidence: 0.93,
+    sourceType: "document",
+  },
+  "pptx": {
+    businessName: "Executive Digital Roadmap Presentation",
+    industry: "Enterprise Services",
+    businessModel: "Digital Agency & Staffing",
+    summary:
+      "Extracted from Deck: High-level leadership pitch to modernize candidate delivery pipelines and introduce client self-serve visibility.",
+    targetUsers: ["Executive Leadership", "Client Directors", "Delivery Teams"],
+    painPoints: ["Opaque operational metrics", "Long billing reconciliation cycles"],
+    existingTools: ["PowerPoint Decks", "Financial Excel Sheets"],
+    goals: ["Interactive operational dashboard", "Automated client onboarding pipeline"],
+    constraints: ["Implementation within Q3", "Minimal downtime during rollout"],
+    confidence: 0.89,
+    sourceType: "document",
+  },
+};
+
+export const VOICE_SAMPLE_TRANSCRIPT =
+  "We are launching an HR consultancy with eight recruiters. We are managing candidate resumes in WhatsApp and Excel, but it's getting impossible to track who is in what interview stage. We also need our consultants to punch in daily attendance and let our enterprise clients review shortlisted profiles online.";
+
+export const INTAKE_LANGUAGES = {
+  en: {
+    title: "New Transformation Intake",
+    kicker: "Step 01",
+    subtitle: "Describe your business challenge or provide business context in any format.",
+    tabs: {
+      prompt: "Describe Problem",
+      upload: "Upload Documents",
+      url: "Website URL",
+      voice: "Voice Input",
+      legacy: "Existing Systems",
+    },
+    modes: {
+      know: {
+        badge: "Direct Track",
+        title: "I know what to build",
+        desc: "Specify your desired systems (e.g., 'Build a website, CRM, attendance system') for rapid technical generation.",
+      },
+      consult: {
+        badge: "Recommended for Startups",
+        title: "I need recommendations",
+        desc: "Our AI Business Consultant will analyze your context, ask clarifying questions, and advise what to build.",
+      },
+    },
+    fields: {
+      name: "Business / Project Name",
+      namePlaceholder: "e.g., TalentCraft HR Consultancy",
+      industry: "Primary Industry",
+      description: "Business Description & Problem Statement",
+      descriptionPlaceholder:
+        "What is going wrong in the business or what are you looking to launch? Describe it in plain terms...",
+      goals: "Primary Goals",
+      goalsPlaceholder: "e.g., Automate candidate pipeline, track attendance, launch client portal",
+      constraints: "Key Constraints (Budget, Timeline, Tools)",
+      constraintsPlaceholder: "e.g., 6-week delivery target, non-technical team",
+    },
+    chipsLabel: "Or start from a curated business scenario:",
+    cta: "Create Workspace & Start AI Discovery",
+    creating: "Creating Workspace & Context...",
+  },
+  hi: {
+    title: "नया बिजनेस ट्रांसफॉर्मेशन इनटेक",
+    kicker: "चरण 01",
+    subtitle: "अपनी व्यावसायिक समस्या बताएं या किसी भी प्रारूप में बिजनेस संदर्भ प्रदान करें।",
+    tabs: {
+      prompt: "समस्या बताएं",
+      upload: "दस्तावेज़ अपलोड",
+      url: "वेबसाइट URL",
+      voice: "आवाज़ से इनपुट",
+      legacy: "मौजूदा सिस्टम",
+    },
+    modes: {
+      know: {
+        badge: "डायरेक्ट ट्रैक",
+        title: "मुझे पता है क्या बनाना है",
+        desc: "अपनी आवश्यकताओं को स्पष्ट रूप से बताएं (उदा. 'वेबसाइट, CRM और अटेंडेंस सिस्टम बनाएं')।",
+      },
+      consult: {
+        badge: "स्टार्टअप्स के लिए अनुशंसित",
+        title: "मुझे AI सलाह और सुझाव चाहिए",
+        desc: "हमारा AI बिजनेस कंसल्टेंट आपके संदर्भ को समझकर सही समाधानों की सिफारिश करेगा।",
+      },
+    },
+    fields: {
+      name: "व्यापार / प्रोजेक्ट का नाम",
+      namePlaceholder: "उदा. टैलेंटक्राफ्ट एचआर कंसल्टेंसी",
+      industry: "उद्योग (Industry)",
+      description: "बिजनेस विवरण और समस्या",
+      descriptionPlaceholder: "व्यापार में क्या समस्या आ रही है या आप क्या नया शुरू करना चाहते हैं?",
+      goals: "मुख्य लक्ष्य (Goals)",
+      goalsPlaceholder: "उदा. कैंडिडेट ट्रैकिंग आसान बनाना, अटेंडेंस और क्लाइंट पोर्टल शुरू करना",
+      constraints: "सीमाएं (बजट, समय सीमा, तकनीक)",
+      constraintsPlaceholder: "उदा. 6 सप्ताह की समय सीमा, आसान यूआई",
+    },
+    chipsLabel: "या पहले से तैयार बिजनेस परिदृश्य चुनें:",
+    cta: "वर्कस्पेस बनाएं और AI डिस्कवरी शुरू करें",
+    creating: "वर्कस्पेस और संदर्भ तैयार हो रहा है...",
+  },
+} as const;
+
+export type SupportedLanguage = keyof typeof INTAKE_LANGUAGES;
