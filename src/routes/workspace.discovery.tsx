@@ -1,149 +1,215 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Lightbulb } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  HelpCircle,
+  Lightbulb,
+  Search,
+  Send,
+  Sparkles,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { ThinkingDots, Typewriter } from "@/components/motion/primitives";
-import { AI_SUMMARY, DISCOVERY_SCRIPT, HR_CONSULTANCY_PROBLEM, SAMPLE_PROBLEM } from "@/lib/demo-data";
+import {
+  getActiveAiSummary,
+  getActiveBusinessAnalysis,
+  getActiveDiscoveryScript,
+  HR_CONSULTANCY_PROBLEM,
+} from "@/lib/demo-data";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/workspace/discovery")({
   head: () => ({
     meta: [
-      { title: "AI discovery interview — BizzMitra-AI" },
-      { name: "description", content: "A scripted analyst-grade discovery interview that sharpens the problem before design." },
-      { property: "og:title", content: "AI discovery interview — BizzMitra-AI" },
-      { property: "og:description", content: "Clarifying questions that behave like a real business analyst." },
+      { title: "AI Discovery & Business Analysis — BizzMitra-AI" },
+      {
+        name: "description",
+        content: "Context-aware discovery interview and automated business analysis engine.",
+      },
+      { property: "og:title", content: "AI Discovery & Business Analysis — BizzMitra-AI" },
+      {
+        property: "og:description",
+        content: "Targeted discovery questions and structured business analysis.",
+      },
     ],
   }),
   component: DiscoveryPage,
 });
 
-type Turn = { role: "user" | "ai"; text: string; hint?: string };
+type Turn = {
+  role: "user" | "ai";
+  text: string;
+  hint?: string;
+  whyWeAsk?: string;
+  missingEntity?: string;
+};
 
 function DiscoveryPage() {
   const { user } = useAuth();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [problemText, setProblemText] = useState<string>(HR_CONSULTANCY_PROBLEM);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [step, setStep] = useState(0);
   const [thinking, setThinking] = useState(false);
   const [complete, setComplete] = useState(false);
+  const [customInput, setCustomInput] = useState("");
+
+  const script = getActiveDiscoveryScript(problemText);
+  const summaryText = getActiveAiSummary(problemText);
+  const analysis = getActiveBusinessAnalysis(problemText);
 
   useEffect(() => {
     const id = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
     setWorkspaceId(id);
-    if (!user || !id) return;
+
+    // Read problem text from local context or Supabase
+    let loadedText = "";
+    try {
+      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        loadedText = parsed.problemStatement || parsed.summary || "";
+      }
+    } catch {}
+
+    if (!loadedText) loadedText = HR_CONSULTANCY_PROBLEM;
+    setProblemText(loadedText);
+
+    if (!user || !id) {
+      // Local fallback mode
+      setTurns([{ role: "user", text: loadedText }]);
+      setThinking(true);
+      return;
+    }
+
     async function loadMessages() {
       const { data, error } = await supabase
         .from("discovery_messages")
         .select("role, content")
-        .eq("workspace_id", id)
+        .eq("workspace_id", id!)
         .order("created_at");
+
       if (error) {
-        toast.error(error.message);
-        return;
+        console.warn(error.message);
       }
-      if (data?.length) {
-        const loadedTurns = data.map((message) => ({ role: message.role as Turn["role"], text: message.content }));
+
+      if (data && data.length > 0) {
+        const loadedTurns = data.map((message) => ({
+          role: message.role as Turn["role"],
+          text: message.content,
+        }));
         setTurns(loadedTurns);
-        const answered = loadedTurns.filter((turn) => turn.role === "user").length - 1;
+        const answered = loadedTurns.filter((t) => t.role === "user").length - 1;
         setStep(Math.max(0, answered));
-        setComplete(loadedTurns.some((turn) => turn.text === AI_SUMMARY));
+        setComplete(loadedTurns.some((t) => t.text === summaryText));
       } else {
-        let text = "";
-        if (!id.startsWith("ws-")) {
-          const { data: workspace } = await supabase
+        if (!id!.startsWith("ws-")) {
+          const { data: ws } = await supabase
             .from("workspaces")
             .select("problem_statement")
-            .eq("id", id)
+            .eq("id", id!)
             .maybeSingle();
-          if (workspace?.problem_statement) {
-            text = workspace.problem_statement;
+          if (ws?.problem_statement) {
+            loadedText = ws.problem_statement;
+            setProblemText(loadedText);
           }
-        }
 
-        if (!text && typeof window !== "undefined") {
-          try {
-            const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              text = parsed.problemStatement || parsed.summary || "";
-            }
-          } catch {}
-        }
-
-        if (!text) text = HR_CONSULTANCY_PROBLEM;
-
-        if (!id.startsWith("ws-")) {
-          const { error: insertError } = await supabase.from("discovery_messages").insert({
-            workspace_id: id,
+          await supabase.from("discovery_messages").insert({
+            workspace_id: id!,
             role: "user",
-            content: text,
+            content: loadedText,
           });
-          if (insertError) console.warn("Supabase message insert:", insertError.message);
         }
 
-        setTurns([{ role: "user", text }]);
+        setTurns([{ role: "user", text: loadedText }]);
         setThinking(true);
       }
     }
+
     void loadMessages();
   }, [user]);
 
+  // AI response streaming effect
   useEffect(() => {
     if (!thinking) return;
     const t = setTimeout(() => {
-      if (step < DISCOVERY_SCRIPT.length) {
-        const q = DISCOVERY_SCRIPT[step]!;
-        if (workspaceId) {
+      if (step < script.length) {
+        const q = script[step]!;
+        if (workspaceId && !workspaceId.startsWith("ws-")) {
           void supabase.from("discovery_messages").insert({
             workspace_id: workspaceId,
             role: "ai",
             content: q.question,
           });
         }
-        setTurns((prev) => [...prev, { role: "ai", text: q.question, hint: q.hint }]);
+        setTurns((prev) => [
+          ...prev,
+          {
+            role: "ai",
+            text: q.question,
+            hint: q.hint,
+            whyWeAsk: q.whyWeAsk,
+            missingEntity: q.missingEntity,
+          },
+        ]);
       } else {
-        if (workspaceId) {
+        if (workspaceId && !workspaceId.startsWith("ws-")) {
           void supabase.from("discovery_messages").insert({
             workspace_id: workspaceId,
             role: "ai",
-            content: AI_SUMMARY,
+            content: summaryText,
           });
         }
-        setTurns((prev) => [...prev, { role: "ai", text: AI_SUMMARY }]);
+        setTurns((prev) => [...prev, { role: "ai", text: summaryText }]);
         setComplete(true);
+        toast.success("AI Discovery complete! Business Analysis Engine synthesized.");
       }
       setThinking(false);
-    }, 1400);
-    return () => clearTimeout(t);
-  }, [thinking, step, workspaceId]);
+    }, 1200);
 
-  function answer() {
-    if (!workspaceId) return;
-    const a = DISCOVERY_SCRIPT[step]!.answer;
-    void supabase.from("discovery_messages").insert({
-      workspace_id: workspaceId,
-      role: "user",
-      content: a,
-    });
-    setTurns((prev) => [...prev, { role: "user", text: a }]);
+    return () => clearTimeout(t);
+  }, [thinking, step, workspaceId, script, summaryText]);
+
+  function submitAnswer(textToSubmit: string) {
+    if (!textToSubmit.trim()) return;
+    if (workspaceId && !workspaceId.startsWith("ws-")) {
+      void supabase.from("discovery_messages").insert({
+        workspace_id: workspaceId,
+        role: "user",
+        content: textToSubmit,
+      });
+    }
+
+    setTurns((prev) => [...prev, { role: "user", text: textToSubmit }]);
+    setCustomInput("");
     setStep((s) => s + 1);
     setThinking(true);
   }
 
-  const progress = Math.round((Math.min(step, DISCOVERY_SCRIPT.length) / DISCOVERY_SCRIPT.length) * 100);
+  const currentQuestion = step < script.length ? script[step] : null;
+  const progressPercent = Math.min(100, Math.round(((step + (complete ? 1 : 0)) / (script.length + 1)) * 100));
+  const confidenceScore = complete ? 96 : Math.min(92, 38 + step * 24);
 
   return (
     <AppShell>
-      <ArtifactHeader id="discovery" kicker="Step 02" title="AI discovery" />
+      <ArtifactHeader
+        id="discovery"
+        kicker="Step 02"
+        title="AI Discovery & Business Analysis"
+      />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
-        <div className="neu p-5 sm:p-6">
+      <div className="grid gap-6 lg:grid-cols-[1fr_310px]">
+        {/* Main Conversation Stream */}
+        <div className="neu p-5 sm:p-6 space-y-6">
           <div className="space-y-4">
             <AnimatePresence initial={false}>
               {turns.map((t, i) => (
@@ -151,27 +217,47 @@ function DiscoveryPage() {
                   key={i}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                   className={t.role === "user" ? "flex justify-end" : ""}
                 >
                   <div
                     className={
                       t.role === "user"
-                        ? "max-w-[80%] rounded-2xl rounded-br-sm bg-primary px-4 py-3 text-sm text-primary-foreground"
-                        : "max-w-[85%]"
+                        ? "max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-4 py-3 text-xs sm:text-sm text-primary-foreground shadow-sm"
+                        : "max-w-[92%]"
                     }
                   >
                     {t.role === "ai" ? (
-                      <div className="neu-sm px-4 py-3">
-                        <p className="text-sm leading-relaxed">
+                      <div className="neu-sm px-4 py-3.5 space-y-2">
+                        <div className="flex items-center gap-2 text-primary font-semibold text-xs">
+                          <Sparkles className="size-3.5" />
+                          <span>AI Business Consultant</span>
+                        </div>
+                        <p className="text-xs sm:text-sm leading-relaxed text-foreground">
                           {i === turns.length - 1 ? <Typewriter text={t.text} /> : t.text}
                         </p>
-                        {t.hint ? (
-                          <p className="mt-2.5 flex items-start gap-1.5 text-xs text-muted-foreground">
+
+                        {/* Missing Information Detector Callout */}
+                        {t.missingEntity && (
+                          <div className="neu-inset mt-3 rounded-lg p-2.5 text-xs space-y-1">
+                            <p className="font-semibold text-primary flex items-center gap-1.5">
+                              <Search className="size-3 text-primary" />
+                              <span>Missing Information: {t.missingEntity}</span>
+                            </p>
+                            {t.whyWeAsk && (
+                              <p className="text-[11px] text-muted-foreground leading-normal">
+                                <strong className="text-foreground">Why we ask:</strong> {t.whyWeAsk}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {t.hint && (
+                          <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground pt-1">
                             <Lightbulb className="mt-0.5 size-3 shrink-0 text-clay" />
-                            {t.hint}
+                            <span>{t.hint}</span>
                           </p>
-                        ) : null}
+                        )}
                       </div>
                     ) : (
                       t.text
@@ -181,52 +267,370 @@ function DiscoveryPage() {
               ))}
             </AnimatePresence>
 
-            {thinking ? (
+            {thinking && (
               <div className="neu-sm w-fit px-4 py-3">
-                <ThinkingDots label="BizzMitra is thinking" />
+                <ThinkingDots label="AI Consultant is analyzing business context..." />
+              </div>
+            )}
+          </div>
+
+          {/* User Response Controls */}
+          <div className="border-t border-border pt-4">
+            {complete ? (
+              <div className="space-y-4">
+                <div className="neu-inset p-4 rounded-xl flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                      <CheckCircle2 className="size-4" /> Discovery Completed & Context Verified
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Business Analysis synthesized below. Ready to generate solution recommendations.
+                    </p>
+                  </div>
+                  <Link
+                    to="/workspace/solution"
+                    className="neu-press inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs sm:text-sm font-semibold text-primary-foreground whitespace-nowrap shadow-md"
+                  >
+                    View Solution Recommendations <ArrowRight className="size-4" />
+                  </Link>
+                </div>
+              </div>
+            ) : currentQuestion && !thinking ? (
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Select a response or type a custom answer:
+                </p>
+
+                {/* Quick Contextual Response Options */}
+                <div className="grid gap-2">
+                  {currentQuestion.options.map((opt, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => submitAnswer(opt)}
+                      className="neu-sm neu-press p-3 text-left text-xs hover:border-primary/50 transition-all flex items-start justify-between gap-2 group"
+                    >
+                      <span className="leading-relaxed text-foreground">{opt}</span>
+                      <ArrowRight className="size-3.5 text-muted-foreground group-hover:text-primary shrink-0 mt-0.5 transition-colors" />
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom Input Bar */}
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={customInput}
+                    onChange={(e) => setCustomInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && customInput.trim()) {
+                        submitAnswer(customInput.trim());
+                      }
+                    }}
+                    placeholder="Or type specific details about your business..."
+                    className="neu-inset flex-1 px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <button
+                    type="button"
+                    disabled={!customInput.trim()}
+                    onClick={() => submitAnswer(customInput.trim())}
+                    className="neu-sm neu-press px-4 py-2 text-xs font-semibold text-primary flex items-center gap-1.5 disabled:opacity-40"
+                  >
+                    <Send className="size-3" /> Send
+                  </button>
+                </div>
               </div>
             ) : null}
           </div>
-
-          <div className="mt-6 border-t border-border pt-4">
-            {complete ? (
-              <Link
-                to="/workspace/solution"
-                className="neu-press inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
-              >
-                Generate framing & solution <ArrowRight className="size-4" />
-              </Link>
-            ) : (
-              <button
-                onClick={answer}
-                disabled={thinking}
-                className="neu-sm neu-press w-full px-4 py-3 text-left text-sm disabled:opacity-50"
-              >
-                {thinking ? "Waiting for the analyst…" : `Reply: “${DISCOVERY_SCRIPT[step]!.answer}”`}
-              </button>
-            )}
-          </div>
         </div>
 
-        <aside className="neu h-fit p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Context captured
-          </p>
-          <div className="neu-inset mt-3 h-2 overflow-hidden rounded-full p-0">
-            <motion.div
-              className="h-full rounded-full bg-sage"
-              animate={{ width: `${complete ? 100 : progress}%` }}
-              transition={{ type: "spring", stiffness: 180, damping: 26 }}
-            />
+        {/* Right Context & Missing Info Sidebar */}
+        <aside className="space-y-4">
+          <div className="neu p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Context Maturity
+              </p>
+              <span className="text-xs font-bold text-primary">{confidenceScore}%</span>
+            </div>
+
+            <div className="neu-inset mt-2 h-2 overflow-hidden rounded-full p-0">
+              <motion.div
+                className="h-full rounded-full bg-primary"
+                animate={{ width: `${progressPercent}%` }}
+                transition={{ type: "spring", stiffness: 180, damping: 26 }}
+              />
+            </div>
+
+            <div className="mt-4 space-y-2.5 text-xs">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
+                <span className="font-medium text-foreground">Problem Context Captured</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {step > 0 ? (
+                  <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
+                ) : (
+                  <HelpCircle className="size-3.5 text-muted-foreground shrink-0" />
+                )}
+                <span className={step > 0 ? "font-medium text-foreground" : "text-muted-foreground"}>
+                  {step > 0 ? "Volume & Client Scale ✓" : "Volume & Scale Detection…"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {step > 1 ? (
+                  <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
+                ) : (
+                  <HelpCircle className="size-3.5 text-muted-foreground shrink-0" />
+                )}
+                <span className={step > 1 ? "font-medium text-foreground" : "text-muted-foreground"}>
+                  {step > 1 ? "Vetting Lifecycle & Gaps ✓" : "Lifecycle Stages…"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {step > 2 ? (
+                  <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
+                ) : (
+                  <HelpCircle className="size-3.5 text-muted-foreground shrink-0" />
+                )}
+                <span className={step > 2 ? "font-medium text-foreground" : "text-muted-foreground"}>
+                  {step > 2 ? "Attendance & Portal Rules ✓" : "Compliance & Operations…"}
+                </span>
+              </div>
+            </div>
           </div>
-          <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
-            <li>Problem statement ✓</li>
-            <li>{step > 0 ? "Ticket volume ✓" : "Ticket volume …"}</li>
-            <li>{step > 1 ? "Tool landscape ✓" : "Tool landscape …"}</li>
-            <li>{step > 2 ? "Team shape ✓" : "Team shape …"}</li>
-          </ul>
+
+          {/* Active Context Card */}
+          <div className="neu p-5 space-y-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Extracted Persona Model
+            </p>
+            <div className="space-y-2 text-xs">
+              <div className="neu-inset p-2.5 rounded-lg space-y-1">
+                <p className="font-bold text-foreground">Target Stakeholders</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Recruiters (8 seats), Corporate Clients (35 accounts), Job Candidates
+                </p>
+              </div>
+              <div className="neu-inset p-2.5 rounded-lg space-y-1">
+                <p className="font-bold text-foreground">Identified Friction</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Excel duplication, interview round 2 drop-off, 10-day contract signing
+                </p>
+              </div>
+            </div>
+          </div>
         </aside>
       </div>
+
+      {/* Business Analysis Engine Section */}
+      {complete && (
+        <motion.section
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mt-8 space-y-6"
+        >
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+                Futurrizon Business Analysis Engine
+              </p>
+              <h2 className="font-display text-2xl font-bold mt-1">
+                Business Discovery & Gap Analysis Report
+              </h2>
+            </div>
+            <span className="neu-sm px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+              <CheckCircle2 className="size-3.5" /> Validated by AI Consultant
+            </span>
+          </div>
+
+          {/* Current State vs Future State Grid */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Current State */}
+            <div className="neu p-5 sm:p-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-base font-bold flex items-center gap-2">
+                  <AlertTriangle className="size-4 text-amber-500" />
+                  <span>Current State (As-Is)</span>
+                </h3>
+                <span className="neu-sm px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                  Efficiency: {analysis.currentState.efficiencyScore}%
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {analysis.currentState.summary}
+              </p>
+              <div className="neu-inset p-3 rounded-lg space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Active Tools
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {analysis.currentState.tools.map((t, idx) => (
+                    <span key={idx} className="neu-sm px-2 py-0.5 text-[10px] font-medium">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1 pt-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Primary Bottlenecks
+                </p>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  {analysis.currentState.bottlenecks.map((b, idx) => (
+                    <li key={idx} className="flex items-start gap-1.5">
+                      <span className="text-amber-500 font-bold">•</span>
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Future State */}
+            <div className="neu p-5 sm:p-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-base font-bold flex items-center gap-2 text-primary">
+                  <Sparkles className="size-4" />
+                  <span>Future State (To-Be)</span>
+                </h3>
+                <span className="neu-sm px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  Target: 95% Automated
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {analysis.futureState.summary}
+              </p>
+              <div className="neu-inset p-3 rounded-lg space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Recommended Architecture Modules
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {analysis.futureState.recommendedModules.map((m, idx) => (
+                    <span key={idx} className="neu-sm px-2 py-0.5 text-[10px] font-semibold text-primary">
+                      {m}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1 pt-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Automation Initiatives
+                </p>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  {analysis.futureState.automationOpportunities.map((o, idx) => (
+                    <li key={idx} className="flex items-start gap-1.5">
+                      <span className="text-primary font-bold">✓</span>
+                      <span>{o}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Stakeholder Analysis Table */}
+          <div className="neu p-5 sm:p-6 space-y-3">
+            <h3 className="font-display text-base font-bold flex items-center gap-2">
+              <Users className="size-4 text-primary" />
+              <span>Stakeholder Analysis & Personas</span>
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border text-[10px] uppercase text-muted-foreground tracking-wider">
+                    <th className="pb-2 font-semibold">Stakeholder Group</th>
+                    <th className="pb-2 font-semibold">Scale</th>
+                    <th className="pb-2 font-semibold">Core Needs</th>
+                    <th className="pb-2 font-semibold">Business Impact</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {analysis.stakeholders.map((s, idx) => (
+                    <tr key={idx} className="hover:bg-card/40 transition-colors">
+                      <td className="py-2.5 font-bold text-foreground">{s.role}</td>
+                      <td className="py-2.5 text-muted-foreground">{s.count}</td>
+                      <td className="py-2.5 text-foreground leading-relaxed">{s.needs}</td>
+                      <td className="py-2.5 text-muted-foreground">{s.impact}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Gap Analysis Matrix */}
+          <div className="neu p-5 sm:p-6 space-y-3">
+            <h3 className="font-display text-base font-bold">Gap Analysis Matrix</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-border text-[10px] uppercase text-muted-foreground tracking-wider">
+                    <th className="pb-2 font-semibold">Functional Area</th>
+                    <th className="pb-2 font-semibold">Current Process (As-Is)</th>
+                    <th className="pb-2 font-semibold">Future Architecture (To-Be)</th>
+                    <th className="pb-2 font-semibold">Severity</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {analysis.gapAnalysis.map((g, idx) => (
+                    <tr key={idx} className="hover:bg-card/40 transition-colors">
+                      <td className="py-2.5 font-bold text-foreground">{g.area}</td>
+                      <td className="py-2.5 text-muted-foreground leading-relaxed">{g.current}</td>
+                      <td className="py-2.5 text-foreground leading-relaxed">{g.future}</td>
+                      <td className="py-2.5">
+                        <span
+                          className={`neu-sm px-2 py-0.5 text-[10px] font-bold ${
+                            g.severity === "Critical"
+                              ? "text-red-500"
+                              : g.severity === "High"
+                              ? "text-amber-500"
+                              : "text-blue-500"
+                          }`}
+                        >
+                          {g.severity}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Quantified Business Impact Cards */}
+          <div className="neu p-5 sm:p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-base font-bold flex items-center gap-2">
+                <TrendingUp className="size-4 text-emerald-500" />
+                <span>Quantified Transformation Impact</span>
+              </h3>
+              <span className="text-[11px] text-muted-foreground font-medium">
+                Baseline vs. Post-Implementation Projection
+              </span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 pt-2">
+              {analysis.businessImpact.map((item, idx) => (
+                <div key={idx} className="neu-inset p-3 rounded-xl text-center space-y-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate">
+                    {item.metric}
+                  </p>
+                  <p className="font-display text-lg font-extrabold text-foreground">
+                    {item.projected}
+                  </p>
+                  <div className="flex items-center justify-center gap-1.5 text-[10px]">
+                    <span className="text-muted-foreground line-through">{item.current}</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {item.improvement}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.section>
+      )}
     </AppShell>
   );
 }
