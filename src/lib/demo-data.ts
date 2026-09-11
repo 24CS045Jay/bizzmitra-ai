@@ -32,33 +32,286 @@ export const EXAMPLE_CHIPS = [
   "Field technicians still using paper job cards with no GPS validation",
 ];
 
-export const DISCOVERY_SCRIPT: {
+export type DiscoveryQuestionItem = {
   question: string;
   hint: string;
+  whyWeAsk: string;
+  missingEntity: string;
+  options: string[];
   answer: string;
-}[] = [
-    {
-      question:
-        "Got it — repetitive order-status and return tickets at 14h first response. What's your current support volume per day?",
-      hint: "Volume drives whether we automate deflection or just assist agents.",
-      answer: "About 1,200 tickets a day, spiking to 2,000 during sale weeks.",
-    },
-    {
-      question:
-        "1,200/day with 2,000 peaks — that's deflection territory. Do you have an existing helpdesk tool (Zendesk, Freshdesk, or none)?",
-      hint: "An existing helpdesk means we integrate rather than replace.",
-      answer: "Freshdesk, plus Shopify for orders and Shiprocket for logistics.",
-    },
-    {
-      question:
-        "Freshdesk + Shopify + Shiprocket. Last one — what's your support team size, and is it in-house or outsourced?",
-      hint: "Team size sets the ROI baseline and change-management effort.",
-      answer: "18 in-house agents across two shifts.",
-    },
-  ];
+};
+
+export const DISCOVERY_SCRIPT: DiscoveryQuestionItem[] = [
+  {
+    question:
+      "Got it — repetitive order-status and return tickets at 14h first response. What's your current support volume per day?",
+    hint: "Volume drives whether we automate deflection or just assist agents.",
+    whyWeAsk: "High volume (>500/day) justifies an automated deflection layer over human routing.",
+    missingEntity: "Daily inbound ticket volume & peak surges",
+    options: [
+      "About 1,200 tickets a day, spiking to 2,000 during sale weeks.",
+      "Around 300-500 tickets per day.",
+      "Over 3,000 tickets a day across multiple brands.",
+    ],
+    answer: "About 1,200 tickets a day, spiking to 2,000 during sale weeks.",
+  },
+  {
+    question:
+      "1,200/day with 2,000 peaks — that's deflection territory. Do you have an existing helpdesk tool (Zendesk, Freshdesk, or none)?",
+    hint: "An existing helpdesk means we integrate rather than replace.",
+    whyWeAsk: "Determines whether the solution builds a custom helpdesk or integrates via webhooks.",
+    missingEntity: "Helpdesk software & e-commerce backend",
+    options: [
+      "Freshdesk, plus Shopify for orders and Shiprocket for logistics.",
+      "Zendesk with WooCommerce.",
+      "Custom in-house database with no ticketing software.",
+    ],
+    answer: "Freshdesk, plus Shopify for orders and Shiprocket for logistics.",
+  },
+  {
+    question:
+      "Freshdesk + Shopify + Shiprocket. Last one — what's your support team size, and is it in-house or outsourced?",
+    hint: "Team size sets the ROI baseline and change-management effort.",
+    whyWeAsk: "Agent count and shifts establish the cost baseline for ROI and payback period.",
+    missingEntity: "Support staff count & shift distribution",
+    options: [
+      "18 in-house agents across two shifts.",
+      "8 full-time agents with no shift coverage.",
+      "35 outsourced BPO agents on a 24/7 rota.",
+    ],
+    answer: "18 in-house agents across two shifts.",
+  },
+];
+
+export const HR_DISCOVERY_SCRIPT: DiscoveryQuestionItem[] = [
+  {
+    question:
+      "Welcome to BizzMitra! Starting an HR consultancy involves managing candidates, client accounts, and internal consultants. What is your expected monthly candidate volume and number of active client companies?",
+    hint: "Volume and client count size your candidate CRM pipeline, database relations, and concurrency.",
+    whyWeAsk: "Sizes database schemas, indexing requirements, and UI pagination for candidate pipelines.",
+    missingEntity: "Monthly candidate applicants & active corporate clients",
+    options: [
+      "Around 400 candidate applications a month across 35 active corporate client accounts.",
+      "Under 100 candidates with 5-10 boutique startup clients.",
+      "1,500+ high-volume candidates across industrial staffing contracts.",
+    ],
+    answer: "Around 400 candidate applications a month across 35 active corporate client accounts.",
+  },
+  {
+    question:
+      "400 candidates and 35 clients is significant. What specific stages do candidates pass through, and where does candidate drop-off or data loss occur today?",
+    hint: "Defines the exact state-machine stages for the Workable HR CRM and notifications.",
+    whyWeAsk: "Sets up the CRM Kanban column stages and identifies which transitions need automation.",
+    missingEntity: "Recruitment lifecycle stages & operational drop-off points",
+    options: [
+      "Screening → Interview → Offer → Rejected. We lose track after round 2 because of scattered WhatsApp and Excel files.",
+      "Sourcing → Technical Screen → Client Review → Offer. Communication lags take 7+ days.",
+      "Application → Assessment → Video Interview → Final Placement.",
+    ],
+    answer:
+      "Screening → Interview → Offer → Rejected. We lose track after round 2 because of scattered WhatsApp and Excel files.",
+  },
+  {
+    question:
+      "For consultant attendance and client onboarding, what are your core operational and compliance needs?",
+    hint: "Determines whether attendance requires web punch-clock and if clients need self-serve contract sign-off.",
+    whyWeAsk: "Specifies feature requirements for the attendance log and client portal modules.",
+    missingEntity: "Attendance tracking rules & client self-serve requirements",
+    options: [
+      "Daily web check-in/out with leave approval for our 8 consultants, plus a client portal to review shortlists and sign MSAs.",
+      "Simple attendance punch-clock only; client contracts handled via email.",
+      "Hourly billing timesheet tracker integrated with payroll.",
+    ],
+    answer:
+      "Daily web check-in/out with leave approval for our 8 consultants, plus a client portal to review shortlists and sign MSAs.",
+  },
+];
 
 export const AI_SUMMARY =
   "Here's what I have: 1,200 tickets/day (2,000 at peak), 18 in-house agents on two shifts, Freshdesk + Shopify + Shiprocket, 60% repetitive order-status and return intent, 14h average first response. That's roughly 720 automatable contacts a day. I'll frame the problem, recommend a solution, and generate the full blueprint chain.";
+
+export const HR_AI_SUMMARY =
+  "Here is what I have captured: ~400 candidates/month across 35 client accounts, 8 internal recruiters on WhatsApp and Excel, a 4-stage recruitment pipeline with drop-offs after interview round 2, and manual consultant attendance tracking. I have performed gap analysis, framed your business problem, and will now generate your Business Analysis report and workable system blueprints.";
+
+export type BusinessAnalysisReport = {
+  currentState: {
+    summary: string;
+    tools: string[];
+    bottlenecks: string[];
+    efficiencyScore: number;
+  };
+  stakeholders: {
+    role: string;
+    count: string;
+    needs: string;
+    impact: string;
+  }[];
+  gapAnalysis: {
+    area: string;
+    current: string;
+    future: string;
+    severity: "High" | "Medium" | "Critical";
+  }[];
+  futureState: {
+    summary: string;
+    recommendedModules: string[];
+    automationOpportunities: string[];
+  };
+  businessImpact: {
+    metric: string;
+    current: string;
+    projected: string;
+    improvement: string;
+  }[];
+};
+
+export const HR_BUSINESS_ANALYSIS: BusinessAnalysisReport = {
+  currentState: {
+    summary:
+      "TalentCraft HR currently manages hiring operations through disjointed tools (Excel spreadsheets, WhatsApp groups, and email attachments). Recruiters duplicate resume entries, interview feedback is lost after round 2, client contract turnaround lags by 10+ days, and consultant daily attendance is recorded manually on paper.",
+    tools: ["Microsoft Excel (5 workbooks)", "WhatsApp Web", "Google Drive", "Manual Outlook emails"],
+    bottlenecks: [
+      "No centralized candidate database; resumes saved across personal local folders",
+      "Severe candidate drop-off between interview round 2 and client offer stage",
+      "Manual consultant attendance tracking lacks auditability and leave approval records",
+      "Client onboarding agreements (MSAs) take 10-14 days due to back-and-forth PDF signing",
+    ],
+    efficiencyScore: 38,
+  },
+  stakeholders: [
+    {
+      role: "Internal Recruiters",
+      count: "8 team members",
+      needs: "Unified candidate tracking pipeline, instant resume search, stage movement alerts",
+      impact: "High — spends 4.5 hrs/day on repetitive data entry across spreadsheets",
+    },
+    {
+      role: "Corporate Clients",
+      count: "35 active enterprise clients",
+      needs: "Self-serve portal to review candidate shortlists, approve interviews, and track hiring SLA",
+      impact: "Critical — client satisfaction drops when candidate status takes >48 hrs to report",
+    },
+    {
+      role: "Job Candidates",
+      count: "~400 applicants/month",
+      needs: "Clear application status updates, interview schedule reminders, professional touchpoint",
+      impact: "High — 28% candidate drop-off due to radio silence during interview stages",
+    },
+    {
+      role: "Agency Operations Lead",
+      count: "Founding Partner / Ops Lead",
+      needs: "Audited daily consultant attendance, verified timesheets, revenue/placement visibility",
+      impact: "Medium — manual billing reconciliation takes 4 days at month-end",
+    },
+  ],
+  gapAnalysis: [
+    {
+      area: "Candidate Pipeline",
+      current: "Static multi-sheet Excel files with no stage validation or audit history",
+      future: "Interactive Workable CRM with drag-and-drop stages (Screening → Interview → Offer → Rejected)",
+      severity: "Critical",
+    },
+    {
+      area: "Client Onboarding",
+      current: "Manual email attachments for MSAs, rate cards, and KYC documents",
+      future: "Self-serve Client Onboarding Portal with digital document upload and status tracker",
+      severity: "High",
+    },
+    {
+      area: "Consultant Attendance",
+      current: "Manual WhatsApp check-ins and paper punch sheets",
+      future: "Digital web attendance clock-in/out with punch log and leave approval workflow",
+      severity: "High",
+    },
+    {
+      area: "Public Presence",
+      current: "No dedicated agency web portal; reliance on LinkedIn personal profiles",
+      future: "Modern Agency Website with integrated candidate application submission",
+      severity: "Medium",
+    },
+  ],
+  futureState: {
+    summary:
+      "A unified, connected digital operations hub where recruiters manage candidates through an interactive CRM, corporate clients review candidates through a private portal, consultants record attendance digitally, and public candidates apply via a modern agency website.",
+    recommendedModules: [
+      "Workable HR Candidate CRM",
+      "Consultant Daily Attendance & Punch Tracker",
+      "Client Onboarding & Collaboration Portal",
+      "Public Agency Web Presence",
+      "AI-Assisted Candidate Screening & Matching",
+    ],
+    automationOpportunities: [
+      "Automated stage transition alerts sent to candidates via email",
+      "One-click client shortlist generation with resume PII redaction",
+      "Automated attendance punch logs with daily summary alerts",
+      "Self-serve client onboarding wizard reducing contract signing from 10 days to 24 hours",
+    ],
+  },
+  businessImpact: [
+    { metric: "Candidate Placement Cycle", current: "28 days", projected: "9 days", improvement: "-68%" },
+    { metric: "Candidate Drop-Off Rate", current: "28%", projected: "6%", improvement: "-78%" },
+    { metric: "Recruiter Manual Admin Time", current: "4.5 hrs/day", projected: "1.0 hr/day", improvement: "-77%" },
+    { metric: "Client Contract Turnaround", current: "10-14 days", projected: "24-48 hrs", improvement: "-82%" },
+    { metric: "Attendance & Timesheet Accuracy", current: "62%", projected: "99.4%", improvement: "+37.4%" },
+  ],
+};
+
+export const NEXA_BUSINESS_ANALYSIS: BusinessAnalysisReport = {
+  currentState: {
+    summary:
+      "Nexa Retail's support team absorbs ~720 repetitive low-value contacts per day. 18 agents spend 96 hours daily manually checking Shopify orders and Shiprocket delivery status, causing average first response times to balloon to 14 hours.",
+    tools: ["Freshdesk", "Shopify Admin API", "Shiprocket Logistics API", "Manual agent macros"],
+    bottlenecks: [
+      "Undifferentiated Freshdesk queue; high-intent refund tickets wait behind simple tracking questions",
+      "Order status exists in Shopify but is not reachable by customers directly",
+      "Return eligibility checks are deterministic but performed manually by agents",
+    ],
+    efficiencyScore: 42,
+  },
+  stakeholders: [
+    { role: "Support Agents", count: "18 in-house agents", needs: "Automated triage, AI suggested drafts", impact: "High" },
+    { role: "Online Customers", count: "~25,000 active buyers", needs: "Instant order tracking and return answers", impact: "Critical" },
+    { role: "Customer Experience Lead", count: "Head of Support", needs: "SLA compliance, deflection visibility", impact: "High" },
+  ],
+  gapAnalysis: [
+    { area: "Intent Classification", current: "Manual agent reading and tagging", future: "AI intent triage at webhook ingestion", severity: "Critical" },
+    { area: "Order Tracking", current: "Agent switches 3 browser tabs to query Shiprocket", future: "Automated resolver joins Shopify + Shiprocket into 40s answer", severity: "High" },
+    { area: "Return Eligibility", current: "Agent manual policy lookup", future: "Rules engine auto-evaluates return window and SKU category", severity: "High" },
+  ],
+  futureState: {
+    summary:
+      "An automated deflection and triage layer inserted in front of Freshdesk. 60% repetitive tickets resolve automatically in seconds; complex tickets arrive enriched with full context and suggested drafts.",
+    recommendedModules: ["Intent Triage Service", "Order Status Resolver", "Return Eligibility Engine", "Agent Copilot"],
+    automationOpportunities: ["Instant tracking deflection", "Automated RMA generation", "Confidence-scored agent drafts"],
+  },
+  businessImpact: [
+    { metric: "Average First Response Time", current: "14 hours", projected: "40 seconds (auto) / 3.1h (complex)", improvement: "-78%" },
+    { metric: "Automatable Contacts Deflected", current: "0%", projected: "60% (~720/day)", improvement: "+60%" },
+    { metric: "Agent Hours Freed Daily", current: "0 hrs", projected: "96 agent hrs/day", improvement: "+96 hrs" },
+    { metric: "Repeat-Purchase Retention", current: "Base", projected: "+18%", improvement: "+18%" },
+  ],
+};
+
+export function getActiveDiscoveryScript(problemText?: string): DiscoveryQuestionItem[] {
+  if (problemText && (problemText.toLowerCase().includes("support") || problemText.toLowerCase().includes("ticket"))) {
+    return DISCOVERY_SCRIPT;
+  }
+  return HR_DISCOVERY_SCRIPT;
+}
+
+export function getActiveAiSummary(problemText?: string): string {
+  if (problemText && (problemText.toLowerCase().includes("support") || problemText.toLowerCase().includes("ticket"))) {
+    return AI_SUMMARY;
+  }
+  return HR_AI_SUMMARY;
+}
+
+export function getActiveBusinessAnalysis(problemText?: string): BusinessAnalysisReport {
+  if (problemText && (problemText.toLowerCase().includes("support") || problemText.toLowerCase().includes("ticket"))) {
+    return NEXA_BUSINESS_ANALYSIS;
+  }
+  return HR_BUSINESS_ANALYSIS;
+}
 
 export const PROBLEM_FRAMING = {
   statement:
