@@ -67,3 +67,62 @@ Probabilistic outputs can vary between runs, which is why BizzMitra provides hum
 
 ## What I Should Be Able To Explain To A Judge
 > *"BizzMitra is deliberately built as a hybrid system: we use AI where human language nuance is required, but keep state management, calculations, and data persistence strictly deterministic."*
+
+---
+
+# 3. Goal-Oriented Dialog & Slot Filling (Frame Semantics)
+
+## Simple Definition
+A technique in conversational AI where the system has a mental "form" with empty slots (e.g., `Expected Volume`, `Team Roles`, `Key Integrations`), and asks targeted questions until every essential slot is filled.
+
+## How It Works
+Traditional task-oriented dialogue systems (like airline booking bots) use semantic frame parsing to identify unfilled slots. In LLM-based architectures, the prompt instructs the model to inspect the business requirement schema, identify missing fields required to produce a valid technical architecture, and formulate a targeted clarifying question for the highest-priority empty slot.
+
+## Where BizzMitra Uses It
+In **Step 2: AI Discovery Interview** (`/workspace/discovery`).
+When the user submits a business problem, BizzMitra tracks the `Context Maturity Score` (38% → 62% → 88% → 96%).
+The AI identifies missing parameters:
+- `Candidate Volume` (how many resumes/month)
+- `Stakeholder Roles` (who uses the system)
+- `Integration Targets` (spreadsheets, emails, ERPs)
+
+Each time the user answers a question (either via interactive chips or custom typing), the missing slot is filled, and the context maturity score advances.
+
+## Why We Need It
+Generating enterprise blueprints (database schemas, API routes, process workflows) requires concrete boundary conditions. If an AI generates a solution without knowing volume or integrations, it generates generic, unworkable boilerplate.
+
+## Limitations
+In the Day 2 prototype, the discovery interview sequence uses adaptive question templates (`HR_DISCOVERY_SCRIPT` and `NEXA_DISCOVERY_SCRIPT`) with simulated slot recognition. In full production, this runs as a dynamic multi-turn LLM agent with structured output extraction.
+
+## What I Should Be Able To Explain To A Judge
+> *"BizzMitra doesn't rush into generating architecture on day one. It runs a structured slot-filling dialogue. Until essential architectural parameters like scale, roles, and bottlenecks are established, the system flags missing information and guides the user to full context maturity."*
+
+---
+
+# 4. Missing Information Detection & Explainable Prompting
+
+## Simple Definition
+Detecting what critical information the user *omitted* from their prompt, and explaining to the user *why* that information is needed before the system can build a solution.
+
+## How It Works
+When evaluating business requirements, the AI compares the user's initial problem description against a reference ontology for that industry. For every missing dimension (e.g., scale, concurrency, regulatory compliance), the system produces:
+1. The missing entity name.
+2. The architectural rationale ("Why we ask").
+3. A set of plausible answers calibrated for that industry.
+
+## Where BizzMitra Uses It
+In the **Missing Information Detector** badges in `/workspace/discovery`:
+```text
+[Missing Information Detector]: Monthly candidate applicants & active client accounts
+[Why we ask]: Sizes database schemas, indexing requirements, and UI pagination for candidate pipelines.
+```
+
+## Why We Need It
+It builds user trust and educates non-technical business founders. When an AI asks questions without explaining why, users feel interrogated or annoyed. When the AI shows that the question directly impacts database indexing and server sizing, the user understands the value of the discovery process.
+
+## Limitations
+Ontologies for niche enterprise domains must be maintained or learned from enterprise architecture frameworks (TOGAF, C4 model).
+
+## What I Should Be Able To Explain To A Judge
+> *"Most AI chatbots just hallucinate default assumptions when information is missing. BizzMitra features an explicit Missing Information Detector that alerts the user to ambiguity and transparently explains why each detail is necessary for downstream technical architecture."*
+
