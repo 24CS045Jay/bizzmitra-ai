@@ -313,6 +313,104 @@ export function getActiveBusinessAnalysis(problemText?: string): BusinessAnalysi
   return HR_BUSINESS_ANALYSIS;
 }
 
+export const HR_PROBLEM_FRAMING = {
+  statement:
+    "TalentCraft HR's operations are throttled by disjointed spreadsheets and manual communication channels. 8 internal recruiters spend over 4.5 hours daily on repetitive data entry, candidate feedback drops off after interview round 2, corporate clients wait 10-14 days for manual contract onboarding, and consultant attendance lacks auditable compliance.",
+  rootCauses: [
+    {
+      title: "Decentralized candidate records across spreadsheets",
+      detail:
+        "Resumes and stage notes are saved in personal local folders and WhatsApp chats; no unified candidate timeline exists.",
+    },
+    {
+      title: "No client self-serve interface",
+      detail:
+        "Client hiring managers must exchange 4+ emails per candidate shortlist, creating communication lag and delayed interview feedback.",
+    },
+    {
+      title: "Manual attendance & timesheet tracking",
+      detail:
+        "Daily consultant check-ins and hours are recorded on paper or unverified messaging, causing billing reconciliation disputes.",
+    },
+  ],
+  constraints: [
+    "Non-technical recruiting team requiring zero-training intuitive UI.",
+    "Strict candidate resume PII protection (DPDP / GDPR compliance).",
+    "Phased 6-week rollout target with immediate MVP delivery.",
+  ],
+  impact: [
+    { metric: "Candidate Placement Cycle", value: "28d → 9d" },
+    { metric: "Recruiter Admin Time Saved", value: "3.5 hrs/day" },
+    { metric: "Candidate Drop-Off Reduction", value: "-78%" },
+    { metric: "Client Onboarding Velocity", value: "10d → 24h" },
+  ],
+};
+
+export const HR_SOLUTION = {
+  headline: "Unified Talent Operations Platform & Interactive Workable Suite",
+  summary:
+    "Deploy an integrated digital suite consisting of an interactive Candidate CRM, a consultant Attendance Punch Tracker, a self-serve Client Onboarding Portal, and an automated AI resume screening assistant.",
+  pillars: [
+    {
+      title: "Workable Candidate CRM",
+      detail:
+        "Visual drag-and-drop pipeline (Screening → Interview → Offer → Rejected) with instant filtering, search, and candidate export.",
+    },
+    {
+      title: "Consultant Attendance Tracker",
+      detail:
+        "Digital web clock-in/out with punch logs, daily hours calculation, and leave approval workflows.",
+    },
+    {
+      title: "Client Onboarding Portal",
+      detail:
+        "Self-serve client dashboard for NDA/MSA digital document upload, rate cards, and candidate shortlist reviews.",
+    },
+    {
+      title: "AI Candidate Screener",
+      detail:
+        "Automated semantic keyword and skills matching that ranks applicant resumes against client job requirements.",
+    },
+  ],
+  tradeoffs: [
+    {
+      option: "Off-the-shelf Enterprise ATS (Workday / Bullhorn)",
+      verdict: "Rejected",
+      why: "Extremely expensive annual seat licensing, 4-month implementation cycle, and rigid workflows incompatible with a boutique agency.",
+    },
+    {
+      option: "Custom-built modular Workable CRM + Portal (Recommended)",
+      verdict: "Recommended",
+      why: "Directly solves candidate drop-off and attendance tracking within a 6-week delivery window, tailored to 8 recruiters and 35 clients.",
+    },
+    {
+      option: "Continued spreadsheet automation with Zapier",
+      verdict: "Rejected",
+      why: "Fails to provide client-facing credibility, lacks security permissions for candidate PII, and doesn't scale past 500 applicants.",
+    },
+  ],
+  stack: [
+    { layer: "Frontend / Workable Apps", choice: "React 19 + TypeScript + Tailwind CSS", why: "Ultra-fast UI responsiveness, interactive drag-and-drop pipeline." },
+    { layer: "Backend & Database", choice: "Supabase (PostgreSQL 14.5)", why: "Row-level security for candidate PII, real-time stage updates, instant REST APIs." },
+    { layer: "AI Matching Engine", choice: "Semantic Embeddings + LLM Classifier", why: "Fast candidate-to-job matching without hallucination." },
+    { layer: "Document Storage", choice: "Supabase Secure Storage", why: "Encrypted storage for candidate resumes and client agreements." },
+  ],
+};
+
+export function getActiveProblemFraming(problemText?: string) {
+  if (problemText && (problemText.toLowerCase().includes("support") || problemText.toLowerCase().includes("ticket"))) {
+    return PROBLEM_FRAMING;
+  }
+  return HR_PROBLEM_FRAMING;
+}
+
+export function getActiveSolution(problemText?: string) {
+  if (problemText && (problemText.toLowerCase().includes("support") || problemText.toLowerCase().includes("ticket"))) {
+    return SOLUTION;
+  }
+  return HR_SOLUTION;
+}
+
 export const PROBLEM_FRAMING = {
   statement:
     "Nexa Retail's support function absorbs ~720 low-value contacts per day (60% of 1,200) that carry no decision content — order status and return eligibility. Because agents triage manually, high-intent tickets queue behind them, pushing average first response to 14 hours and driving measurable repeat-purchase churn.",
