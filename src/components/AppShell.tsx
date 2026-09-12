@@ -20,6 +20,7 @@ import {
   ChevronDown,
   FileCheck2,
   Package,
+  Shield,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -43,6 +44,7 @@ const NAV = [
   { to: "/workspace/map", label: "Artifact Map", icon: GitBranch },
   { to: "/workspace/collaboration", label: "Governance & Review", icon: FileCheck2 },
   { to: "/workspace/export", label: "Export Center", icon: Package },
+  { to: "/admin", label: "Admin Console", icon: Shield },
   { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
