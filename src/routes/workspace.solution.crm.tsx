@@ -8,9 +8,12 @@ import {
   Filter,
   Plus,
   Search,
+  Sliders,
+  Sparkles,
   Star,
   Timer,
   Users,
+  Wand2,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -18,6 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { GenerationSequence } from "@/components/GenerationSequence";
+import { SolutionStudioDrawer } from "@/components/SolutionStudioDrawer";
 import { Stagger, StaggerItem } from "@/components/motion/primitives";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import {
@@ -26,6 +30,11 @@ import {
   type AttendanceEntry,
   type CRMCandidate,
 } from "@/lib/demo-data";
+import {
+  loadStudioSettings,
+  saveStudioSettings,
+  type StudioSettings,
+} from "@/lib/solution-studio";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/workspace/solution/crm")({
@@ -74,6 +83,19 @@ function CRMPage() {
   const [expRange, setExpRange] = useState<[number, number]>([0, 20]);
   const [showFilters, setShowFilters] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isStudioOpen, setIsStudioOpen] = useState(false);
+  const [studioSettings, setStudioSettings] = useState<StudioSettings>(() => loadStudioSettings());
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const custom = e as CustomEvent<StudioSettings>;
+      if (custom.detail) {
+        setStudioSettings(custom.detail);
+      }
+    };
+    window.addEventListener("bizzmitra:studio-updated", handler);
+    return () => window.removeEventListener("bizzmitra:studio-updated", handler);
+  }, []);
 
   // Attendance state
   const [attendanceLog, setAttendanceLog] = useState<AttendanceEntry[]>([...HR_ATTENDANCE_LOG]);
@@ -285,6 +307,17 @@ function CRMPage() {
               >
                 <Download className="size-3.5" />
                 Export CSV
+              </button>
+
+              <button
+                onClick={() => setIsStudioOpen(true)}
+                className="neu-press flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-primary/80 px-3.5 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm hover:brightness-105"
+              >
+                <Sliders className="size-3.5" />
+                Solution Studio
+                <span className="rounded-full bg-primary-foreground/20 px-1.5 py-0.2 text-[9px] font-mono">
+                  {studioSettings.version}
+                </span>
               </button>
             </div>
 
@@ -553,6 +586,13 @@ function CRMPage() {
           <AddCandidateModal onClose={() => setShowAddModal(false)} onAdd={addCandidate} />
         )}
       </AnimatePresence>
+
+      {/* ═══ Solution Studio Slide-Out Drawer ═══ */}
+      <SolutionStudioDrawer
+        isOpen={isStudioOpen}
+        onClose={() => setIsStudioOpen(false)}
+        onSettingsChange={(newSettings) => setStudioSettings(newSettings)}
+      />
     </AppShell>
   );
 }

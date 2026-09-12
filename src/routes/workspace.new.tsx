@@ -107,7 +107,7 @@ function IntakePage() {
       setUploadProgress((p) => {
         if (p >= 90) {
           clearInterval(interval);
-          const template = DOCUMENT_PARSE_TEMPLATES[type] ?? DOCUMENT_PARSE_TEMPLATES.pdf;
+          const template = DOCUMENT_PARSE_TEMPLATES[type] ?? DOCUMENT_PARSE_TEMPLATES["pdf"]!;
           setUploadedDoc({
             name: fileName,
             size: "2.4 MB",
@@ -132,7 +132,7 @@ function IntakePage() {
     setAnalyzingUrl(true);
     setTimeout(() => {
       const sampleKey = urlInput.toLowerCase().includes("talentcraft") ? "talentcraft" : "default";
-      const data = URL_ANALYZER_SAMPLES[sampleKey] ?? URL_ANALYZER_SAMPLES.default;
+      const data = URL_ANALYZER_SAMPLES[sampleKey] ?? URL_ANALYZER_SAMPLES["default"]!;
       setBusinessName(data.businessName);
       setIndustry(data.industry);
       setProblemStatement(data.summary);

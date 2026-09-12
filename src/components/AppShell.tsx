@@ -22,6 +22,7 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { DEMO_WORKSPACE } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
 
@@ -76,11 +77,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         .select("name, problem_statement")
         .eq("id", wsId)
         .maybeSingle()
-        .then(({ data }) => {
-          if (data) {
+        .then((res: { data: { name?: string } | null }) => {
+          const fetchedName = res.data?.name;
+          if (fetchedName) {
             setActiveWs((prev) => ({
               ...prev,
-              name: data.name,
+              name: fetchedName,
             }));
           }
         });

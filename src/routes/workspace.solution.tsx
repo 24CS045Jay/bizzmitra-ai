@@ -5,8 +5,10 @@ import {
   Building2,
   Check,
   Clock,
+  Sliders,
   Sparkles,
   Users,
+  Wand2,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -14,6 +16,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { GenerationSequence } from "@/components/GenerationSequence";
+import { SolutionStudioDrawer } from "@/components/SolutionStudioDrawer";
 import { Stagger, StaggerItem } from "@/components/motion/primitives";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import {
@@ -23,6 +26,7 @@ import {
   HR_CONSULTANCY_PROBLEM,
   HR_SOLUTION_MODULES,
 } from "@/lib/demo-data";
+import { loadStudioSettings } from "@/lib/solution-studio";
 
 export const Route = createFileRoute("/workspace/solution")({
   head: () => ({
@@ -56,6 +60,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 function SolutionPage() {
   const [problemText, setProblemText] = useState(HR_CONSULTANCY_PROBLEM);
+  const [isStudioOpen, setIsStudioOpen] = useState(false);
+  const [studioSettings, setStudioSettings] = useState(() => loadStudioSettings());
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -76,6 +82,35 @@ function SolutionPage() {
   return (
     <AppShell>
       <ArtifactHeader id="solution" kicker="Step 03" title="Framing & solution" />
+
+      {/* Solution Studio Trigger Strip */}
+      <div className="mb-6 neu p-3 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-primary/5 via-card to-accent/20">
+        <div className="flex items-center gap-2.5">
+          <span className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
+            <Sparkles className="size-4" />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-foreground">
+                Solution Studio (USP #2)
+              </span>
+              <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+                {studioSettings.version}
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Customize schema fields, UI layout density, and regenerate CRM views in real time.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setIsStudioOpen(true)}
+          className="neu-press flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground hover:brightness-105"
+        >
+          <Sliders className="size-3.5" />
+          Open Solution Studio
+        </button>
+      </div>
 
       <GenerationSequence
         steps={GENERATION_STEPS.solution}
@@ -355,6 +390,13 @@ function SolutionPage() {
           </StaggerItem>
         </Stagger>
       </GenerationSequence>
+
+      {/* Solution Studio Slide-Out Drawer */}
+      <SolutionStudioDrawer
+        isOpen={isStudioOpen}
+        onClose={() => setIsStudioOpen(false)}
+        onSettingsChange={(newSettings) => setStudioSettings(newSettings)}
+      />
     </AppShell>
   );
 }

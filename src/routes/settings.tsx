@@ -32,9 +32,10 @@ function SettingsPage() {
 
   useEffect(() => {
     if (!user) return;
+    const currentUserId = user.id;
     async function loadSettings() {
       const [{ data: profile }, workspaceResult] = await Promise.all([
-        supabase.from("profiles").select("full_name, plan").eq("id", user.id).single(),
+        supabase.from("profiles").select("full_name, plan").eq("id", currentUserId).single(),
         supabase
           .from("workspaces")
           .select("id, name, maturity_score")
