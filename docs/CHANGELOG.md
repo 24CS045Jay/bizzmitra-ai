@@ -2,6 +2,29 @@
 
 All notable changes across the 8-day engineering sprint will be documented in this file.
 
+## [Day 5] - 2026-09-12: Technical Blueprint Engine (HLD/LLD, BPMN & APIs)
+
+### Added
+- **Architecture Builder (`/workspace/architecture`)**:
+  - High-Level Architecture (HLD) diagram modeling Client presentation, Cloudflare edge, Go/Node core services, BullMQ AI queues, and PostgreSQL/Redis persistence.
+  - Low-Level Architecture (LLD) sequence diagram modeling synchronous and asynchronous API execution flows.
+  - Interactive Component Inspector Drawer: Deep-dive inspection of 7 architecture components detailing technology stack, security policies, data contracts, and scaling considerations.
+  - Security & SLA Compliance Matrix table covering latency targets (P95 < 80ms), uptime SLAs (99.95%), encryption standards (TLS 1.3, AES-256), and rate limits.
+  - One-click copy Mermaid source code for external whiteboard and documentation tools.
+- **Process Intelligence & BPMN Engine (`/workspace/process`)**:
+  - Comparative As-Is Manual vs. To-Be Automated process models with split, manual-only, and automated-only view toggles.
+  - 4-Tier BPMN 2.0 Swimlane sequence diagram formalizing responsibilities between Candidates, Recruiters, AI Engine, and Corporate Clients.
+  - Cycle time reduction metrics: Candidate screening (48h -> 30s), Time-to-offer (14.2d -> 2.4d, 83% reduction), and timesheet reconciliation (12h/mo -> real-time).
+  - Bottleneck Resolution Analysis: In-depth breakdowns of resume screening, client feedback loops, and timesheet discrepancies with quantified business impact.
+- **Database & API Designer (`/workspace/data`)**:
+  - Multi-tenant Entity-Relationship Diagram (ERD) with Crow's Foot notation covering `organizations`, `candidates`, `candidate_custom_fields`, `clients`, `attendance_punches`, and `audit_logs`.
+  - Table Schema Dictionary: Interactive inspector for all 6 tables with column definitions, data types, constraints, and descriptions.
+  - Production-ready PostgreSQL 16+ DDL script with multi-tenant Row Level Security (RLS) policies, indexes, and foreign keys.
+  - One-click Copy SQL and Download `bizzmitra_schema_v1.sql` actions.
+  - RESTful API Specification Explorer: OpenAPI 3.1 compatible endpoint documentation with HTTP method badges, request/response JSON payloads, and copyable cURL generators.
+- **Workspace Context Ribbon**:
+  - Added dynamic context banner across all technical blueprint routes displaying active business name, industry, and quick navigation links.
+
 ---
 
 ## [Day 4] - 2026-09-12: Live Customizer, Field Builder & AI Regeneration (USP #2)

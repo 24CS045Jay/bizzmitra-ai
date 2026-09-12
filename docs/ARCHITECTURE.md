@@ -106,3 +106,26 @@
   4. *Theme & Density Synthesis*: Applies neumorphic tokens, color classes, and spacing variables.
 - **Solution Versioning**: Automatically increments version from `v1.0` to `v1.1`, synthesizing changelog summaries and recording timestamped audit history in `StudioVersionEntry`.
 
+### 9. Architecture Builder & Interactive Component Inspector (Day 5)
+- **Route**: `/workspace/architecture` (`src/routes/workspace.architecture.tsx`)
+- **Data Model**: `src/lib/architecture-data.ts`
+- **High-Level Architecture (HLD)**: Mermaid diagram detailing presentation, API gateway, core microservices, background AI processing queue, and multi-tenant persistence.
+- **Low-Level Architecture (LLD)**: Sequence diagram tracing synchronous HTTP workflows (candidate ingestion, stage changes) and asynchronous BullMQ jobs (OCR extraction, vector generation).
+- **Interactive Component Inspector**: Slide-out drawer displaying technology stack, runtime environment, security protocols, inbound/outbound data contracts, and scaling considerations for all 7 architectural components.
+- **Security & SLA Compliance Matrix**: Latency (P95), availability SLAs (99.95%), encryption standards (TLS 1.3, AES-256), and rate limiting policies.
+
+### 10. Process Intelligence & BPMN 2.0 Engine (Day 5)
+- **Route**: `/workspace/process` (`src/routes/workspace.process.tsx`)
+- **Data Model**: `src/lib/process-data.ts`
+- **As-Is vs. To-Be Comparative Modeling**: Visual comparison proving an 83% cycle time reduction (14.2 days manual down to 2.4 days automated). Features split, manual-only, and automated-only view filters.
+- **4-Tier BPMN Swimlane Flow**: Sequence diagram establishing operational handoffs between Candidates/Consultants, Agency Recruiters, BizzMitra AI Engine, and Corporate Clients.
+- **Bottleneck Resolution Engine**: Identifies root causes, business impacts, and quantified time savings across resume screening, client feedback loops, and timesheet disputes.
+
+### 11. Database Designer & RESTful API Surface (Day 5)
+- **Route**: `/workspace/data` (`src/routes/workspace.data.tsx`)
+- **Data Model**: `src/lib/database-data.ts`
+- **Entity-Relationship Diagram (ERD)**: Crow's Foot ERD detailing `organizations`, `candidates`, `candidate_custom_fields`, `clients`, `attendance_punches`, and `audit_logs`.
+- **Table Schema Dictionary**: Interactive explorer of table fields, primary keys, foreign keys, data types, and constraint definitions.
+- **PostgreSQL 16+ DDL Script**: Copyable and downloadable SQL script (`bizzmitra_schema_v1.sql`) featuring Row Level Security (RLS) policies for multi-tenant isolation.
+- **RESTful API Specifications**: OpenAPI 3.1 compatible endpoint documentation with HTTP method indicators, request/response JSON schemas, authentication scopes, and instant cURL command generators.
+
