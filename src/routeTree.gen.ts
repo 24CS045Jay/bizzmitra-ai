@@ -18,6 +18,7 @@ import { Route as WorkspaceArchitectureRouteImport } from './routes/workspace.ar
 import { Route as WorkspaceCollaborationRouteImport } from './routes/workspace.collaboration'
 import { Route as WorkspaceDataRouteImport } from './routes/workspace.data'
 import { Route as WorkspaceDiscoveryRouteImport } from './routes/workspace.discovery'
+import { Route as WorkspaceExportRouteImport } from './routes/workspace.export'
 import { Route as WorkspaceInsightsRouteImport } from './routes/workspace.insights'
 import { Route as WorkspaceMapRouteImport } from './routes/workspace.map'
 import { Route as WorkspaceNewRouteImport } from './routes/workspace.new'
@@ -72,6 +73,11 @@ const WorkspaceDiscoveryRoute = WorkspaceDiscoveryRouteImport.update({
   path: '/workspace/discovery',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceExportRoute = WorkspaceExportRouteImport.update({
+  id: '/workspace/export',
+  path: '/workspace/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceInsightsRoute = WorkspaceInsightsRouteImport.update({
   id: '/workspace/insights',
   path: '/workspace/insights',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/workspace/collaboration': typeof WorkspaceCollaborationRoute
   '/workspace/data': typeof WorkspaceDataRoute
   '/workspace/discovery': typeof WorkspaceDiscoveryRoute
+  '/workspace/export': typeof WorkspaceExportRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
   '/workspace/map': typeof WorkspaceMapRoute
   '/workspace/new': typeof WorkspaceNewRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/workspace/collaboration': typeof WorkspaceCollaborationRoute
   '/workspace/data': typeof WorkspaceDataRoute
   '/workspace/discovery': typeof WorkspaceDiscoveryRoute
+  '/workspace/export': typeof WorkspaceExportRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
   '/workspace/map': typeof WorkspaceMapRoute
   '/workspace/new': typeof WorkspaceNewRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/workspace/collaboration': typeof WorkspaceCollaborationRoute
   '/workspace/data': typeof WorkspaceDataRoute
   '/workspace/discovery': typeof WorkspaceDiscoveryRoute
+  '/workspace/export': typeof WorkspaceExportRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
   '/workspace/map': typeof WorkspaceMapRoute
   '/workspace/new': typeof WorkspaceNewRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/workspace/collaboration'
     | '/workspace/data'
     | '/workspace/discovery'
+    | '/workspace/export'
     | '/workspace/insights'
     | '/workspace/map'
     | '/workspace/new'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/workspace/collaboration'
     | '/workspace/data'
     | '/workspace/discovery'
+    | '/workspace/export'
     | '/workspace/insights'
     | '/workspace/map'
     | '/workspace/new'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/workspace/collaboration'
     | '/workspace/data'
     | '/workspace/discovery'
+    | '/workspace/export'
     | '/workspace/insights'
     | '/workspace/map'
     | '/workspace/new'
@@ -241,6 +253,7 @@ export interface RootRouteChildren {
   WorkspaceCollaborationRoute: typeof WorkspaceCollaborationRoute
   WorkspaceDataRoute: typeof WorkspaceDataRoute
   WorkspaceDiscoveryRoute: typeof WorkspaceDiscoveryRoute
+  WorkspaceExportRoute: typeof WorkspaceExportRoute
   WorkspaceInsightsRoute: typeof WorkspaceInsightsRoute
   WorkspaceMapRoute: typeof WorkspaceMapRoute
   WorkspaceNewRoute: typeof WorkspaceNewRoute
@@ -313,6 +326,13 @@ declare module '@tanstack/react-router' {
       path: '/workspace/discovery'
       fullPath: '/workspace/discovery'
       preLoaderRoute: typeof WorkspaceDiscoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/export': {
+      id: '/workspace/export'
+      path: '/workspace/export'
+      fullPath: '/workspace/export'
+      preLoaderRoute: typeof WorkspaceExportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace/insights': {
@@ -395,6 +415,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceCollaborationRoute: WorkspaceCollaborationRoute,
   WorkspaceDataRoute: WorkspaceDataRoute,
   WorkspaceDiscoveryRoute: WorkspaceDiscoveryRoute,
+  WorkspaceExportRoute: WorkspaceExportRoute,
   WorkspaceInsightsRoute: WorkspaceInsightsRoute,
   WorkspaceMapRoute: WorkspaceMapRoute,
   WorkspaceNewRoute: WorkspaceNewRoute,

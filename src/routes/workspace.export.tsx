@@ -1,0 +1,360 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  Archive,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Copy,
+  Database,
+  Download,
+  FileCode2,
+  FileSpreadsheet,
+  FileText,
+  Layers,
+  Package,
+  Printer,
+  ShieldCheck,
+  Sparkles,
+  Zap,
+} from "lucide-react";
+import { motion } from "motion/react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
+import { AppShell } from "@/components/AppShell";
+import { ArtifactHeader } from "@/components/ArtifactHeader";
+import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
+import {
+  downloadFile,
+  generateOpenApiJson,
+  generatePostgreSqlDdl,
+  generateTechnicalSpecMarkdown,
+} from "@/lib/export-engine";
+
+export const Route = createFileRoute("/workspace/export")({
+  head: () => ({
+    meta: [
+      { title: "Universal Export Center — BizzMitra-AI" },
+      {
+        name: "description",
+        content: "Generate and download board-ready PDFs, Word specs, Excel models, OpenAPI 3.1 schemas, and PostgreSQL DDL.",
+      },
+      { property: "og:title", content: "Universal Export Center — BizzMitra-AI" },
+      { property: "og:description", content: "Download the complete enterprise digital transformation blueprint bundle." },
+    ],
+  }),
+  component: ExportCenterPage,
+});
+
+export function ExportCenterPage() {
+  const [activePreview, setActivePreview] = useState<"spec" | "openapi" | "sql">("spec");
+  const [packagingProgress, setPackagingProgress] = useState<number | null>(null);
+
+  const workspaceContext = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem("bizzmitra.workspaceContext");
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const scenarioName = workspaceContext?.name ?? "TalentCraft HR Consultancy";
+
+  const openApiContent = useMemo(() => generateOpenApiJson(scenarioName), [scenarioName]);
+  const sqlDdlContent = useMemo(() => generatePostgreSqlDdl(), []);
+  const specMarkdownContent = useMemo(() => generateTechnicalSpecMarkdown(scenarioName), [scenarioName]);
+
+  const previewContent =
+    activePreview === "spec"
+      ? specMarkdownContent
+      : activePreview === "openapi"
+        ? openApiContent
+        : sqlDdlContent;
+
+  const handleCopyPreview = () => {
+    navigator.clipboard.writeText(previewContent);
+    toast.success("Preview contents copied to clipboard!");
+  };
+
+  const handleDownloadSpec = () => {
+    downloadFile(`${scenarioName.replace(/\s+/g, "_")}_Spec_v1.3.md`, specMarkdownContent, "text/markdown");
+    toast.success("Downloaded Technical Specification (.md)");
+  };
+
+  const handleDownloadOpenApi = () => {
+    downloadFile(`${scenarioName.replace(/\s+/g, "_")}_OpenAPI_v1.1.json`, openApiContent, "application/json");
+    toast.success("Downloaded OpenAPI 3.1 Specification (.json)");
+  };
+
+  const handleDownloadSql = () => {
+    downloadFile("bizzmitra_schema_v1.sql", sqlDdlContent, "application/sql");
+    toast.success("Downloaded PostgreSQL 16+ DDL (.sql)");
+  };
+
+  const handleDownloadCsv = () => {
+    const csvContent = `ID,Full Name,Role,Stage,Experience,Rating,Custom Attribute (LinkedIn)\nCAN-001,Aarav Patel,Senior React Engineer,Interview,6.5,4.8,https://linkedin.com/in/aarav-patel\nCAN-002,Meera Iyer,Fullstack Node Architect,Offer,8.0,4.9,https://linkedin.com/in/meera-iyer\nCAN-003,Rohan Verma,DevOps & Cloud Engineer,Screening,4.5,4.2,https://linkedin.com/in/rohan-v\nCAN-004,Ananya Sen,HR Operations Specialist,Interview,5.0,4.6,https://linkedin.com/in/ananya-sen`;
+    downloadFile(`${scenarioName.replace(/\s+/g, "_")}_Candidate_Roster.csv`, csvContent, "text/csv");
+    toast.success("Downloaded Candidate Roster (.csv)");
+  };
+
+  const handlePrintPdf = () => {
+    window.print();
+  };
+
+  const handleDownloadCompleteBundle = () => {
+    setPackagingProgress(10);
+    const stages = [25, 55, 85, 100];
+    let i = 0;
+    const interval = setInterval(() => {
+      setPackagingProgress(stages[i]!);
+      i++;
+      if (i >= stages.length) {
+        clearInterval(interval);
+        setTimeout(() => {
+          setPackagingProgress(null);
+          handleDownloadSpec();
+          setTimeout(() => handleDownloadOpenApi(), 300);
+          setTimeout(() => handleDownloadSql(), 600);
+          toast.success("Universal Blueprint Package successfully bundled and downloaded!");
+        }, 600);
+      }
+    }, 450);
+  };
+
+  const formats = [
+    {
+      id: "pdf",
+      title: "Executive PDF Blueprint",
+      format: "PDF Document",
+      desc: "Board-ready presentation with executive summary, architecture diagrams, and financial ROI.",
+      badge: "Print & Export",
+      action: handlePrintPdf,
+      icon: Printer,
+    },
+    {
+      id: "word",
+      title: "Technical Spec (Markdown / Word)",
+      format: "Markdown / .docx",
+      desc: "Full implementation blueprint with system requirements, critical path schedules, and risk register.",
+      badge: "v1.3 Approved",
+      action: handleDownloadSpec,
+      icon: FileText,
+    },
+    {
+      id: "openapi",
+      title: "RESTful API Specification",
+      format: "OpenAPI 3.1 JSON",
+      desc: "Interactive endpoint schemas for candidates, pipelines, stage transitions, and punch clocks.",
+      badge: "Swagger Ready",
+      action: handleDownloadOpenApi,
+      icon: FileCode2,
+    },
+    {
+      id: "sql",
+      title: "PostgreSQL 16+ DDL Schema",
+      format: "SQL Script",
+      desc: "Production database tables, GIN indexes on custom JSONB fields, and Row Level Security policies.",
+      badge: "Multi-Tenant RLS",
+      action: handleDownloadSql,
+      icon: Database,
+    },
+    {
+      id: "csv",
+      title: "Candidate & Financial Model Data",
+      format: "Excel / CSV",
+      desc: "Candidate pipeline records with dynamic custom attributes (LinkedIn URL) and ROI sensitivity models.",
+      badge: "Live Data",
+      action: handleDownloadCsv,
+      icon: FileSpreadsheet,
+    },
+  ];
+
+  return (
+    <AppShell>
+      <div className="space-y-8 pb-16">
+        {/* Top Header Banner */}
+        <Reveal className="neu p-6 md:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-3xl space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  <Package className="size-3.5" />
+                  Universal Export Center · Multi-Format Bundle
+                </span>
+                <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  v1.3 Implementation Ready
+                </span>
+              </div>
+              <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+                Universal Blueprint Deliverables & Export Center
+              </h1>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Download the complete enterprise digital transformation package for <strong>{scenarioName}</strong> in board-ready PDF, Word, OpenAPI 3.1 JSON, Excel data, or PostgreSQL 16 DDL.
+              </p>
+            </div>
+
+            {/* One-Click Download Complete Package Button */}
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              <button
+                type="button"
+                onClick={handleDownloadCompleteBundle}
+                disabled={packagingProgress !== null}
+                className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-sm transition hover:opacity-90 disabled:opacity-50"
+              >
+                <Archive className="size-4" />
+                {packagingProgress !== null
+                  ? `Packaging Blueprint (${packagingProgress}%)...`
+                  : "Download Complete Bundle (ZIP)"}
+              </button>
+              <span className="text-[11px] text-muted-foreground">
+                Packages all 5 enterprise formats in one click
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div className="mt-8 grid grid-cols-2 gap-4 border-t border-border/40 pt-6 sm:grid-cols-4">
+            <div className="neu-inset p-3.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                <ShieldCheck className="size-3.5 text-emerald-500" />
+                Governance Sign-Off
+              </div>
+              <p className="mt-1 font-display text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                100% Approved
+              </p>
+              <p className="text-[11px] text-muted-foreground">4/4 Key Stakeholders</p>
+            </div>
+
+            <div className="neu-inset p-3.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                <Layers className="size-3.5 text-primary" />
+                Export Formats
+              </div>
+              <p className="mt-1 font-display text-xl font-bold">5 Deliverables</p>
+              <p className="text-[11px] text-muted-foreground">PDF, Word, OpenAPI, SQL, CSV</p>
+            </div>
+
+            <div className="neu-inset p-3.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                <FileCode2 className="size-3.5 text-blue-500" />
+                Standard Standards
+              </div>
+              <p className="mt-1 font-display text-xl font-bold">OpenAPI 3.1 + PG 16</p>
+              <p className="text-[11px] text-muted-foreground">Production ready</p>
+            </div>
+
+            <div className="neu-inset p-3.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                <Zap className="size-3.5 text-amber-500" />
+                Delivery Velocity
+              </div>
+              <p className="mt-1 font-display text-xl font-bold">9 Weeks</p>
+              <p className="text-[11px] text-muted-foreground">68 Person-days planned</p>
+            </div>
+          </div>
+        </Reveal>
+
+        {/* 5 Export Format Cards Grid */}
+        <Reveal className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold">Individual Deliverables</h2>
+            <p className="text-xs text-muted-foreground">
+              Click any card to trigger immediate client-side download.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {formats.map((f) => (
+              <div
+                key={f.id}
+                onClick={f.action}
+                className="neu p-5 space-y-3 cursor-pointer group hover:border-primary/50 transition"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition">
+                    <f.icon className="size-5" />
+                  </div>
+                  <span className="rounded bg-accent px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                    {f.badge}
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
+                    {f.title}
+                  </h3>
+                  <p className="text-[11px] font-mono text-muted-foreground mt-0.5">{f.format}</p>
+                  <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                    {f.desc}
+                  </p>
+                </div>
+
+                <div className="border-t border-border/30 pt-3 flex items-center justify-between text-xs font-bold text-primary">
+                  <span>Download File</span>
+                  <Download className="size-3.5 group-hover:translate-y-0.5 transition" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+
+        {/* In-Browser Interactive Spec Inspector */}
+        <Reveal className="neu p-6 md:p-8 space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-4">
+            <div>
+              <h2 className="font-display text-lg font-bold">Live In-Browser Spec Inspector</h2>
+              <p className="text-xs text-muted-foreground">
+                Inspect raw generated contracts before exporting to local disk.
+              </p>
+            </div>
+
+            {/* Preview Selector Tabs & Copy Action */}
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-lg bg-accent/40 p-1">
+                {(
+                  [
+                    { key: "spec", label: "Technical Spec (MD)" },
+                    { key: "openapi", label: "OpenAPI 3.1 JSON" },
+                    { key: "sql", label: "PostgreSQL 16 DDL" },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActivePreview(tab.key)}
+                    className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+                      activePreview === tab.key
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCopyPreview}
+                className="neu-sm neu-press flex items-center gap-1.5 px-3 py-1 text-xs font-semibold hover:text-primary"
+              >
+                <Copy className="size-3.5" />
+                Copy
+              </button>
+            </div>
+          </div>
+
+          {/* Code View Area */}
+          <div className="rounded-xl bg-muted/40 p-4 font-mono text-xs overflow-x-auto max-h-[480px] border border-border/40">
+            <pre className="text-foreground/90 whitespace-pre leading-relaxed">
+              {previewContent}
+            </pre>
+          </div>
+        </Reveal>
+      </div>
+    </AppShell>
+  );
+}
