@@ -1,11 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { ArrowLeft, ArrowRight, Download, GitBranch, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { ExportModal } from "@/components/ExportModal";
 import { VersionControlDrawer } from "@/components/VersionControlDrawer";
 import { cn } from "@/lib/utils";
+import { ROLE_DEFINITIONS, UserRole, loadCurrentRole } from "@/lib/admin-rbac-data";
 
 export const CHAIN = [
   { id: "intake", label: "Intake", to: "/workspace/new" },
@@ -35,14 +37,39 @@ export function ArtifactHeader({
   const [exporting, setExporting] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [versionDrawerOpen, setVersionDrawerOpen] = useState(false);
+  const [role, setRole] = useState<UserRole>("admin");
+
+  useEffect(() => {
+    setRole(loadCurrentRole());
+    const onRoleChange = (e: Event) => {
+      const ce = e as CustomEvent<UserRole>;
+      setRole(ce.detail || loadCurrentRole());
+    };
+    window.addEventListener("bizzmitra:role-changed", onRoleChange);
+    return () => window.removeEventListener("bizzmitra:role-changed", onRoleChange);
+  }, []);
+
+  const permissions = ROLE_DEFINITIONS[role]?.permissions || ROLE_DEFINITIONS.admin.permissions;
   const idx = CHAIN.findIndex((c) => c.id === id);
   const prev = CHAIN[idx - 1];
   const next = CHAIN[idx + 1];
 
   function regen() {
+    if (!permissions.canRegenerateAI) {
+      toast.error(`Your role (${ROLE_DEFINITIONS[role].badge}) cannot trigger AI blueprint regeneration.`);
+      return;
+    }
     setRegenerating(true);
     onRegenerate?.();
     setTimeout(() => setRegenerating(false), 2200);
+  }
+
+  function handleExportClick() {
+    if (!permissions.canExportDeliverables) {
+      toast.error(`Your role (${ROLE_DEFINITIONS[role].badge}) has read-only access. Export is disabled.`);
+      return;
+    }
+    setExporting(true);
   }
 
   return (
@@ -88,7 +115,12 @@ export function ArtifactHeader({
           </button>
           <button
             onClick={regen}
-            className="neu-sm neu-press flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium"
+            disabled={!permissions.canRegenerateAI}
+            title={!permissions.canRegenerateAI ? `Disabled for role: ${role}` : "Trigger AI regeneration"}
+            className={cn(
+              "neu-sm neu-press flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium",
+              !permissions.canRegenerateAI && "opacity-50 cursor-not-allowed",
+            )}
           >
             <motion.span
               animate={regenerating ? { rotate: 360 } : { rotate: 0 }}
@@ -99,8 +131,13 @@ export function ArtifactHeader({
             {regenerating ? "Regenerating" : "Regenerate"}
           </button>
           <button
-            onClick={() => setExporting(true)}
-            className="neu-press flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2.5 text-sm font-semibold text-primary-foreground"
+            onClick={handleExportClick}
+            disabled={!permissions.canExportDeliverables}
+            title={!permissions.canExportDeliverables ? `Disabled for role: ${role}` : "Export artifact deliverables"}
+            className={cn(
+              "neu-press flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2.5 text-sm font-semibold text-primary-foreground",
+              !permissions.canExportDeliverables && "opacity-50 cursor-not-allowed",
+            )}
           >
             <Download className="size-4" />
             Export
