@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Activity,
@@ -23,7 +23,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
@@ -71,6 +71,26 @@ function ArchitecturePage() {
   const [tab, setTab] = useState<"hld" | "lld" | "components" | "sla">("hld");
   const [selectedComponent, setSelectedComponent] = useState<ArchitectureComponent | null>(null);
   const [copied, setCopied] = useState(false);
+  const [workspaceContext, setWorkspaceContext] = useState<{
+    businessName: string;
+    industry: string;
+  }>({
+    businessName: "TalentCraft HR Consultancy",
+    industry: "HR & Recruitment Services",
+  });
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setWorkspaceContext({
+          businessName: parsed.businessName || "TalentCraft HR Consultancy",
+          industry: parsed.industry || "HR & Recruitment Services",
+        });
+      }
+    } catch {}
+  }, []);
 
   const activeDiagram = tab === "hld" ? ENHANCED_HLD_DIAGRAM : ENHANCED_LLD_DIAGRAM;
 
@@ -84,6 +104,21 @@ function ArchitecturePage() {
   return (
     <AppShell>
       <ArtifactHeader id="architecture" kicker="Step 04" title="Technical Architecture" />
+
+      {/* Blueprint Context Banner */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          <span className="text-muted-foreground">Tailored Architecture For:</span>
+          <span className="font-bold text-foreground">{workspaceContext.businessName}</span>
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+            {workspaceContext.industry}
+          </span>
+        </div>
+        <Link to="/workspace/solution" className="font-medium text-primary hover:underline">
+          Connected to Solution Stack →
+        </Link>
+      </div>
 
       <GenerationSequence
         steps={GENERATION_STEPS.architecture}

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Activity,
   AlertTriangle,
@@ -53,6 +53,26 @@ type DiffViewMode = "split" | "before" | "after";
 function ProcessPage() {
   const [activeTab, setActiveTab] = useState<TabView>("comparison");
   const [diffMode, setDiffMode] = useState<DiffViewMode>("split");
+  const [workspaceContext, setWorkspaceContext] = useState<{
+    businessName: string;
+    industry: string;
+  }>({
+    businessName: "TalentCraft HR Consultancy",
+    industry: "HR & Recruitment Services",
+  });
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setWorkspaceContext({
+          businessName: parsed.businessName || "TalentCraft HR Consultancy",
+          industry: parsed.industry || "HR & Recruitment Services",
+        });
+      }
+    } catch {}
+  }, []);
 
   const getMetricIcon = (icon: string) => {
     switch (icon) {
@@ -72,6 +92,21 @@ function ProcessPage() {
   return (
     <AppShell>
       <ArtifactHeader id="process" kicker="Step 05" title="Process Intelligence & BPMN Engine" />
+
+      {/* Blueprint Context Banner */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          <span className="text-muted-foreground">Process Modeling Context:</span>
+          <span className="font-bold text-foreground">{workspaceContext.businessName}</span>
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+            {workspaceContext.industry}
+          </span>
+        </div>
+        <Link to="/workspace/architecture" className="font-medium text-primary hover:underline">
+          View Technical Architecture →
+        </Link>
+      </div>
 
       <GenerationSequence steps={GENERATION_STEPS.process} run={() => generateArtifact("process")}>
         <Stagger className="space-y-6">
