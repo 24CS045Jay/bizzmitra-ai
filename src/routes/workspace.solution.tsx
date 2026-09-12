@@ -1,5 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Check, Sparkles, X } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ArrowRight,
+  BarChart3,
+  Building2,
+  Check,
+  Clock,
+  Sparkles,
+  Users,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/AppShell";
@@ -10,7 +19,9 @@ import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import {
   getActiveProblemFraming,
   getActiveSolution,
+  HR_BUILD_BUY_MATRIX,
   HR_CONSULTANCY_PROBLEM,
+  HR_SOLUTION_MODULES,
 } from "@/lib/demo-data";
 
 export const Route = createFileRoute("/workspace/solution")({
@@ -28,6 +39,20 @@ export const Route = createFileRoute("/workspace/solution")({
   }),
   component: SolutionPage,
 });
+
+const MODULE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  Users,
+  Building2,
+  Clock,
+  BarChart3,
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  Core: "bg-primary text-primary-foreground",
+  Recommended: "bg-sage text-sage-foreground",
+  Optional: "bg-muted text-muted-foreground",
+  Planned: "bg-accent text-accent-foreground",
+};
 
 function SolutionPage() {
   const [problemText, setProblemText] = useState(HR_CONSULTANCY_PROBLEM);
@@ -121,6 +146,152 @@ function SolutionPage() {
                   <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{p.detail}</p>
                 </div>
               ))}
+            </div>
+          </StaggerItem>
+
+          {/* ═══ Day 3: 4-Module Recommendation Grid ═══ */}
+          <StaggerItem className="neu p-6">
+            <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+              <Sparkles className="size-3.5" />
+              <span>Recommended Solution Modules</span>
+            </div>
+            <h2 className="mt-1.5 font-display text-xl font-extrabold">
+              4-Module Delivery Blueprint
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              Each module is independently deployable. Core modules ship in the MVP phase;
+              Recommended and Planned modules follow in subsequent sprints.
+            </p>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              {HR_SOLUTION_MODULES.map((mod) => {
+                const Icon = MODULE_ICONS[mod.icon] || Users;
+                return (
+                  <div
+                    key={mod.key}
+                    className="neu-inset p-4 flex flex-col gap-3 transition-all hover:scale-[1.01]"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                          <Icon className="size-4.5" />
+                        </span>
+                        <div>
+                          <p className="text-sm font-bold leading-tight">{mod.name}</p>
+                          <span
+                            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_COLORS[mod.status]}`}
+                          >
+                            {mod.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {mod.description}
+                    </p>
+                    <ul className="mt-auto space-y-1.5">
+                      {mod.features.map((f) => (
+                        <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
+                          <Check className="mt-0.5 size-3 shrink-0 text-sage" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* CRM CTA */}
+            <div className="mt-6 flex justify-center">
+              <Link
+                to="/workspace/solution/crm"
+                className="neu-press inline-flex items-center gap-2.5 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02]"
+              >
+                Explore Interactive HR CRM
+                <ArrowRight className="size-4" />
+              </Link>
+            </div>
+          </StaggerItem>
+
+          {/* ═══ Day 3: Build vs. Buy vs. Hybrid Decision Matrix ═══ */}
+          <StaggerItem className="neu p-6">
+            <h3 className="font-display text-base font-bold">
+              Build vs. Buy vs. Hybrid — Decision Matrix
+            </h3>
+            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+              Each dimension is scored 1–5. Higher is better for your agency context.
+            </p>
+            <div className="mt-4 space-y-4">
+              {HR_BUILD_BUY_MATRIX.map((row) => {
+                const isRec = row.verdict === "Recommended";
+                const isViable = row.verdict === "Viable";
+                return (
+                  <div
+                    key={row.option}
+                    className={`neu-inset px-4 py-4 ${isRec ? "ring-2 ring-primary/30" : ""}`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className={`grid size-5 shrink-0 place-items-center rounded-full ${
+                          isRec
+                            ? "bg-sage text-sage-foreground"
+                            : isViable
+                              ? "bg-accent text-accent-foreground"
+                              : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {isRec ? <Check className="size-3" /> : <X className="size-3" />}
+                      </span>
+                      <p className="text-sm font-bold">{row.option}</p>
+                      <span
+                        className={`ml-auto neu-sm px-2 py-0.5 text-[10px] font-bold ${
+                          isRec
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : isViable
+                              ? "text-amber-600 dark:text-amber-400"
+                              : "text-muted-foreground"
+                        }`}
+                      >
+                        {row.verdict}
+                      </span>
+                    </div>
+
+                    {/* Score bars */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                      {(
+                        [
+                          ["Cost Efficiency", row.cost],
+                          ["Delivery Speed", row.speed],
+                          ["Control", row.control],
+                          ["Agency Fit", row.fit],
+                        ] as [string, number][]
+                      ).map(([label, score]) => (
+                        <div key={label}>
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                            {label}
+                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex-1 h-2 rounded-full bg-border/60 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${
+                                  isRec ? "bg-primary" : isViable ? "bg-amber-400" : "bg-muted-foreground/40"
+                                }`}
+                                style={{ width: `${(score / 5) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-bold tabular-nums">{score}/5</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
+                      {row.rationale}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </StaggerItem>
 

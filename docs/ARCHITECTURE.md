@@ -70,3 +70,18 @@
 - Separates frontend UI from LLM/generation logic.
 - Currently serves high-fidelity seed payloads with simulated delay and step transitions, ready for zero-downtime LLM provider swap.
 
+### 5. Interactive HR CRM Module (Day 3 — USP #1)
+- **Route**: `/workspace/solution/crm` (`src/routes/workspace.solution.crm.tsx`)
+- **Candidate Pipeline Engine**: React state-managed CRUD table with 15 seed records. Pipeline stages (Screening → Interview → Offer → Rejected) rendered as animated tabbed filters with count badges.
+- **Search & Filter**: Full-text search across name/role/email fields, multi-filter panel with status dropdown and experience range sliders.
+- **Add Candidate Modal**: Form-based candidate entry with validation, immediately appends to live pipeline state.
+- **CSV Export**: Client-side CSV generation via `Blob` API — exports the currently filtered candidate roster as a timestamped `.csv` file.
+- **Attendance Punch Clock**: Punch-in/out toggle with live elapsed timer (`setInterval`-based), punch log history table, and automatic hours calculation.
+- **Data Layer**: All CRM state is managed in-memory via React `useState` hooks. Types (`CRMCandidate`, `AttendanceEntry`) and seed data live in `src/lib/demo-data.ts`.
+
+### 6. Solution Builder Module (Day 3)
+- **Route**: `/workspace/solution` (`src/routes/workspace.solution.tsx`)
+- **4-Module Recommendation Grid**: Core ATS, Client Portal, Smart Attendance, Analytics Engine — each with icon, status badge, description, and feature checklist.
+- **Build vs. Buy vs. Hybrid Decision Matrix**: Multi-dimensional scoring (Cost, Speed, Control, Fit) with visual bar indicators and verdict badges.
+- **Navigation Chain**: Breadcrumb chain updated in `ArtifactHeader.tsx` to include CRM step. Sidebar nav updated in `AppShell.tsx`.
+

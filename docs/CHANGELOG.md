@@ -4,6 +4,34 @@ All notable changes across the 8-day engineering sprint will be documented in th
 
 ---
 
+## [Day 3] - 2026-09-12: Solution Builder & Workable HR CRM (USP #1)
+
+### Added
+- **Solution Builder Enhancements** (`src/routes/workspace.solution.tsx`):
+  - 4-module recommendation grid: Core ATS, Client Onboarding Portal, Smart Attendance Tracker, Analytics & Reporting Engine.
+  - Each module card displays icon, description, status badge (Core/Recommended/Planned), and feature checklist.
+  - **Build vs. Buy vs. Hybrid Decision Matrix** with visual score bars (Cost Efficiency, Delivery Speed, Control, Agency Fit) scored 1–5.
+  - CTA button linking to the interactive HR CRM page.
+- **USP #1: Interactive Workable HR CRM** (`src/routes/workspace.solution.crm.tsx`):
+  - Candidate Pipeline Data Table with 15 realistic talent records (Name, Email, Role, Experience, Stage, Rating, Status, Applied Date, Notes).
+  - Pipeline Stage Tabs: All / Screening / Interview / Offer / Rejected with animated count badges and spring-animated active pill.
+  - Full-text search bar across name, role, and email fields.
+  - Multi-filter panel with Status dropdown, Experience range (min/max) inputs, and "Reset all" button.
+  - **Add Candidate Modal**: Form with Name, Email, Role, Experience, Stage, Notes — validates required fields, appends to live table state.
+  - **CSV Export**: One-click download of the filtered candidate roster as timestamped `.csv` file.
+  - **Attendance Punch Clock**: Punch-in/out toggle button, live session timer (HH:MM:SS), and historical punch log table with 7 seed entries.
+- **Navigation Wiring**:
+  - Added "HR CRM" entry to sidebar navigation in `AppShell.tsx` with `Users` icon.
+  - Added "HR CRM" step to artifact breadcrumb chain in `ArtifactHeader.tsx` between Solution and Architecture.
+- **Seed Data** (`src/lib/demo-data.ts`):
+  - `HR_SOLUTION_MODULES` — 4 solution module definitions with features.
+  - `HR_BUILD_BUY_MATRIX` — 3 decision matrix options with multi-dimensional scores.
+  - `HR_CRM_CANDIDATES` — 15 realistic candidate pipeline records.
+  - `HR_ATTENDANCE_LOG` — 7 sample attendance punch entries.
+  - TypeScript types: `SolutionModule`, `BuildBuyOption`, `CRMCandidate`, `AttendanceEntry`.
+
+---
+
 ## [Day 2] - 2026-09-11: AI Business Consultant & Discovery Engine
 
 ### Added

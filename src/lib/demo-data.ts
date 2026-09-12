@@ -1021,3 +1021,170 @@ export const INTAKE_LANGUAGES = {
 } as const;
 
 export type SupportedLanguage = keyof typeof INTAKE_LANGUAGES;
+
+/* ─── Day 3: Solution Builder — Module Recommendations ────────────────────── */
+
+export type SolutionModule = {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;          // lucide icon name
+  status: "Core" | "Recommended" | "Optional" | "Planned";
+  features: string[];
+};
+
+export const HR_SOLUTION_MODULES: SolutionModule[] = [
+  {
+    key: "ats",
+    name: "Core ATS (Applicant Tracking)",
+    description:
+      "Unified candidate pipeline with drag-and-drop stage movement, instant resume search, and automated stage transition alerts.",
+    icon: "Users",
+    status: "Core",
+    features: [
+      "Candidate data table with search & multi-filter",
+      "Pipeline stage tabs (Screening → Interview → Offer → Rejected)",
+      "Add / edit / archive candidate records",
+      "CSV / Excel export of active roster",
+    ],
+  },
+  {
+    key: "client-portal",
+    name: "Client Onboarding Portal",
+    description:
+      "Self-serve dashboard where corporate clients upload NDA/MSA documents, review candidate shortlists, and approve interview schedules.",
+    icon: "Building2",
+    status: "Recommended",
+    features: [
+      "Digital document upload & status tracker",
+      "Candidate shortlist review with accept / reject",
+      "Rate card and contract management",
+      "Real-time hiring SLA visibility",
+    ],
+  },
+  {
+    key: "attendance",
+    name: "Smart Attendance Tracker",
+    description:
+      "Digital web clock-in/out for consultants with punch logs, daily hours calculation, leave approval workflows, and monthly timesheet export.",
+    icon: "Clock",
+    status: "Core",
+    features: [
+      "One-click punch-in / punch-out",
+      "Live session timer display",
+      "Daily / weekly / monthly punch log history",
+      "Leave request & approval workflow",
+    ],
+  },
+  {
+    key: "analytics",
+    name: "Analytics & Reporting Engine",
+    description:
+      "Executive dashboard with placement velocity, recruiter productivity, client SLA compliance, and revenue-per-placement KPIs.",
+    icon: "BarChart3",
+    status: "Planned",
+    features: [
+      "Placement funnel conversion rates",
+      "Recruiter activity & productivity scores",
+      "Client SLA compliance heatmap",
+      "Monthly revenue & placement trend charts",
+    ],
+  },
+];
+
+export type BuildBuyOption = {
+  option: string;
+  cost: number;       // 1-5 score
+  speed: number;      // 1-5 score
+  control: number;    // 1-5 score
+  fit: number;        // 1-5 score
+  verdict: "Recommended" | "Viable" | "Rejected";
+  rationale: string;
+};
+
+export const HR_BUILD_BUY_MATRIX: BuildBuyOption[] = [
+  {
+    option: "Build Custom (Recommended)",
+    cost: 3,
+    speed: 3,
+    control: 5,
+    fit: 5,
+    verdict: "Recommended",
+    rationale:
+      "Directly addresses boutique agency workflows — candidate pipeline, attendance, and client portal — within a 6-week delivery window. Full control over candidate PII and data residency.",
+  },
+  {
+    option: "Buy Off-the-Shelf (Workday / Bullhorn)",
+    cost: 1,
+    speed: 2,
+    control: 2,
+    fit: 2,
+    verdict: "Rejected",
+    rationale:
+      "Enterprise ATS pricing (₹25L+ annual) with a 4-month implementation cycle. Rigid workflows incompatible with an 8-person boutique agency.",
+  },
+  {
+    option: "Hybrid (Open-Source ATS + Custom Modules)",
+    cost: 4,
+    speed: 4,
+    control: 3,
+    fit: 3,
+    verdict: "Viable",
+    rationale:
+      "Faster time-to-market using open-source ATS core, but requires significant customisation for attendance, client portal, and AI screening. Vendor lock-in risk on the open-source project.",
+  },
+];
+
+/* ─── Day 3: Workable HR CRM — Candidate Pipeline Data ───────────────────── */
+
+export type CRMCandidate = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  experience: number;   // years
+  stage: "Screening" | "Interview" | "Offer" | "Rejected";
+  rating: number;        // 1-5
+  status: "Active" | "On Hold" | "Hired" | "Withdrawn";
+  appliedDate: string;   // ISO date string
+  notes: string;
+};
+
+export const HR_CRM_CANDIDATES: CRMCandidate[] = [
+  { id: "c001", name: "Priya Sharma", email: "priya.sharma@mail.com", role: "Senior Java Developer", experience: 7, stage: "Interview", rating: 4, status: "Active", appliedDate: "2026-09-01", notes: "Strong Spring Boot experience. Cleared round 1." },
+  { id: "c002", name: "Rahul Verma", email: "rahul.v@mail.com", role: "React Frontend Engineer", experience: 4, stage: "Screening", rating: 3, status: "Active", appliedDate: "2026-09-03", notes: "Portfolio looks promising. Needs technical assessment." },
+  { id: "c003", name: "Ananya Desai", email: "ananya.d@mail.com", role: "Product Manager", experience: 6, stage: "Offer", rating: 5, status: "Active", appliedDate: "2026-08-25", notes: "Exceptional PM skills. Client approved. Offer at ₹18L CTC." },
+  { id: "c004", name: "Vikram Patel", email: "vikram.p@mail.com", role: "DevOps Engineer", experience: 5, stage: "Interview", rating: 4, status: "Active", appliedDate: "2026-09-02", notes: "Strong AWS + Kubernetes. Round 2 scheduled." },
+  { id: "c005", name: "Meera Krishnan", email: "meera.k@mail.com", role: "Data Analyst", experience: 3, stage: "Screening", rating: 3, status: "Active", appliedDate: "2026-09-05", notes: "Good SQL and Tableau skills. Entry-level position." },
+  { id: "c006", name: "Arjun Nair", email: "arjun.n@mail.com", role: "Senior Java Developer", experience: 9, stage: "Rejected", rating: 2, status: "Withdrawn", appliedDate: "2026-08-20", notes: "Withdrawn after receiving competing offer." },
+  { id: "c007", name: "Sneha Gupta", email: "sneha.g@mail.com", role: "QA Lead", experience: 8, stage: "Offer", rating: 5, status: "Active", appliedDate: "2026-08-28", notes: "Excellent automation expertise. Final negotiation stage." },
+  { id: "c008", name: "Karthik Rajan", email: "karthik.r@mail.com", role: "Full Stack Developer", experience: 3, stage: "Interview", rating: 3, status: "Active", appliedDate: "2026-09-04", notes: "MERN stack. Cleared coding round, HR interview pending." },
+  { id: "c009", name: "Divya Iyer", email: "divya.i@mail.com", role: "UI/UX Designer", experience: 5, stage: "Screening", rating: 4, status: "Active", appliedDate: "2026-09-06", notes: "Strong Figma portfolio. Scheduled initial screen." },
+  { id: "c010", name: "Rohit Saxena", email: "rohit.s@mail.com", role: "Backend Engineer (Node.js)", experience: 4, stage: "Rejected", rating: 2, status: "Active", appliedDate: "2026-08-22", notes: "Did not clear system design round. May re-apply in 6 months." },
+  { id: "c011", name: "Isha Malhotra", email: "isha.m@mail.com", role: "HR Business Partner", experience: 6, stage: "Interview", rating: 4, status: "On Hold", appliedDate: "2026-09-01", notes: "Client budget approval pending. Strong HRBP background." },
+  { id: "c012", name: "Aditya Joshi", email: "aditya.j@mail.com", role: "Cloud Architect", experience: 10, stage: "Offer", rating: 5, status: "Active", appliedDate: "2026-08-18", notes: "AWS Solutions Architect Pro certified. Negotiating ₹35L package." },
+  { id: "c013", name: "Nandini Rao", email: "nandini.r@mail.com", role: "React Frontend Engineer", experience: 2, stage: "Screening", rating: 3, status: "Active", appliedDate: "2026-09-07", notes: "Fresh bootcamp grad with good project work. Junior position." },
+  { id: "c014", name: "Siddharth Menon", email: "sid.m@mail.com", role: "Technical Lead", experience: 12, stage: "Interview", rating: 5, status: "Active", appliedDate: "2026-08-30", notes: "Lead architect at previous company. Final panel interview next week." },
+  { id: "c015", name: "Lakshmi Venkat", email: "lakshmi.v@mail.com", role: "Data Analyst", experience: 4, stage: "Rejected", rating: 3, status: "Active", appliedDate: "2026-08-24", notes: "Good skills but lacked domain-specific experience for client requirement." },
+];
+
+/* ─── Day 3: Attendance Punch Clock — Sample Log Data ─────────────────────── */
+
+export type AttendanceEntry = {
+  id: string;
+  date: string;
+  punchIn: string;     // HH:mm format
+  punchOut: string;    // HH:mm format or "" if still clocked in
+  hoursWorked: string; // e.g. "8h 15m"
+  consultant: string;
+};
+
+export const HR_ATTENDANCE_LOG: AttendanceEntry[] = [
+  { id: "a001", date: "2026-09-11", punchIn: "09:02", punchOut: "18:15", hoursWorked: "9h 13m", consultant: "You" },
+  { id: "a002", date: "2026-09-10", punchIn: "09:10", punchOut: "17:45", hoursWorked: "8h 35m", consultant: "You" },
+  { id: "a003", date: "2026-09-09", punchIn: "08:55", punchOut: "18:30", hoursWorked: "9h 35m", consultant: "You" },
+  { id: "a004", date: "2026-09-08", punchIn: "09:15", punchOut: "17:30", hoursWorked: "8h 15m", consultant: "You" },
+  { id: "a005", date: "2026-09-07", punchIn: "09:00", punchOut: "18:00", hoursWorked: "9h 00m", consultant: "You" },
+  { id: "a006", date: "2026-09-06", punchIn: "09:30", punchOut: "17:00", hoursWorked: "7h 30m", consultant: "You" },
+  { id: "a007", date: "2026-09-05", punchIn: "08:45", punchOut: "18:10", hoursWorked: "9h 25m", consultant: "You" },
+];
