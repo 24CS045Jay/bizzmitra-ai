@@ -5,10 +5,10 @@ export interface CustomField {
   key: string;
   label: string;
   type: FieldType;
-  placeholder?: string;
-  defaultValue?: string;
-  required?: boolean;
-  options?: string[]; // for select type
+  placeholder?: string | undefined;
+  defaultValue?: string | undefined;
+  required?: boolean | undefined;
+  options?: string[] | undefined; // for select type
 }
 
 export type TableDensity = "compact" | "comfortable" | "spacious";
@@ -131,6 +131,22 @@ export const PREDEFINED_CUSTOM_FIELDS: Omit<CustomField, "id">[] = [
     type: "url",
     placeholder: "https://github.com/...",
     defaultValue: "",
+    required: false,
+  },
+  {
+    key: "currentLocation",
+    label: "Current Location",
+    type: "text",
+    placeholder: "e.g., Ahmedabad, Bengaluru, Remote",
+    defaultValue: "Ahmedabad",
+    required: false,
+  },
+  {
+    key: "highestEducation",
+    label: "Highest Education",
+    type: "text",
+    placeholder: "e.g., B.Tech Computer Engineering",
+    defaultValue: "B.Tech",
     required: false,
   },
 ];
