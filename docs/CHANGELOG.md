@@ -4,6 +4,39 @@ All notable changes across the 8-day engineering sprint will be documented in th
 
 ---
 
+## [Day 4] - 2026-09-12: Live Customizer, Field Builder & AI Regeneration (USP #2)
+
+### Added
+- **USP #2: Solution Studio Slide-Out Drawer** (`src/components/SolutionStudioDrawer.tsx`):
+  - Accessible directly from both the Solution recommendation page (`/workspace/solution`) and the Workable HR CRM (`/workspace/solution/crm`).
+  - Spring-animated slide-out drawer with backdrop blur and tabbed interface: "UI & Theme", "Field Builder", and "Versions".
+  - **Theme Accent Customizer**: Live switcher supporting 6 color palettes (Teal Mint, Electric Indigo, Warm Amber, Rose Quartz, Cyber Violet, Deep Sky).
+  - **Table Layout Density Controls**: Switch between `Compact`, `Comfortable`, and `Spacious` row heights.
+  - **Layout Preferences**: Zebra row striping toggle and soft neumorphic depth toggle.
+  - **Column Visibility Checklist**: Toggle standard columns (Role, Experience, Stage, Rating, Status, Applied, Notes) in real time.
+- **Field Builder & Dynamic Schema Engine** (`src/components/SolutionStudioDrawer.tsx`, `src/lib/solution-studio.ts`):
+  - Custom attribute creation form: Label, Key (auto-slugified camelCase), Type (`text`, `number`, `url`, `select`, `date`), Placeholder, Default Value, and Required toggle.
+  - **Quick-Add Presets**: One-click chip addition for common recruitment attributes (`LinkedIn URL`, `Notice Period`, `Expected CTC`, `Portfolio / GitHub`, `Current Location`, `Highest Education`).
+  - **Active Custom Fields Manager**: Delete, inspect, and preview active schema fields.
+  - **Schema Statistics Bar**: Live tally of standard fields (8), custom attributes (N), and total schema count (8 + N).
+- **AI Regeneration Engine** (`src/components/AIRegenerationModal.tsx`):
+  - Multi-step animated progress overlay simulating real-time schema synthesis:
+    1. *"Analyzing updated schema & field constraints…"*
+    2. *"Adjusting data pipeline & type definitions…"*
+    3. *"Rebuilding CRM views & dynamic table columns…"*
+    4. *"Applying theme accent & layout density…"*
+  - Solution version incrementing (`v1.0` → `v1.1` → `v1.2` etc.) with automated changelog generation and timestamped version history.
+  - Broadcast event dispatcher (`bizzmitra:studio-updated`) syncing all workspace views instantly without page reloads.
+- **Dynamic CRM Integration** (`src/routes/workspace.solution.crm.tsx`):
+  - Candidate table dynamically displays new custom attributes as additional columns with type-specific badges and external link handlers.
+  - **Dynamic Add Candidate Modal**: Automatically generates input controls for any active custom schema fields, storing values in `c.customValues`.
+  - **Dynamic CSV Export**: Automatically writes custom column headers and serializes candidate custom attribute values.
+  - Real-time zebra striping and density classes applied to candidate records.
+- **Solution Page Enhancements** (`src/routes/workspace.solution.tsx`):
+  - Solution Studio Trigger Strip displaying active solution version (`v1.0`), custom field count, theme accent, and quick access drawer trigger.
+
+---
+
 ## [Day 3] - 2026-09-12: Solution Builder & Workable HR CRM (USP #1)
 
 ### Added

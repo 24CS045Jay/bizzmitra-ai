@@ -85,3 +85,24 @@
 - **Build vs. Buy vs. Hybrid Decision Matrix**: Multi-dimensional scoring (Cost, Speed, Control, Fit) with visual bar indicators and verdict badges.
 - **Navigation Chain**: Breadcrumb chain updated in `ArtifactHeader.tsx` to include CRM step. Sidebar nav updated in `AppShell.tsx`.
 
+### 7. Solution Studio & Dynamic Schema Customizer (Day 4 — USP #2)
+- **Component**: `src/components/SolutionStudioDrawer.tsx`
+- **State Store**: `src/lib/solution-studio.ts`
+- **Slide-Out Studio Drawer**: Persistent slide-out drawer accessible from both `/workspace/solution` and `/workspace/solution/crm`.
+- **Dynamic Field Builder**: Enables non-technical users to extend candidate schema at runtime by adding custom attributes (e.g. `LinkedIn URL`, `Notice Period`, `Expected CTC`, `Portfolio`). Supports attribute typing (`text`, `number`, `url`, `select`, `date`), auto-slugified keys, placeholders, default values, and required constraints.
+- **UI Customizer**:
+  - Theme accent palette switcher (Teal, Indigo, Amber, Rose, Violet, Cyan).
+  - Table density controller (`compact`, `comfortable`, `spacious`).
+  - Zebra alternating rows and soft neumorphic depth toggles.
+  - Column visibility toggles for both standard columns and custom attributes.
+- **Cross-Component Reactivity**: Broadcasts `bizzmitra:studio-updated` `CustomEvent` alongside `localStorage` synchronization to immediately reconcile views across active routes with zero page reload.
+
+### 8. AI Regeneration Engine (Day 4 — USP #2)
+- **Component**: `src/components/AIRegenerationModal.tsx`
+- **Multi-Step Animated Synthesis Pipeline**:
+  1. *Schema AST Analysis*: Validates custom field types, uniqueness, and constraints.
+  2. *Data Pipeline Adjustment*: Reconciles candidate records and in-memory indices.
+  3. *CRM View Rebuilding*: Re-renders table columns, dynamic forms, and CSV serializers.
+  4. *Theme & Density Synthesis*: Applies neumorphic tokens, color classes, and spacing variables.
+- **Solution Versioning**: Automatically increments version from `v1.0` to `v1.1`, synthesizing changelog summaries and recording timestamped audit history in `StudioVersionEntry`.
+
