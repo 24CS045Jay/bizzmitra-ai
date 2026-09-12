@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as WorkspaceArchitectureRouteImport } from './routes/workspace.architecture'
+import { Route as WorkspaceCollaborationRouteImport } from './routes/workspace.collaboration'
 import { Route as WorkspaceDataRouteImport } from './routes/workspace.data'
 import { Route as WorkspaceDiscoveryRouteImport } from './routes/workspace.discovery'
 import { Route as WorkspaceInsightsRouteImport } from './routes/workspace.insights'
@@ -54,6 +55,11 @@ const SignupRoute = SignupRouteImport.update({
 const WorkspaceArchitectureRoute = WorkspaceArchitectureRouteImport.update({
   id: '/workspace/architecture',
   path: '/workspace/architecture',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceCollaborationRoute = WorkspaceCollaborationRouteImport.update({
+  id: '/workspace/collaboration',
+  path: '/workspace/collaboration',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceDataRoute = WorkspaceDataRouteImport.update({
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/workspace/architecture': typeof WorkspaceArchitectureRoute
+  '/workspace/collaboration': typeof WorkspaceCollaborationRoute
   '/workspace/data': typeof WorkspaceDataRoute
   '/workspace/discovery': typeof WorkspaceDiscoveryRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/workspace/architecture': typeof WorkspaceArchitectureRoute
+  '/workspace/collaboration': typeof WorkspaceCollaborationRoute
   '/workspace/data': typeof WorkspaceDataRoute
   '/workspace/discovery': typeof WorkspaceDiscoveryRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/workspace/architecture': typeof WorkspaceArchitectureRoute
+  '/workspace/collaboration': typeof WorkspaceCollaborationRoute
   '/workspace/data': typeof WorkspaceDataRoute
   '/workspace/discovery': typeof WorkspaceDiscoveryRoute
   '/workspace/insights': typeof WorkspaceInsightsRoute
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/workspace/architecture'
+    | '/workspace/collaboration'
     | '/workspace/data'
     | '/workspace/discovery'
     | '/workspace/insights'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/workspace/architecture'
+    | '/workspace/collaboration'
     | '/workspace/data'
     | '/workspace/discovery'
     | '/workspace/insights'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/workspace/architecture'
+    | '/workspace/collaboration'
     | '/workspace/data'
     | '/workspace/discovery'
     | '/workspace/insights'
@@ -226,6 +238,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   WorkspaceArchitectureRoute: typeof WorkspaceArchitectureRoute
+  WorkspaceCollaborationRoute: typeof WorkspaceCollaborationRoute
   WorkspaceDataRoute: typeof WorkspaceDataRoute
   WorkspaceDiscoveryRoute: typeof WorkspaceDiscoveryRoute
   WorkspaceInsightsRoute: typeof WorkspaceInsightsRoute
@@ -279,6 +292,13 @@ declare module '@tanstack/react-router' {
       path: '/workspace/architecture'
       fullPath: '/workspace/architecture'
       preLoaderRoute: typeof WorkspaceArchitectureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/collaboration': {
+      id: '/workspace/collaboration'
+      path: '/workspace/collaboration'
+      fullPath: '/workspace/collaboration'
+      preLoaderRoute: typeof WorkspaceCollaborationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace/data': {
@@ -372,6 +392,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   WorkspaceArchitectureRoute: WorkspaceArchitectureRoute,
+  WorkspaceCollaborationRoute: WorkspaceCollaborationRoute,
   WorkspaceDataRoute: WorkspaceDataRoute,
   WorkspaceDiscoveryRoute: WorkspaceDiscoveryRoute,
   WorkspaceInsightsRoute: WorkspaceInsightsRoute,
