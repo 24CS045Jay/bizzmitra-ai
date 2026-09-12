@@ -172,4 +172,49 @@ Generative AI frequently hallucinates numbers when tasked with arithmetic. By ke
 ## What I Should Be Able To Explain To A Judge
 > *"We never ask LLMs to generate financial ROI figures. We use deterministic mathematical models where the user adjusts operational variables in real time. This gives enterprise decision-makers transparent, mathematically sound justifications for digital transformation."*
 
+---
+
+# 7. Human-in-the-Loop (HITL) Governance & Stage-Gate AI Workflows
+
+## Simple Definition
+An enterprise AI pattern where automated generative models are bounded by explicit human review, authorization checkpoints, and formal sign-offs before any output can transition into an executable production state.
+
+## How It Works
+Rather than allowing AI outputs to deploy autonomously, the system creates a state machine:
+$$\text{Draft} \longrightarrow \text{Under Review} \longrightarrow \text{Approved for Implementation}$$
+Each state transition requires explicit cryptographic or authenticated signatures from designated domain experts (Solution Architect, Compliance Officer, Operations Lead).
+
+## Where BizzMitra Uses It
+In **Step 11: Governance, Review & Approvals Hub** (`/workspace/collaboration`).
+The 4-tier sign-off matrix tracks reviews across Architecture, HR Operations, Delivery Planning, and DPDP Act legal compliance before approving the transformation blueprint.
+
+## Why We Need It
+Enterprise risk policies strictly prohibit unreviewed AI code or database migrations from reaching production environments. HITL governance provides legal accountability and compliance assurance.
+
+## What I Should Be Able To Explain To A Judge
+> *"BizzMitra-AI is not an autonomous black box. We enforce enterprise Stage-Gate governance. Even after AI synthesizes complete blueprints, four distinct domain leaders must review the visual diffs, resolve in-context comments, and provide formal sign-off before implementation begins."*
+
+---
+
+# 8. Multi-Format Code & Schema Serialization from Unified Business Context
+
+## Simple Definition
+The architectural technique of holding a single, unified business context in memory or database, and running multiple deterministic serializers to output disparate technical artifacts (OpenAPI, SQL, Markdown, CSV) without cross-tool translation loss.
+
+## How It Works
+A central data model encapsulates the entities, attributes, pipeline stages, and security rules. When the user requests deliverables, specialized serializers traverse this abstract syntax tree (AST):
+- **SQL Serializer**: Produces `CREATE TABLE`, `CREATE INDEX`, and PostgreSQL Row Level Security policies.
+- **OpenAPI Serializer**: Produces RESTful endpoints, request/response schemas, and parameter enums.
+- **Documentation Serializer**: Produces structured Markdown/Docx with executive summaries and risk registers.
+
+## Where BizzMitra Uses It
+In **Step 12: Universal Export Center** (`/workspace/export`).
+
+## Why We Need It
+If a company manually transcribes architecture diagrams into OpenAPI specs and database schemas, human error and scope drift inevitably occur. Automated multi-format serialization guarantees that every technical artifact is 100% synchronized with the original business intent.
+
+## What I Should Be Able To Explain To A Judge
+> *"In competitor workflows, you design a database in one tool, write OpenAPI specs in another, and draft requirements in Word. In BizzMitra, everything derives from one unified business context. Our Universal Export Center serializes this single source of truth into OpenAPI 3.1 JSON, PostgreSQL 16 DDL, Word specs, and board-ready PDFs with zero desynchronization."*
+
+
 
