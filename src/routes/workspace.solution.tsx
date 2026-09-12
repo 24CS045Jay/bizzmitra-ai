@@ -74,6 +74,15 @@ function SolutionPage() {
         }
       }
     } catch {}
+
+    const handleStudioUpdate = (e: Event) => {
+      const custom = e as CustomEvent<ReturnType<typeof loadStudioSettings>>;
+      if (custom.detail) {
+        setStudioSettings(custom.detail);
+      }
+    };
+    window.addEventListener("bizzmitra:studio-updated", handleStudioUpdate);
+    return () => window.removeEventListener("bizzmitra:studio-updated", handleStudioUpdate);
   }, []);
 
   const framing = getActiveProblemFraming(problemText);
@@ -97,9 +106,12 @@ function SolutionPage() {
               <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
                 {studioSettings.version}
               </span>
+              <span className="rounded-full bg-sage/15 px-2 py-0.5 text-[10px] font-bold text-sage">
+                {studioSettings.customFields.length} Custom Fields
+              </span>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Customize schema fields, UI layout density, and regenerate CRM views in real time.
+              Live customizer active with {studioSettings.accent} theme accent & {studioSettings.density} density.
             </p>
           </div>
         </div>

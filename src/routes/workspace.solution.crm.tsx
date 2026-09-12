@@ -5,12 +5,14 @@ import {
   ChevronDown,
   Clock,
   Download,
+  ExternalLink,
   Filter,
   Plus,
   Search,
   Sliders,
   Sparkles,
   Star,
+  Tag,
   Timer,
   Users,
   Wand2,
@@ -31,8 +33,10 @@ import {
   type CRMCandidate,
 } from "@/lib/demo-data";
 import {
+  THEME_ACCENTS,
   loadStudioSettings,
   saveStudioSettings,
+  type CustomField,
   type StudioSettings,
 } from "@/lib/solution-studio";
 import { cn } from "@/lib/utils";
@@ -139,21 +143,74 @@ function CRMPage() {
     return counts;
   }, [candidates]);
 
-  // CSV Export
+  // Dynamic Theme and Density styles
+  const activeAccent = useMemo(() => {
+    return THEME_ACCENTS.find((a) => a.id === studioSettings.accent) || THEME_ACCENTS[0];
+  }, [studioSettings.accent]);
+
+  const cellDensityClass = useMemo(() => {
+    switch (studioSettings.density) {
+      case "compact":
+        return "px-3 py-1.5 text-xs";
+      case "spacious":
+        return "px-5 py-3.5 text-sm";
+      default:
+        return "px-4 py-2.5 text-xs";
+    }
+  }, [studioSettings.density]);
+
+  const colSpanCount = useMemo(() => {
+    let count = 1; // Candidate
+    if (studioSettings.visibleStandardColumns.role) count++;
+    if (studioSettings.visibleStandardColumns.experience) count++;
+    if (studioSettings.visibleStandardColumns.stage) count++;
+    if (studioSettings.visibleStandardColumns.rating) count++;
+    if (studioSettings.visibleStandardColumns.status) count++;
+    if (studioSettings.visibleStandardColumns.applied) count++;
+    if (studioSettings.visibleStandardColumns.notes) count++;
+    count += studioSettings.customFields.length;
+    return count;
+  }, [studioSettings.visibleStandardColumns, studioSettings.customFields]);
+
+  // CSV Export with Dynamic Custom Fields
   const exportCSV = useCallback(() => {
-    const headers = ["Name", "Email", "Role", "Experience (yrs)", "Stage", "Rating", "Status", "Applied Date", "Notes"];
-    const rows = filtered.map((c) => [
-      c.name, c.email, c.role, c.experience.toString(), c.stage,
-      c.rating.toString(), c.status, c.appliedDate, `"${c.notes.replace(/"/g, '""')}"`,
-    ]);
+    const baseHeaders = ["Name", "Email"];
+    if (studioSettings.visibleStandardColumns.role) baseHeaders.push("Role");
+    if (studioSettings.visibleStandardColumns.experience) baseHeaders.push("Experience (yrs)");
+    if (studioSettings.visibleStandardColumns.stage) baseHeaders.push("Stage");
+    if (studioSettings.visibleStandardColumns.rating) baseHeaders.push("Rating");
+    if (studioSettings.visibleStandardColumns.status) baseHeaders.push("Status");
+    if (studioSettings.visibleStandardColumns.applied) baseHeaders.push("Applied Date");
+    if (studioSettings.visibleStandardColumns.notes) baseHeaders.push("Notes");
+
+    const customHeaders = studioSettings.customFields.map((f) => f.label);
+    const headers = [...baseHeaders, ...customHeaders];
+
+    const rows = filtered.map((c) => {
+      const row: string[] = [c.name, c.email];
+      if (studioSettings.visibleStandardColumns.role) row.push(c.role);
+      if (studioSettings.visibleStandardColumns.experience) row.push(c.experience.toString());
+      if (studioSettings.visibleStandardColumns.stage) row.push(c.stage);
+      if (studioSettings.visibleStandardColumns.rating) row.push(c.rating.toString());
+      if (studioSettings.visibleStandardColumns.status) row.push(c.status);
+      if (studioSettings.visibleStandardColumns.applied) row.push(c.appliedDate);
+      if (studioSettings.visibleStandardColumns.notes) row.push(`"${c.notes.replace(/"/g, '""')}"`);
+
+      for (const field of studioSettings.customFields) {
+        const val = c.customValues?.[field.key] ?? field.defaultValue ?? "";
+        row.push(`"${String(val).replace(/"/g, '""')}"`);
+      }
+      return row;
+    });
+
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `bizzmitra_candidates_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `bizzmitra_candidates_${studioSettings.version}_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
-  }, [filtered]);
+  }, [filtered, studioSettings]);
 
   // Add candidate handler
   const addCandidate = useCallback((candidate: Omit<CRMCandidate, "id">) => {
@@ -397,21 +454,50 @@ function CRMPage() {
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground border-b border-border bg-surface/60">
-                    <th className="px-4 py-3 font-semibold">Candidate</th>
-                    <th className="px-4 py-3 font-semibold">Role</th>
-                    <th className="px-4 py-3 font-semibold text-center">Exp.</th>
-                    <th className="px-4 py-3 font-semibold">Stage</th>
-                    <th className="px-4 py-3 font-semibold text-center">Rating</th>
-                    <th className="px-4 py-3 font-semibold">Status</th>
-                    <th className="px-4 py-3 font-semibold">Applied</th>
-                    <th className="px-4 py-3 font-semibold">Notes</th>
+                    <th className={cn(cellDensityClass, "font-semibold")}>Candidate</th>
+                    {studioSettings.visibleStandardColumns.role && (
+                      <th className={cn(cellDensityClass, "font-semibold")}>Role</th>
+                    )}
+                    {studioSettings.visibleStandardColumns.experience && (
+                      <th className={cn(cellDensityClass, "font-semibold text-center")}>Exp.</th>
+                    )}
+                    {studioSettings.visibleStandardColumns.stage && (
+                      <th className={cn(cellDensityClass, "font-semibold")}>Stage</th>
+                    )}
+                    {studioSettings.visibleStandardColumns.rating && (
+                      <th className={cn(cellDensityClass, "font-semibold text-center")}>Rating</th>
+                    )}
+                    {studioSettings.visibleStandardColumns.status && (
+                      <th className={cn(cellDensityClass, "font-semibold")}>Status</th>
+                    )}
+                    {studioSettings.visibleStandardColumns.applied && (
+                      <th className={cn(cellDensityClass, "font-semibold")}>Applied</th>
+                    )}
+                    {studioSettings.visibleStandardColumns.notes && (
+                      <th className={cn(cellDensityClass, "font-semibold")}>Notes</th>
+                    )}
+                    {/* Dynamic Custom Columns */}
+                    {studioSettings.customFields.map((field) => (
+                      <th
+                        key={field.id}
+                        className={cn(cellDensityClass, "font-semibold text-primary")}
+                      >
+                        <span className="flex items-center gap-1">
+                          <Tag className="size-2.5 opacity-70" />
+                          {field.label}
+                        </span>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
                   <AnimatePresence>
                     {filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                        <td
+                          colSpan={colSpanCount}
+                          className="py-12 text-center text-sm text-muted-foreground"
+                        >
                           No candidates match your current filters.
                         </td>
                       </tr>
@@ -424,52 +510,97 @@ function CRMPage() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -6 }}
                           transition={{ duration: 0.2 }}
-                          className="group align-top hover:bg-card/60 transition-colors"
+                          className={cn(
+                            "group align-top transition-colors hover:bg-card/70",
+                            studioSettings.alternateRows && "odd:bg-card/35 even:bg-transparent",
+                          )}
                         >
-                          <td className="px-4 py-3">
+                          <td className={cellDensityClass}>
                             <p className="text-xs font-bold">{c.name}</p>
                             <p className="text-[10px] text-muted-foreground">{c.email}</p>
                           </td>
-                          <td className="px-4 py-3 text-xs text-foreground">{c.role}</td>
-                          <td className="px-4 py-3 text-xs text-center font-medium tabular-nums">
-                            {c.experience} yr{c.experience !== 1 ? "s" : ""}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={cn(
-                                "inline-block rounded-full px-2 py-0.5 text-[10px] font-bold",
-                                STAGE_COLORS[c.stage],
-                              )}
-                            >
-                              {c.stage}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <div className="flex items-center justify-center gap-0.5">
-                              {[1, 2, 3, 4, 5].map((i) => (
-                                <Star
-                                  key={i}
-                                  className={cn(
-                                    "size-3",
-                                    i <= c.rating
-                                      ? "fill-amber-400 text-amber-400"
-                                      : "text-border fill-transparent",
-                                  )}
-                                />
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={cn("text-[10px] font-bold", STATUS_COLORS[c.status])}>
-                              {c.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-[10px] text-muted-foreground tabular-nums">
-                            {c.appliedDate}
-                          </td>
-                          <td className="px-4 py-3 text-[10px] text-muted-foreground max-w-[180px] truncate">
-                            {c.notes}
-                          </td>
+                          {studioSettings.visibleStandardColumns.role && (
+                            <td className={cn(cellDensityClass, "text-foreground")}>{c.role}</td>
+                          )}
+                          {studioSettings.visibleStandardColumns.experience && (
+                            <td className={cn(cellDensityClass, "text-center font-medium tabular-nums")}>
+                              {c.experience} yr{c.experience !== 1 ? "s" : ""}
+                            </td>
+                          )}
+                          {studioSettings.visibleStandardColumns.stage && (
+                            <td className={cellDensityClass}>
+                              <span
+                                className={cn(
+                                  "inline-block rounded-full px-2 py-0.5 text-[10px] font-bold",
+                                  STAGE_COLORS[c.stage],
+                                )}
+                              >
+                                {c.stage}
+                              </span>
+                            </td>
+                          )}
+                          {studioSettings.visibleStandardColumns.rating && (
+                            <td className={cn(cellDensityClass, "text-center")}>
+                              <div className="flex items-center justify-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                  <Star
+                                    key={i}
+                                    className={cn(
+                                      "size-3",
+                                      i <= c.rating
+                                        ? "fill-amber-400 text-amber-400"
+                                        : "text-border fill-transparent",
+                                    )}
+                                  />
+                                ))}
+                              </div>
+                            </td>
+                          )}
+                          {studioSettings.visibleStandardColumns.status && (
+                            <td className={cellDensityClass}>
+                              <span className={cn("text-[10px] font-bold", STATUS_COLORS[c.status])}>
+                                {c.status}
+                              </span>
+                            </td>
+                          )}
+                          {studioSettings.visibleStandardColumns.applied && (
+                            <td className={cn(cellDensityClass, "text-[10px] text-muted-foreground tabular-nums")}>
+                              {c.appliedDate}
+                            </td>
+                          )}
+                          {studioSettings.visibleStandardColumns.notes && (
+                            <td className={cn(cellDensityClass, "text-[10px] text-muted-foreground max-w-[180px] truncate")}>
+                              {c.notes}
+                            </td>
+                          )}
+                          {/* Dynamic Custom Attribute Cells */}
+                          {studioSettings.customFields.map((field) => {
+                            const rawVal = c.customValues?.[field.key] ?? field.defaultValue ?? "—";
+                            const val = String(rawVal);
+                            const isUrl =
+                              field.type === "url" &&
+                              (val.startsWith("http://") || val.startsWith("https://"));
+
+                            return (
+                              <td key={field.id} className={cellDensityClass}>
+                                {isUrl ? (
+                                  <a
+                                    href={val}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary hover:underline"
+                                  >
+                                    <ExternalLink className="size-2.5" />
+                                    Link
+                                  </a>
+                                ) : (
+                                  <span className="inline-block rounded bg-accent/60 px-2 py-0.5 text-[11px] font-medium text-foreground">
+                                    {val}
+                                  </span>
+                                )}
+                              </td>
+                            );
+                          })}
                         </motion.tr>
                       ))
                     )}
@@ -583,7 +714,11 @@ function CRMPage() {
       {/* ═══ Add Candidate Modal ═══ */}
       <AnimatePresence>
         {showAddModal && (
-          <AddCandidateModal onClose={() => setShowAddModal(false)} onAdd={addCandidate} />
+          <AddCandidateModal
+            onClose={() => setShowAddModal(false)}
+            onAdd={addCandidate}
+            customFields={studioSettings.customFields}
+          />
         )}
       </AnimatePresence>
 
@@ -602,9 +737,11 @@ function CRMPage() {
 function AddCandidateModal({
   onClose,
   onAdd,
+  customFields = [],
 }: {
   onClose: () => void;
   onAdd: (c: Omit<CRMCandidate, "id">) => void;
+  customFields?: CustomField[];
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -612,6 +749,13 @@ function AddCandidateModal({
   const [experience, setExperience] = useState("");
   const [stage, setStage] = useState<CRMCandidate["stage"]>("Screening");
   const [notes, setNotes] = useState("");
+  const [customValues, setCustomValues] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    for (const f of customFields) {
+      if (f.defaultValue) init[f.key] = f.defaultValue;
+    }
+    return init;
+  });
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -631,6 +775,7 @@ function AddCandidateModal({
       status: "Active",
       appliedDate: new Date().toISOString().slice(0, 10),
       notes,
+      customValues,
     });
   };
 
@@ -643,7 +788,7 @@ function AddCandidateModal({
       onClick={onClose}
     >
       <motion.div
-        className="neu w-full max-w-lg p-6"
+        className="neu w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
         initial={{ scale: 0.92, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.92, opacity: 0, y: 20 }}
@@ -754,6 +899,43 @@ function AddCandidateModal({
               className="mt-1 w-full neu-inset rounded-lg px-3 py-2.5 text-sm outline-none resize-none placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/30"
             />
           </div>
+
+          {/* Dynamic Custom Schema Attributes */}
+          {customFields.length > 0 && (
+            <div className="pt-3 border-t border-border/60 space-y-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-primary flex items-center gap-1">
+                <Tag className="size-3" />
+                Custom Schema Attributes ({customFields.length})
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {customFields.map((field) => (
+                  <div key={field.id}>
+                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                      {field.label} {field.required && "*"}
+                    </label>
+                    <input
+                      type={
+                        field.type === "number"
+                          ? "number"
+                          : field.type === "url"
+                            ? "url"
+                            : field.type === "date"
+                              ? "date"
+                              : "text"
+                      }
+                      value={customValues[field.key] ?? ""}
+                      onChange={(e) =>
+                        setCustomValues((prev) => ({ ...prev, [field.key]: e.target.value }))
+                      }
+                      placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}…`}
+                      required={field.required}
+                      className="mt-1 w-full neu-inset rounded-lg px-3 py-2 text-xs outline-none placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-2">
             <button
