@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, ArrowRight, Download, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, GitBranch, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 import { ExportModal } from "@/components/ExportModal";
+import { VersionControlDrawer } from "@/components/VersionControlDrawer";
 import { cn } from "@/lib/utils";
 
 export const CHAIN = [
@@ -33,6 +34,7 @@ export function ArtifactHeader({
 }) {
   const [exporting, setExporting] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [versionDrawerOpen, setVersionDrawerOpen] = useState(false);
   const idx = CHAIN.findIndex((c) => c.id === id);
   const prev = CHAIN[idx - 1];
   const next = CHAIN[idx + 1];
@@ -76,6 +78,15 @@ export function ArtifactHeader({
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
+            onClick={() => setVersionDrawerOpen(true)}
+            className="neu-sm neu-press flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold hover:text-primary"
+            title="Inspect workspace versions and diffs"
+          >
+            <GitBranch className="size-3.5 text-primary" />
+            <span>v1.3</span>
+          </button>
+          <button
             onClick={regen}
             className="neu-sm neu-press flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium"
           >
@@ -98,6 +109,7 @@ export function ArtifactHeader({
       </div>
 
       <ExportModal open={exporting} onClose={() => setExporting(false)} artifactName={title} />
+      <VersionControlDrawer open={versionDrawerOpen} onClose={() => setVersionDrawerOpen(false)} />
 
       <div className="mt-6 flex items-center justify-between text-sm">
         {prev ? (
