@@ -189,5 +189,27 @@
 - **One-Click Package Bundler**: Multi-step download sequencer packaging all deliverables into a unified download experience.
 - **Live In-Browser Code Inspector**: Syntax-highlighted previewer for OpenAPI JSON, SQL DDL, and Markdown specs with instant clipboard copy.
 
+### 18. Central Admin Console & Multi-Tenant Directory (Day 8)
+- **Route**: `/admin` (`src/routes/admin.tsx`)
+- **Data Model**: `src/lib/admin-rbac-data.ts`
+- **Multi-Tenant Workspace Management**: Directory of managed enterprise tenant workspaces (`TalentCraft HR`, `FinFlow Treasury`, `LogiTrack Global`, `HealthSync Care`) with live status filtering (active vs. archived), maturity scores, and 1-click workspace switching.
+- **Multi-Region Cloud Health Monitor**: Telemetry tracking service operational status, uptime percentage, and P95 latency across Cloudflare Edge (24ms), Supabase PostgreSQL 16 (38ms), Redis 7 BullMQ queue (12ms), and AWS Bedrock inference (280ms).
+- **AI Platform Token Economics**: Aggregated token metrics tracking total tokens processed (1.42M), cache hit efficiency (88.4%), and average blended cost ($0.0018/kTok).
 
+### 19. Dynamic Role-Based Access Control (RBAC) (Day 8)
+- **Components**: `src/components/AppShell.tsx`, `src/components/ArtifactHeader.tsx`
+- **Data Model**: `src/lib/admin-rbac-data.ts`
+- **4 Standardized Enterprise Roles**:
+  - `Admin`: Full governance, schema modifications, approvals, billing, and user management.
+  - `Architect`: Full technical control over HLD/LLD diagrams, PostgreSQL DDL schemas, and AI regeneration.
+  - `Analyst`: Discovery triage, candidate CRM reviews, and threaded feedback; schema and AI edits locked.
+  - `Viewer`: Stakeholder read-only access; deliverable exports and AI regenerations restricted.
+- **Client-Side Event Bus Propagation**: Sidebar dropdown triggers `bizzmitra:role-changed` window events, dynamically updating UI states, button attributes, and permission banners across all 11 chain routes without page reloads.
 
+### 20. Monetization Engine & AI Token Wallet (Day 8)
+- **Route**: `/settings` (`src/routes/settings.tsx`)
+- **Data Model**: `src/lib/admin-rbac-data.ts`
+- **Live Metered Credit Wallet**: Real-time balance tracking (840 credits), monthly quota, and average burn rate (32 credits/day).
+- **Audited Transaction Ledger**: Chronological transaction history detailing deduction reasons (Solution Studio AI regen: -40, AST serialization: -25, Architecture synthesis: -50).
+- **Interactive Top-Up Simulation**: One-click credit grants (+250 credits for $10, +1,000 credits for $35) persisting into `localStorage` and updating UI balances in real-time.
+- **SaaS Subscription Tier Matrix**: 3-tier model (Free Starter, Growth Pro, Enterprise Scale) with interactive tier switching and feature comparison.
