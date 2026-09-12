@@ -129,3 +129,36 @@
 - **PostgreSQL 16+ DDL Script**: Copyable and downloadable SQL script (`bizzmitra_schema_v1.sql`) featuring Row Level Security (RLS) policies for multi-tenant isolation.
 - **RESTful API Specifications**: OpenAPI 3.1 compatible endpoint documentation with HTTP method indicators, request/response JSON schemas, authentication scopes, and instant cURL command generators.
 
+### 12. AI Implementation Planning Engine (Day 6)
+- **Route**: `/workspace/roadmap` (`src/routes/workspace.roadmap.tsx`)
+- **Data Model**: `src/lib/planning-data.ts`
+- **Phased 3-Tier Delivery Blueprint**:
+  - Phase 1: MVP Foundation & Core Pipeline (Weeks 1–3, 21 person-days).
+  - Phase 2: Client Portal & Automated Interview Sync (Weeks 4–6, 23 person-days).
+  - Phase 3: AI Talent Matching & Executive Analytics (Weeks 7–9, 24 person-days).
+- **Interactive Visual Gantt Timeline**: Percentage-based SVG timeline bars tracking sprint execution schedules across 9 calendar weeks.
+- **Milestone Decomposition Checklist**: Interactive toggles tracking milestone deliverables, effort days, categories, and sonner notifications.
+- **FTE Team Staffing Breakdown**: Allocated headcount across Lead Fullstack Architect, React Frontend Engineer, Backend/Database Engineer, and AI/ML Specialists.
+- **Enterprise Risk Mitigation Register**: Multi-attribute risk assessment matrix (Technical, Adoption, Security, Timeline) with likelihood, impact, consequence, and mitigation protocols.
+
+### 13. Dynamic ROI Calculator & Financial Transformation Cockpit (Day 6)
+- **Route**: `/workspace/insights` (`src/routes/workspace.insights.tsx`)
+- **Data Model**: `src/lib/roi-data.ts`
+- **Algorithmic Financial Justification Model**:
+  - Live interactive sliders (Recruiter team size, Monthly applicant volume, Hourly cost, Spreadsheet hours, Automation rate).
+  - Real-time reactive recalculation of direct labor savings, capacity revenue expansion, net annual savings, payback period (months), and 3-year cumulative ROI multiple.
+- **36-Month Cumulative Value Trajectory**: Recharts Area chart displaying initial platform investment vs. cumulative gross benefits vs. net cashflow, visually demonstrating the fast break-even point.
+- **Sensitivity Scenario Analysis**: Conservative (50% automation), Expected (65% automation), and Aggressive (80% automation) financial projections.
+- **Readiness Radar & Operational Benchmarks**: 6-dimension organizational readiness radar chart and Before vs. After operational performance cards.
+
+### 14. Connected Artifact Map Engine (Day 6 — USP #3)
+- **Route**: `/workspace/map` (`src/routes/workspace.map.tsx`)
+- **Data Model**: `src/lib/artifact-map-data.ts`
+- **Interactive Directed Acyclic Graph (DAG)**: 11-node visual topology across 5 enterprise layers (Foundation, Analysis, Solution & Workable Apps, Blueprints, Execution).
+- **Bidirectional Dependency Tracing**:
+  - Clicking any node dynamically computes in-degree (parents / inputs consumed in amber) and out-degree (children / outputs produced in emerald).
+  - Visual dimming of unrelated nodes isolates the active artifact pathway.
+- **Node Inspector Drawer**: Displays artifact metadata, version (`v1.1`), inputs consumed, outputs delivered, key metrics, and direct route navigation link.
+- **Enterprise Traceability Audit**: Formally verifies 100% provenance linkage back to the original business problem, establishing the platform as a single source of truth.
+
+

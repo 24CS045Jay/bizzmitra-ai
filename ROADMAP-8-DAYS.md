@@ -161,24 +161,28 @@ Intake   Discovery   Solution   Customizer Architecture Planning Collaboration A
 
 ---
 
-### ⚪ DAY 6 — Implementation Planning, Dynamic ROI & Connected Artifact Map (USP #3)
-* **Status:** `PLANNED`
+### 🟢 DAY 6 — Implementation Planning, Dynamic ROI & Connected Artifact Map (USP #3)
+* **Status:** `DONE ✅`
 * **Objective:** Deliver executive planning assets, financial justification, and the platform's central visual graph.
 * **Key Deliverables:**
   - **AI Planning Engine** (`/workspace/roadmap`):
-    - 3-Phase rollout plan (MVP, Core Rollout, Enterprise Automation) with milestone timelines, team resourcing, and risk mitigation strategies.
-  - **Dynamic ROI Calculator** (`/workspace/insights`):
-    - Interactive sliders: Team size (recruiters), Monthly applicant volume, Hourly consultant cost.
-    - Real-time recalculation of Annual Cost Savings, Hours Reclaimed, and Payback Period (e.g., *₹18.4L saved / 3.2 month payback*).
+    - 3-Phase rollout plan (MVP Foundation, Coordination Sprint, Intelligence Sprint) with milestone timelines, team resourcing, and risk mitigation strategies.
+    - Interactive visual Gantt timeline over 9 weeks, milestone checklist with live completion tracking, and team FTE allocations.
+  - **Dynamic ROI Calculator & Transformation Cockpit** (`/workspace/insights`):
+    - Interactive sliders: Recruiter squad size, Monthly applicant volume, Hourly rate, Spreadsheet hours, Automation rate.
+    - Real-time recalculation of Annual Direct Labor Savings, Capacity Revenue Gain, Net Annual Savings, Payback Period (Months), and 3-Year ROI Multiple.
+    - 36-Month Cumulative Value Trajectory Area chart showing break-even point.
+    - Multi-scenario Sensitivity Analysis matrix (Conservative, Expected, Aggressive) and 6-dimension digital readiness radar.
   - **USP #3: Connected Artifact Map** (`/workspace/map`):
-    - Interactive graph showing central **Business Problem** node connecting to **Discovery**, **Business Analysis**, **Workable CRM**, **Architecture**, **BPMN**, **Database**, and **ROI Calculator**.
-    - Clicking any node navigates directly to that artifact.
-  - **Transformation Dashboard**: Executive readiness radar and maturity score summary.
-* **Target Git Commits (Min 3):**
-  1. `feat: add planning`
-  2. `feat: add ROI dashboard`
-  3. `feat: add artifact map`
-  4. `docs: add Day 6 technical learning, architecture, and changelog`
+    - Interactive Directed Acyclic Graph (DAG) visualizing 11 artifacts across 5 enterprise layers.
+    - Bidirectional dependency tracing: Highlights upstream parents in amber (inputs consumed) and downstream derivatives in emerald (outputs produced) with dimming of unrelated nodes.
+    - Node Inspector Drawer: Deep-dive artifact metadata, version (`v1.1`), inputs, outputs, key metrics, and direct route navigation.
+    - Provenance Assurance Bar verifying 100% traceability back to the original business problem.
+* **Completed Git Commits on `Param-Shah`:**
+  1. `feat: add AI implementation planning engine with 3-phase rollout, milestones, and risk register`
+  2. `feat: add dynamic ROI calculator and financial transformation dashboard`
+  3. `feat: add interactive connected artifact map with node inspection and dependency tracing`
+  4. `docs: add Day 6 technical learning, architecture blueprint, and changelog`
 
 ---
 
