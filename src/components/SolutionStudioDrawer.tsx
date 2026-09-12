@@ -31,6 +31,7 @@ import {
   type ThemeAccent,
 } from "@/lib/solution-studio";
 import { cn } from "@/lib/utils";
+import { AIRegenerationModal } from "./AIRegenerationModal";
 
 interface SolutionStudioDrawerProps {
   isOpen: boolean;
@@ -47,6 +48,7 @@ export function SolutionStudioDrawer({
 }: SolutionStudioDrawerProps) {
   const [settings, setSettings] = useState<StudioSettings>(() => loadStudioSettings());
   const [activeTab, setActiveTab] = useState<"ui" | "fields" | "versions">("ui");
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   // Field Builder Form State
   const [fieldLabel, setFieldLabel] = useState("");
@@ -654,7 +656,11 @@ export function SolutionStudioDrawer({
             <div className="p-4 border-t border-border bg-surface/90 flex flex-col gap-2">
               <button
                 onClick={() => {
-                  onTriggerRegeneration?.();
+                  if (onTriggerRegeneration) {
+                    onTriggerRegeneration();
+                  } else {
+                    setIsRegenerating(true);
+                  }
                 }}
                 className="neu-press w-full rounded-xl bg-primary py-3 px-4 text-xs font-bold text-primary-foreground shadow-md flex items-center justify-center gap-2 hover:brightness-105 transition-all"
               >
@@ -666,6 +672,16 @@ export function SolutionStudioDrawer({
               </p>
             </div>
           </motion.aside>
+
+          {/* AI Regeneration Modal */}
+          <AIRegenerationModal
+            isOpen={isRegenerating}
+            onClose={() => setIsRegenerating(false)}
+            onComplete={(updated) => {
+              setSettings(updated);
+              onSettingsChange?.(updated);
+            }}
+          />
         </>
       )}
     </AnimatePresence>
