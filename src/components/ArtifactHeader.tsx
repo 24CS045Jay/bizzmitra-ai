@@ -16,6 +16,8 @@ export const CHAIN = [
   { id: "wireframes", label: "UX", to: "/workspace/wireframes" },
   { id: "data", label: "Data & APIs", to: "/workspace/data" },
   { id: "roadmap", label: "Roadmap", to: "/workspace/roadmap" },
+  { id: "dashboard", label: "Transformation", to: "/workspace/insights" },
+  { id: "map", label: "Artifact Map", to: "/workspace/map" },
 ] as const;
 
 export function ArtifactHeader({

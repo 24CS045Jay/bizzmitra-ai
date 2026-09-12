@@ -126,3 +126,50 @@ Ontologies for niche enterprise domains must be maintained or learned from enter
 ## What I Should Be Able To Explain To A Judge
 > *"Most AI chatbots just hallucinate default assumptions when information is missing. BizzMitra features an explicit Missing Information Detector that alerts the user to ambiguity and transparently explains why each detail is necessary for downstream technical architecture."*
 
+---
+
+# 5. Directed Acyclic Graphs (DAGs) & Lineage Provenance in Generative Systems
+
+## Simple Definition
+Using a directed graph with no closed loops to track where every piece of generated content came from, what influenced it, and what downstream assets depend on it.
+
+## How It Works
+In generative software systems, each artifact (problem, CRM, architecture diagram, database schema, roadmap) is represented as a vertex ($V$), and every dependency is represented as a directed edge ($E$). This enables bidirectional topological sorting:
+- **Upstream Traversal (Lineage / Provenance)**: Identifies the root inputs that caused an artifact to exist.
+- **Downstream Traversal (Change Propagation)**: Identifies which technical blueprints must be re-evaluated or regenerated if an upstream business requirement changes.
+
+## Where BizzMitra Uses It
+In **Signature USP #3 — Connected Artifact Map** (`/workspace/map`):
+```text
+Business Problem ──► Discovery ──► Business Analysis ──► HR CRM ──► Architecture ──► Data/APIs ──► Roadmap ──► ROI
+```
+When an asset like the **Workable HR CRM** is clicked, the system computes the in-degree (parents) and out-degree (children) to highlight the exact chain of custody.
+
+## Why We Need It
+Enterprise leaders reject AI tools that behave like opaque "black boxes". Provenance graphs make AI generation 100% explainable, traceable, and auditable.
+
+## What I Should Be Able To Explain To A Judge
+> *"Competitor platforms create isolated artifacts with zero memory. BizzMitra models the entire transformation as a Directed Acyclic Graph (DAG). This allows complete bidirectional traceability: we can prove that every single database table and API route exists because of an explicit pain point identified in the initial business problem."*
+
+---
+
+# 6. Algorithmic Sensitivity Modeling & Deterministic Financial Grounding
+
+## Simple Definition
+Combining deterministic mathematical formulas with ranges of operational variables (sensitivity analysis) to calculate the real monetary impact of an AI transformation.
+
+## How It Works
+Rather than asking an LLM to hallucinate a financial figure, the system establishes a deterministic mathematical model:
+$$S_{\text{net}} = \left(N_{\text{staff}} \times H_{\text{manual}} \times R_{\text{auto}} \times \text{Rate}\right) + \text{RevenueGain} - \text{PlatformCost}$$
+The system evaluates this equation across Conservative, Expected, and Aggressive scenarios, calculating exact payback periods and 36-month cumulative value trajectories.
+
+## Where BizzMitra Uses It
+In **Step 10: Dynamic ROI & Transformation Dashboard** (`/workspace/insights`).
+
+## Why We Need It
+Generative AI frequently hallucinates numbers when tasked with arithmetic. By keeping calculations in a deterministic math engine and pairing it with live interactive sliders, founders and CFOs can test assumptions with mathematical confidence.
+
+## What I Should Be Able To Explain To A Judge
+> *"We never ask LLMs to generate financial ROI figures. We use deterministic mathematical models where the user adjusts operational variables in real time. This gives enterprise decision-makers transparent, mathematically sound justifications for digital transformation."*
+
+

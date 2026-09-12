@@ -2,7 +2,32 @@
 
 All notable changes across the 8-day engineering sprint will be documented in this file.
 
+## [Day 6] - 2026-09-12: AI Implementation Planning, Dynamic ROI & Connected Artifact Map (USP #3)
+
+### Added
+- **AI Implementation Planning Engine (`/workspace/roadmap`)**:
+  - 3-phase, 9-week modernization blueprint for TalentCraft HR Consultancy (Foundation Sprint, Coordination Sprint, Intelligence Sprint).
+  - Interactive Gantt chart timeline projecting sprint execution schedules over 9 calendar weeks.
+  - Milestone checklist with interactive status toggles, category badges, effort days (68 person-days total), and toast notifications.
+  - Team resourcing matrix detailing FTE allocation across software disciplines.
+  - Enterprise Risk Mitigation Register with likelihood/impact severity scoring and actionable contingency plans.
+- **Dynamic ROI Calculator & Financial Transformation Cockpit (`/workspace/insights`)**:
+  - Live interactive sliders (Recruiter team size, Monthly applicant volume, Hourly cost, Spreadsheet hours, Automation rate).
+  - Real-time recalculation of direct labor savings, capacity revenue expansion, net annual savings, payback period (months), and 3-year cumulative ROI multiple.
+  - 36-month cumulative value trajectory Area chart showing the rapid break-even intersection point.
+  - Multi-scenario Sensitivity Analysis matrix comparing Conservative, Expected, and Aggressive outcomes.
+  - Transformation benchmark comparison cards (Placement turnaround: 28d → 9d; Candidate drop-off: 28% → 6%).
+  - Six-dimension organizational readiness radar chart and 1-click executive case copy.
+- **Signature USP #3: Connected Artifact Dependency Map (`/workspace/map`)**:
+  - Interactive Directed Acyclic Graph (DAG) canvas mapping 11 artifacts across 5 enterprise layers.
+  - Bidirectional dependency tracing: Highlights upstream parents in amber (inputs consumed) and downstream derivatives in emerald (outputs produced) with dimming of unrelated nodes.
+  - Node Inspector Drawer: Deep-dive artifact metadata, version (`v1.1`), inputs consumed, outputs produced, key metrics, and direct route navigation.
+  - Enterprise Provenance Assurance: Formally verifies 100% traceability back to the initial business problem statement.
+- **Artifact Navigation Breadcrumb Integration**:
+  - Extended `CHAIN` in `src/components/ArtifactHeader.tsx` to include `dashboard` (`/workspace/insights`) and `map` (`/workspace/map`).
+
 ## [Day 5] - 2026-09-12: Technical Blueprint Engine (HLD/LLD, BPMN & APIs)
+
 
 ### Added
 - **Architecture Builder (`/workspace/architecture`)**:
