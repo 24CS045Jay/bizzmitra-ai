@@ -9,6 +9,8 @@ import {
   Download,
   FileCheck,
   Layers,
+  Scale,
+  Share2,
   ShieldAlert,
   Sparkles,
   Users,
@@ -21,6 +23,9 @@ import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { GenerationSequence } from "@/components/GenerationSequence";
 import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
+import { BlueprintConfidenceScore } from "@/components/BlueprintConfidenceScore";
+import { ScenarioComparisonModal, type ScenarioData } from "@/components/ScenarioComparisonModal";
+import { ShareBlueprintModal } from "@/components/ShareBlueprintModal";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import {
   getRoadmapForWorkspace,
@@ -28,6 +33,7 @@ import {
   RiskItem,
   SprintPhase,
 } from "@/lib/planning-data";
+import { evaluateBlueprintRisks } from "@/lib/risk-evaluator";
 
 export const Route = createFileRoute("/workspace/roadmap")({
   head: () => ({
@@ -70,6 +76,13 @@ export function RoadmapPage() {
   });
 
   const [riskFilter, setRiskFilter] = useState<"All" | "Technical" | "Adoption" | "Security">("All");
+  const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  const { flaggedRisks, scoreResult } = useMemo(
+    () => evaluateBlueprintRisks(blueprint, workspaceContext),
+    [blueprint, workspaceContext],
+  );
 
   const activePhase = (blueprint.phases[activePhaseIndex] ?? blueprint.phases[0])!;
 
@@ -137,6 +150,22 @@ export function RoadmapPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
+                  onClick={() => setIsScenarioModalOpen(true)}
+                  className="neu-sm neu-press flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-primary hover:brightness-105"
+                >
+                  <Scale className="size-3.5" />
+                  Compare Scenarios
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsShareModalOpen(true)}
+                  className="neu-sm neu-press flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-foreground hover:text-primary"
+                >
+                  <Share2 className="size-3.5" />
+                  Share Blueprint
+                </button>
+                <button
+                  type="button"
                   onClick={copyRoadmap}
                   className="neu-sm neu-press flex items-center gap-2 px-3.5 py-2 text-xs font-semibold hover:text-primary"
                 >
@@ -199,7 +228,29 @@ export function RoadmapPage() {
                 <p className="text-[11px] text-muted-foreground">With mitigations</p>
               </div>
             </div>
+
+            {/* Flagged Risks Warning Badges */}
+            {flaggedRisks.length > 0 && (
+              <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border/40 pt-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Flagged Blueprint Warnings:
+                </span>
+                {flaggedRisks.map((r) => (
+                  <span
+                    key={r.id}
+                    title={r.detail}
+                    className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-0.5 text-[10px] font-bold text-destructive"
+                  >
+                    <AlertTriangle className="size-3" />
+                    {r.badgeText}
+                  </span>
+                ))}
+              </div>
+            )}
           </Reveal>
+
+          {/* Blueprint Completeness & Confidence Score Indicator */}
+          <BlueprintConfidenceScore scoreResult={scoreResult} />
 
           {/* Interactive Gantt Timeline */}
           <Reveal className="neu p-6">
@@ -483,6 +534,22 @@ export function RoadmapPage() {
           </Reveal>
         </div>
       </GenerationSequence>
+
+      {/* Scenario Comparison Modal */}
+      <ScenarioComparisonModal
+        isOpen={isScenarioModalOpen}
+        onClose={() => setIsScenarioModalOpen(false)}
+        currentBlueprint={blueprint}
+        workspaceId={workspaceContext?.id}
+      />
+
+      {/* Share Blueprint Modal */}
+      <ShareBlueprintModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        blueprintId={workspaceContext?.id}
+        blueprintName={blueprint.scenarioName}
+      />
     </AppShell>
   );
 }

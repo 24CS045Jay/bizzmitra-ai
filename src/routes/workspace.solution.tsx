@@ -5,13 +5,15 @@ import {
   Building2,
   Check,
   Clock,
+  Filter,
   Sliders,
   Sparkles,
   Users,
   Wand2,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { cn } from "@/lib/utils";
 
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
@@ -58,10 +60,28 @@ const STATUS_COLORS: Record<string, string> = {
   Planned: "bg-accent text-accent-foreground",
 };
 
+export type TimeTag = "All" | "Invest" | "Migrate" | "Tolerate" | "Eliminate";
+
+const TIME_BADGE_STYLES: Record<Exclude<TimeTag, "All">, string> = {
+  Invest: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
+  Migrate: "bg-primary/10 text-primary border-primary/30",
+  Tolerate: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
+  Eliminate: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30",
+};
+
+const MODULE_TIME_TAGS: Record<string, Exclude<TimeTag, "All">> = {
+  ats: "Invest",
+  "client-portal": "Migrate",
+  attendance: "Tolerate",
+  analytics: "Invest",
+  "legacy-tracker": "Eliminate",
+};
+
 function SolutionPage() {
   const [problemText, setProblemText] = useState(HR_CONSULTANCY_PROBLEM);
   const [isStudioOpen, setIsStudioOpen] = useState(false);
   const [studioSettings, setStudioSettings] = useState(() => loadStudioSettings());
+  const [timeFilter, setTimeFilter] = useState<TimeTag>("All");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -73,7 +93,7 @@ function SolutionPage() {
           setProblemText(parsed.problemStatement);
         }
       }
-    } catch {}
+    } catch { }
 
     const handleStudioUpdate = (e: Event) => {
       const custom = e as CustomEvent<ReturnType<typeof loadStudioSettings>>;
@@ -187,66 +207,147 @@ function SolutionPage() {
             <h2 className="mt-1.5 font-display text-2xl font-extrabold">{solution.headline}</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{solution.summary}</p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {solution.pillars.map((p) => (
-                <div key={p.title} className="neu-inset px-4 py-3.5">
-                  <p className="text-sm font-semibold text-foreground">{p.title}</p>
-                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{p.detail}</p>
-                </div>
-              ))}
+              {solution.pillars.map((p, idx) => {
+                const pillarTags: Exclude<TimeTag, "All">[] = ["Invest", "Migrate", "Tolerate", "Eliminate"];
+                const tag = pillarTags[idx % pillarTags.length]!;
+                return (
+                  <div key={p.title} className="neu-inset px-4 py-3.5 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-foreground">{p.title}</p>
+                      <span className={cn("rounded-full px-2 py-0.5 text-[9px] font-bold border", TIME_BADGE_STYLES[tag])}>
+                        {tag}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{p.detail}</p>
+                  </div>
+                );
+              })}
             </div>
           </StaggerItem>
 
-          {/* ═══ Day 3: 4-Module Recommendation Grid ═══ */}
+          {/* ═══ 4-Module Recommendation Grid with TIME Filter ═══ */}
           <StaggerItem className="neu p-6">
             <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
               <Sparkles className="size-3.5" />
               <span>Recommended Solution Modules</span>
             </div>
             <h2 className="mt-1.5 font-display text-xl font-extrabold">
-              4-Module Delivery Blueprint
+              Delivery Blueprint & TIME Portfolio
             </h2>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-              Each module is independently deployable. Core modules ship in the MVP phase;
-              Recommended and Planned modules follow in subsequent sprints.
+              Classified by the enterprise TIME matrix (Invest, Migrate, Tolerate, Eliminate).
+              Filter below to inspect technical and process recommendations by strategic posture.
             </p>
 
+            {/* TIME Framework Filter Control */}
+            <div className="mt-5 mb-4 flex flex-wrap items-center justify-between gap-3 border-y border-border/60 py-3">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <Filter className="size-3.5 text-primary" />
+                <span>Filter by TIME Tag:</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {(["All", "Invest", "Migrate", "Tolerate", "Eliminate"] as const).map((tag) => {
+                  const count =
+                    tag === "All"
+                      ? 5
+                      : tag === "Invest"
+                        ? 2
+                        : 1;
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setTimeFilter(tag)}
+                      className={cn(
+                        "neu-sm neu-press flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all",
+                        timeFilter === tag
+                          ? "bg-primary text-primary-foreground glow-primary"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <span>{tag}</span>
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 py-0.2 text-[9px]",
+                          timeFilter === tag ? "bg-white/25 text-primary-foreground" : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              {HR_SOLUTION_MODULES.map((mod) => {
-                const Icon = MODULE_ICONS[mod.icon] || Users;
-                return (
-                  <div
-                    key={mod.key}
-                    className="neu-inset p-4 flex flex-col gap-3 transition-all hover:scale-[1.01]"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-                          <Icon className="size-4.5" />
-                        </span>
-                        <div>
-                          <p className="text-sm font-bold leading-tight">{mod.name}</p>
-                          <span
-                            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${STATUS_COLORS[mod.status]}`}
-                          >
-                            {mod.status}
+              {[
+                ...HR_SOLUTION_MODULES.map((m) => ({
+                  ...m,
+                  timeTag: MODULE_TIME_TAGS[m.key] ?? ("Invest" as const),
+                })),
+                {
+                  key: "legacy-tracker",
+                  name: "Legacy WhatsApp & Spreadsheet Tracker",
+                  description:
+                    "Informal, un-encrypted candidate routing across disparate chats with no central audit trail.",
+                  icon: "Clock",
+                  status: "Optional" as const,
+                  timeTag: "Eliminate" as const,
+                  features: [
+                    "Unmitigated data leakage risk",
+                    "Manual re-entry overhead (4h/recruiter/wk)",
+                    "Decommission scheduled in Phase 2",
+                  ],
+                },
+              ]
+                .filter((mod) => timeFilter === "All" || mod.timeTag === timeFilter)
+                .map((mod) => {
+                  const Icon = MODULE_ICONS[mod.icon] || Users;
+                  return (
+                    <div
+                      key={mod.key}
+                      className="neu-inset p-4 flex flex-col gap-3 transition-all hover:scale-[1.01]"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                            <Icon className="size-4.5" />
                           </span>
+                          <div>
+                            <p className="text-sm font-bold leading-tight">{mod.name}</p>
+                            <div className="mt-1 flex items-center gap-1.5">
+                              <span
+                                className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold ${STATUS_COLORS[mod.status]}`}
+                              >
+                                {mod.status}
+                              </span>
+                              <span
+                                className={cn(
+                                  "inline-block rounded-full px-2 py-0.5 text-[9px] font-bold border",
+                                  TIME_BADGE_STYLES[mod.timeTag],
+                                )}
+                              >
+                                {mod.timeTag}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {mod.description}
+                      </p>
+                      <ul className="mt-auto space-y-1.5">
+                        {mod.features.map((f) => (
+                          <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
+                            <Check className="mt-0.5 size-3 shrink-0 text-sage" />
+                            <span>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {mod.description}
-                    </p>
-                    <ul className="mt-auto space-y-1.5">
-                      {mod.features.map((f) => (
-                        <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
-                          <Check className="mt-0.5 size-3 shrink-0 text-sage" />
-                          <span>{f}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
 
             {/* CRM CTA */}
@@ -280,25 +381,23 @@ function SolutionPage() {
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <span
-                        className={`grid size-5 shrink-0 place-items-center rounded-full ${
-                          isRec
+                        className={`grid size-5 shrink-0 place-items-center rounded-full ${isRec
                             ? "bg-sage text-sage-foreground"
                             : isViable
                               ? "bg-accent text-accent-foreground"
                               : "bg-muted text-muted-foreground"
-                        }`}
+                          }`}
                       >
                         {isRec ? <Check className="size-3" /> : <X className="size-3" />}
                       </span>
                       <p className="text-sm font-bold">{row.option}</p>
                       <span
-                        className={`ml-auto neu-sm px-2 py-0.5 text-[10px] font-bold ${
-                          isRec
+                        className={`ml-auto neu-sm px-2 py-0.5 text-[10px] font-bold ${isRec
                             ? "text-emerald-600 dark:text-emerald-400"
                             : isViable
                               ? "text-amber-600 dark:text-amber-400"
                               : "text-muted-foreground"
-                        }`}
+                          }`}
                       >
                         {row.verdict}
                       </span>
@@ -321,9 +420,8 @@ function SolutionPage() {
                           <div className="flex items-center gap-1.5">
                             <div className="flex-1 h-2 rounded-full bg-border/60 overflow-hidden">
                               <div
-                                className={`h-full rounded-full transition-all ${
-                                  isRec ? "bg-primary" : isViable ? "bg-amber-400" : "bg-muted-foreground/40"
-                                }`}
+                                className={`h-full rounded-full transition-all ${isRec ? "bg-primary" : isViable ? "bg-amber-400" : "bg-muted-foreground/40"
+                                  }`}
                                 style={{ width: `${(score / 5) * 100}%` }}
                               />
                             </div>
@@ -351,9 +449,8 @@ function SolutionPage() {
                 return (
                   <div key={t.option} className="neu-inset flex gap-3 px-4 py-3.5">
                     <span
-                      className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full ${
-                        good ? "bg-sage text-sage-foreground" : "bg-muted text-muted-foreground"
-                      }`}
+                      className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full ${good ? "bg-sage text-sage-foreground" : "bg-muted text-muted-foreground"
+                        }`}
                     >
                       {good ? <Check className="size-3" /> : <X className="size-3" />}
                     </span>
@@ -361,9 +458,8 @@ function SolutionPage() {
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold">{t.option}</p>
                         <span
-                          className={`neu-sm px-2 py-0.5 text-[10px] font-bold ${
-                            good ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
-                          }`}
+                          className={`neu-sm px-2 py-0.5 text-[10px] font-bold ${good ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+                            }`}
                         >
                           {t.verdict}
                         </span>

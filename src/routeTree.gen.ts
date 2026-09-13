@@ -10,10 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as WorkspaceArchitectureRouteImport } from './routes/workspace.architecture'
 import { Route as WorkspaceCollaborationRouteImport } from './routes/workspace.collaboration'
 import { Route as WorkspaceDataRouteImport } from './routes/workspace.data'
@@ -31,6 +33,11 @@ import { Route as WorkspaceSolutionCrmRouteImport } from './routes/workspace.sol
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -51,6 +58,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShareTokenRoute = ShareTokenRouteImport.update({
+  id: '/share/$token',
+  path: '/share/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceArchitectureRoute = WorkspaceArchitectureRouteImport.update({
@@ -121,10 +133,12 @@ const WorkspaceSolutionCrmRoute = WorkspaceSolutionCrmRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/share/$token': typeof ShareTokenRoute
   '/workspace/architecture': typeof WorkspaceArchitectureRoute
   '/workspace/collaboration': typeof WorkspaceCollaborationRoute
   '/workspace/data': typeof WorkspaceDataRoute
@@ -141,10 +155,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/share/$token': typeof ShareTokenRoute
   '/workspace/architecture': typeof WorkspaceArchitectureRoute
   '/workspace/collaboration': typeof WorkspaceCollaborationRoute
   '/workspace/data': typeof WorkspaceDataRoute
@@ -162,10 +178,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/share/$token': typeof ShareTokenRoute
   '/workspace/architecture': typeof WorkspaceArchitectureRoute
   '/workspace/collaboration': typeof WorkspaceCollaborationRoute
   '/workspace/data': typeof WorkspaceDataRoute
@@ -184,10 +202,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/dashboard'
     | '/login'
     | '/settings'
     | '/signup'
+    | '/share/$token'
     | '/workspace/architecture'
     | '/workspace/collaboration'
     | '/workspace/data'
@@ -204,10 +224,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/dashboard'
     | '/login'
     | '/settings'
     | '/signup'
+    | '/share/$token'
     | '/workspace/architecture'
     | '/workspace/collaboration'
     | '/workspace/data'
@@ -224,10 +246,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/dashboard'
     | '/login'
     | '/settings'
     | '/signup'
+    | '/share/$token'
     | '/workspace/architecture'
     | '/workspace/collaboration'
     | '/workspace/data'
@@ -245,10 +269,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  ShareTokenRoute: typeof ShareTokenRoute
   WorkspaceArchitectureRoute: typeof WorkspaceArchitectureRoute
   WorkspaceCollaborationRoute: typeof WorkspaceCollaborationRoute
   WorkspaceDataRoute: typeof WorkspaceDataRoute
@@ -270,6 +296,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -298,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/share/$token': {
+      id: '/share/$token'
+      path: '/share/$token'
+      fullPath: '/share/$token'
+      preLoaderRoute: typeof ShareTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace/architecture': {
@@ -407,10 +447,12 @@ const WorkspaceSolutionRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  ShareTokenRoute: ShareTokenRoute,
   WorkspaceArchitectureRoute: WorkspaceArchitectureRoute,
   WorkspaceCollaborationRoute: WorkspaceCollaborationRoute,
   WorkspaceDataRoute: WorkspaceDataRoute,

@@ -6,12 +6,12 @@ import {
   Cpu,
   Database,
   Layers,
-  Loader2,
   Sparkles,
   Wand2,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ThinkingDots } from "@/components/motion/primitives";
 
 import {
   loadStudioSettings,
@@ -121,18 +121,22 @@ export function AIRegenerationModal({ isOpen, onClose, onComplete }: AIRegenerat
     return () => clearInterval(interval);
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-md">
+      {isOpen ? (
         <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          transition={{ type: "spring", stiffness: 380, damping: 28 }}
-          className="neu w-full max-w-lg p-6 overflow-hidden relative"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-md"
         >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            transition={{ type: "spring", stiffness: 380, damping: 28 }}
+            className="neu w-full max-w-lg p-6 overflow-hidden relative"
+          >
           {/* Glowing Aura Background */}
           <div className="absolute -top-24 -left-24 size-48 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 -right-24 size-48 rounded-full bg-sage/20 blur-3xl pointer-events-none" />
@@ -206,7 +210,11 @@ export function AIRegenerationModal({ isOpen, onClose, onComplete }: AIRegenerat
                     {isCompleted ? (
                       <Check className="size-4" />
                     ) : isCurrent ? (
-                      <Loader2 className="size-4 animate-spin" />
+                      <motion.span
+                        className="size-2 rounded-full bg-primary-foreground"
+                        animate={{ scale: [0.7, 1.3, 0.7] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                      />
                     ) : (
                       <Icon className="size-3.5" />
                     )}
@@ -256,20 +264,20 @@ export function AIRegenerationModal({ isOpen, onClose, onComplete }: AIRegenerat
             {isFinished ? (
               <button
                 onClick={onClose}
-                className="neu-press w-full rounded-xl bg-primary px-5 py-3 text-xs font-bold text-primary-foreground shadow-lg flex items-center justify-center gap-2 hover:brightness-105"
+                className="neu-press w-full rounded-xl bg-primary px-5 py-3 text-xs font-bold text-primary-foreground shadow-lg flex items-center justify-center gap-2 hover:brightness-105 glow-primary"
               >
                 <span>View Updated Live CRM</span>
                 <ArrowRight className="size-4" />
               </button>
             ) : (
-              <div className="w-full flex items-center justify-center gap-2 py-2 text-xs text-muted-foreground font-semibold">
-                <Loader2 className="size-4 animate-spin text-primary" />
-                <span>AI Engine is applying your schema changes…</span>
+              <div className="w-full flex items-center justify-center py-2">
+                <ThinkingDots label="AI Engine is applying your schema changes…" />
               </div>
             )}
           </div>
         </motion.div>
-      </div>
-    </AnimatePresence>
+      </motion.div>
+    ) : null}
+  </AnimatePresence>
   );
 }
