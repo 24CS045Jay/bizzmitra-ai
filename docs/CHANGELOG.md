@@ -2,6 +2,28 @@
 
 All notable changes across the 8-day engineering sprint will be documented in this file.
 
+## [Day 8] - 2026-09-12: Admin Console, Multi-Tenant RBAC, Monetization & Final Competition Polish
+
+### Added
+- **Central Admin Console (`/admin` & `src/routes/admin.tsx`)**:
+  - Multi-tenant workspace directory with live status filtering (`active`, `archived`) and 1-click workspace switching.
+  - Multi-region cloud telemetry monitor with live latency and SLA checks for Cloudflare Edge, Supabase PostgreSQL, Redis BullMQ, and AWS Bedrock inference.
+  - AI platform token economics cards detailing total tokens processed (1.42M), cache hit efficiency (88.4%), and blended token cost.
+  - Added `Admin Console` to the global sidebar navigation.
+- **Dynamic Role-Based Access Control (RBAC) (`src/lib/admin-rbac-data.ts` & `src/components/AppShell.tsx`)**:
+  - 4 Standardized enterprise roles: `Admin` (Super Admin), `Architect` (Solution Lead), `Analyst` (Business Analyst), and `Viewer` (Stakeholder).
+  - Live role switcher dropdown in the sidebar footer with custom browser event broadcasting.
+  - Permission-gated controls: AI regeneration and deliverable export buttons disabled with explanatory tooltips when acting as Analyst or Viewer.
+  - Interactive top banner warning when previewing non-admin roles, with 1-click "Reset to Super Admin".
+- **Monetization Engine & AI Credit Wallet (`/settings` & `src/routes/settings.tsx`)**:
+  - Live credit wallet showing balance (840 credits), monthly quota, and burn rate.
+  - Chronological transaction audit ledger tracking AI synthesis deductions and subscription grants.
+  - Interactive top-up simulation buttons (+250 credits for $10, +1,000 credits for $35).
+  - 3-tier SaaS pricing cards (Free Starter, Growth Pro, Enterprise Scale) with 1-click plan switching.
+- **Documentation & Competition Rehearsal Guide**:
+  - Added comprehensive technical learning document `/docs/learning/DAY-8.md` detailing multi-tenant isolation, RBAC event propagation, token metering, and a 3-minute winning presentation protocol.
+  - Updated `ROADMAP-8-DAYS.md` marking all 8 days as `DONE ✅`.
+
 ## [Day 7] - 2026-09-12: Collaboration, Version Control & Universal Export Center
 
 ### Added

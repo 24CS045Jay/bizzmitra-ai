@@ -25,6 +25,7 @@ import {
   Home,
   ArrowRight,
   ChevronDown,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "./ThemeToggle";
@@ -225,6 +226,14 @@ const PORTAL_GROUPS: PortalNavGroup[] = [
         description: "PDF, JSON, Mermaid & code export",
         to: "/workspace/export",
         icon: Package,
+      },
+      {
+        id: "admin",
+        label: "Admin Console",
+        description: "Tenant & RBAC permission controls",
+        to: "/admin",
+        icon: Shield,
+        badge: "Admin",
       },
       {
         id: "settings",

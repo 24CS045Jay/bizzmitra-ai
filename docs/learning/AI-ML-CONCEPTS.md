@@ -216,5 +216,48 @@ If a company manually transcribes architecture diagrams into OpenAPI specs and d
 ## What I Should Be Able To Explain To A Judge
 > *"In competitor workflows, you design a database in one tool, write OpenAPI specs in another, and draft requirements in Word. In BizzMitra, everything derives from one unified business context. Our Universal Export Center serializes this single source of truth into OpenAPI 3.1 JSON, PostgreSQL 16 DDL, Word specs, and board-ready PDFs with zero desynchronization."*
 
+---
 
+# 9. Dynamic Role-Based Access Control (RBAC) & Permission Scoping
 
+## Simple Definition
+A security architecture where access to specific actions, data models, and generative AI functions is strictly partitioned based on a user's defined organizational role (Admin, Architect, Analyst, Viewer).
+
+## How It Works
+Instead of binary read/write gates, each role carries a granular boolean permissions object:
+- `canEditSchema`: Allows PostgreSQL DDL and API contract modifications.
+- `canRegenerateAI`: Allows triggering LLM inference and solution studio re-generation.
+- `canApproveBlueprint`: Authorizes stage-gate state transitions.
+- `canExportDeliverables`: Enables downloading PDF, SQL, and ZIP bundles.
+
+## Where BizzMitra Uses It
+In the **AppShell & Admin Console** (`src/lib/admin-rbac-data.ts`, `AppShell.tsx`, `ArtifactHeader.tsx`). Switching to `viewer` or `analyst` instantly disables AI regeneration and export buttons with informative tooltips.
+
+## Why We Need It
+Enterprise procurement demands least-privilege security. External client stakeholders should inspect roadmap milestones and read-only prototypes without having the capability to alter database schemas or exhaust corporate AI token budgets.
+
+## What I Should Be Able To Explain To A Judge
+> *"Enterprise SaaS requires strict governance. In BizzMitra-AI, we implemented a reactive RBAC engine with 4 standard personas. Switching to an Analyst or Viewer role immediately locks down schema edits and prevents unauthorized AI compute consumption."*
+
+---
+
+# 10. AI Token Economics, Metering & Business Credit Abstraction
+
+## Simple Definition
+Translating raw, volatile Large Language Model compute metrics (input tokens, output tokens, latency ms) into predictable, user-friendly business credits that can be budgeted, metered, and billed in SaaS subscriptions.
+
+## How It Works
+Raw LLM inference APIs bill at variable rates per million tokens. The monetization engine introduces a virtual credit ledger:
+$$\text{Available Credits} = \text{Monthly Quota} - \sum (\text{Task Cost})$$
+- AI Discovery Turn: 5 credits (~1,250 tokens)
+- Solution Studio Regeneration: 40 credits (~10,000 tokens)
+- Architecture HLD Synthesis: 50 credits (~12,500 tokens)
+
+## Where BizzMitra Uses It
+In **Settings & Monetization** (`/settings`) and **Central Admin Console** (`/admin`). Tracks balance (840 credits), burn rate (32 credits/day), and provides an instant top-up simulation.
+
+## Why We Need It
+Directly passing raw token counts confuses business users and exposes platforms to runaway cloud costs. Credit abstraction gives customers clear budget transparency while providing SaaS founders with predictable unit margins.
+
+## What I Should Be Able To Explain To A Judge
+> *"We don't bill users in confusing token fractions. We created an enterprise AI Token Wallet. High-value synthesis tasks deduct transparent business credits, recorded in an immutable ledger, with clear tier quotas and top-up options."*
