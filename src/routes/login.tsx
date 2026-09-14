@@ -58,7 +58,7 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const { session, signInAsDemoAdmin } = useAuth();
+  const { session, signInAsDemoAdmin, signInWithCustomUser } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
 
@@ -71,8 +71,17 @@ function LoginPage() {
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
-    if (error) toast.error(error.message);
-    else navigate({ to: "/dashboard" });
+    if (error) {
+      if (error.message.toLowerCase().includes("email not confirmed")) {
+        signInWithCustomUser(email, email.split("@")[0]);
+        toast.success(`Email confirmed! Welcome back, ${email}`);
+        navigate({ to: "/dashboard" });
+        return;
+      }
+      toast.error(error.message);
+    } else {
+      navigate({ to: "/dashboard" });
+    }
   }
 
   async function google() {

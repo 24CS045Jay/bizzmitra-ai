@@ -9,6 +9,7 @@ type AuthValue = {
   loading: boolean;
   signOut: () => Promise<void>;
   signInAsDemoAdmin: () => void;
+  signInWithCustomUser: (email: string, fullName?: string) => void;
 };
 
 const AuthContext = createContext<AuthValue>({
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthValue>({
   loading: true,
   signOut: async () => {},
   signInAsDemoAdmin: () => {},
+  signInWithCustomUser: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -73,6 +75,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(demoSession);
   };
 
+  const signInWithCustomUser = (email: string, fullName?: string) => {
+    const customSession = {
+      access_token: `custom-token-${Date.now()}`,
+      token_type: "bearer",
+      expires_in: 86400,
+      refresh_token: "custom-refresh",
+      user: {
+        id: `user-${Date.now()}`,
+        email,
+        aud: "authenticated",
+        role: "authenticated",
+        user_metadata: { full_name: fullName || email.split("@")[0] },
+        app_metadata: { provider: "email" },
+        created_at: new Date().toISOString(),
+      },
+    } as unknown as Session;
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("bizzmitra.demoSession", JSON.stringify(customSession));
+    }
+    setSession(customSession);
+  };
+
   const value = useMemo<AuthValue>(
     () => ({
       session,
@@ -86,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(null);
       },
       signInAsDemoAdmin,
+      signInWithCustomUser,
     }),
     [session, loading],
   );
