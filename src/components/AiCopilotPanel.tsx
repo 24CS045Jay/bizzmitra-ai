@@ -23,6 +23,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRoadmapForWorkspace } from "@/lib/planning-data";
 import { evaluateBlueprintRisks } from "@/lib/risk-evaluator";
 import { delay } from "@/lib/ai/generate-artifact";
+import {
+  CreditWallet,
+  loadCreditWallet,
+  deductCreditsByTokens,
+} from "@/lib/admin-rbac-data";
 
 interface Message {
   id: string;
@@ -46,6 +51,7 @@ export function AiCopilotPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [wallet, setWallet] = useState<CreditWallet>(loadCreditWallet());
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -61,6 +67,17 @@ export function AiCopilotPanel() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+
+  useEffect(() => {
+    setWallet(loadCreditWallet());
+    const onWalletChange = (e: Event) => {
+      const ce = e as CustomEvent<CreditWallet>;
+      if (ce.detail) setWallet(ce.detail);
+      else setWallet(loadCreditWallet());
+    };
+    window.addEventListener("bizzmitra:wallet-changed", onWalletChange);
+    return () => window.removeEventListener("bizzmitra:wallet-changed", onWalletChange);
+  }, []);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -246,6 +263,14 @@ export function AiCopilotPanel() {
         ];
       }
 
+      // 3. Deduct credits based on exact token count (prompt tokens + completion tokens)
+      const fullResponseContent = `${responseText} ${bullets ? bullets.join(" ") : ""}`;
+      const deduction = deductCreditsByTokens(
+        textToSend,
+        fullResponseContent,
+        `AI Copilot Query: "${textToSend.slice(0, 32)}${textToSend.length > 32 ? "..." : ""}"`,
+      );
+
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         sender: "assistant",
@@ -253,6 +278,9 @@ export function AiCopilotPanel() {
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         badge,
         bullets,
+        actionLabel: deduction.success
+          ? `⚡ ${deduction.totalTokens} tokens processed (-${deduction.creditsDeducted} credit)`
+          : undefined,
       };
 
       setMessages((prev) => [...prev, botMsg]);
@@ -307,9 +335,16 @@ export function AiCopilotPanel() {
                     <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
                       Live Grounded
                     </span>
+                    <span
+                      title="Available AI Credits. Deducted dynamically based on prompt + completion token usage."
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary font-mono"
+                    >
+                      <Coins className="size-3" />
+                      {wallet.balance} cr
+                    </span>
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Answering from your blueprint & artifacts
+                    Live metered • Deducts per token
                   </p>
                 </div>
               </div>
@@ -417,11 +452,18 @@ export function AiCopilotPanel() {
                     )}
 
                     <div
-                      className={`mt-2.5 text-[9px] ${
+                      className={`mt-2.5 flex items-center justify-between text-[9px] ${
                         m.sender === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
-                      } text-right`}
+                      }`}
                     >
-                      {m.timestamp}
+                      {m.actionLabel ? (
+                        <span className="font-mono text-[9px] font-semibold text-primary/80">
+                          {m.actionLabel}
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                      <span>{m.timestamp}</span>
                     </div>
                   </div>
 

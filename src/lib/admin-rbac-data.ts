@@ -240,5 +240,82 @@ export function saveCreditWallet(wallet: CreditWallet): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY_WALLET, JSON.stringify(wallet));
+    window.dispatchEvent(new CustomEvent("bizzmitra:wallet-changed", { detail: wallet }));
   } catch {}
+}
+
+/**
+ * Token-based calculation and metering.
+ * Standard industry conversion: 1 word ≈ 1.33 tokens.
+ * Credit conversion: 250 tokens = 1 Credit. Minimum = 1 Credit.
+ */
+export function estimateTokensForText(text: string): number {
+  if (!text || !text.trim()) return 0;
+  // Word count heuristic
+  const words = text.trim().split(/\s+/).length;
+  // Account for punctuation & subwords: ~1.33 tokens per word + base prompt framing overhead
+  return Math.max(1, Math.round(words * 1.35));
+}
+
+export type TokenDeductionResult = {
+  success: boolean;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  creditsDeducted: number;
+  newBalance: number;
+  message?: string;
+};
+
+export function deductCreditsByTokens(
+  promptText: string,
+  completionText: string,
+  activityDescription: string,
+): TokenDeductionResult {
+  const currentWallet = loadCreditWallet();
+  const promptTokens = estimateTokensForText(promptText);
+  const completionTokens = estimateTokensForText(completionText);
+  const totalTokens = promptTokens + completionTokens;
+
+  // 1 credit per 250 tokens (standardized tier), minimum 1 credit for an inference turn
+  const creditsDeducted = Math.max(1, Math.ceil(totalTokens / 250));
+
+  if (currentWallet.balance < creditsDeducted) {
+    return {
+      success: false,
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      creditsDeducted: 0,
+      newBalance: currentWallet.balance,
+      message: `Insufficient credits! This request requires ${creditsDeducted} credits (${totalTokens} tokens), but your balance is ${currentWallet.balance}.`,
+    };
+  }
+
+  const newBalance = currentWallet.balance - creditsDeducted;
+  const newTx: CreditTransaction = {
+    id: `tx-${Date.now().toString().slice(-5)}`,
+    description: `${activityDescription} (${totalTokens} tokens / ${creditsDeducted} credits)`,
+    type: "deduction",
+    amount: creditsDeducted,
+    timestamp: "Just now",
+    balanceAfter: newBalance,
+  };
+
+  const updatedWallet: CreditWallet = {
+    ...currentWallet,
+    balance: newBalance,
+    transactions: [newTx, ...currentWallet.transactions],
+  };
+
+  saveCreditWallet(updatedWallet);
+
+  return {
+    success: true,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    creditsDeducted,
+    newBalance,
+  };
 }
