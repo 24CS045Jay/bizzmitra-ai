@@ -122,57 +122,116 @@ export function AiCopilotPanel() {
       // 2. Synthesize answers based on the user's inquiry
       await delay(700 + Math.random() * 500);
 
-      const q = textToSend.toLowerCase();
+      // 2. Synthesize answers based on the user's inquiry with comprehensive intent recognition
+      await delay(600 + Math.random() * 400);
+
+      const q = textToSend.toLowerCase().trim();
       let responseText = "";
       let badge: string | undefined;
       let bullets: string[] | undefined;
 
-      if (q.includes("risk") || q.includes("biggest")) {
+      // Intent 1: Greetings & Small Talk
+      if (/^(hi|hello|hey|greetings|namaste|good\s(morning|afternoon|evening)|yo|sup)/i.test(q)) {
+        badge = "Blueprint Assistant";
+        responseText = `Hello! I am your AI Blueprint Copilot for **${workspaceName}**. I'm connected to your live solution architecture, HR CRM pipeline, financial ROI model, and 9-week roadmap.`;
+        bullets = [
+          "Ask me how to scale your business or expand recruitment capacity",
+          "Ask about your financial ROI, savings, and payback period",
+          "Ask about your top risks, timeline, or next action items",
+          "Ask about your database schema, architecture, or REST APIs",
+        ];
+      }
+      // Intent 2: Business Scaling, Growth & Expansion
+      else if (q.includes("scale") || q.includes("grow") || q.includes("expand") || q.includes("business") || q.includes("revenue") || q.includes("more client") || q.includes("client")) {
+        badge = "Scaling Strategy";
+        responseText = `To scale **${workspaceName}**, your digital blueprint unlocks three immediate operational growth levers:`;
+        bullets = [
+          "⚡ Automated Candidate Sourcing: Replace manual Google Sheets with the HR CRM candidate pipeline, cutting turnaround from 28 days to 9 days.",
+          "📈 Capacity Expansion: Reclaim 18 hours/week per recruiter so your 8 consultants can manage 600+ monthly applicants without hiring additional staff.",
+          "🏢 Corporate Client Portal: Give client companies direct self-service access to shortlist candidates, reducing feedback delays from 5 days to 4 hours.",
+          "💰 Projected Financial Impact: Generates an estimated ₹68,000+ net annual savings with a 340% 3-year ROI multiple.",
+        ];
+      }
+      // Intent 3: Risks & Compliance (DPDP, Security, Bottlenecks)
+      else if (q.includes("risk") || q.includes("biggest") || q.includes("threat") || q.includes("security") || q.includes("compliance") || q.includes("dpdp") || q.includes("audit")) {
         const primaryRisk = topRisks[0];
         const backupRisk = roadmap.riskRegister[0];
-        badge = "Risk Analysis";
-        responseText = `Your highest-priority open risk is: "${primaryRisk?.title ?? backupRisk?.title}".`;
+        badge = "Risk & Compliance";
+        responseText = `Your primary operational risk is: **"${primaryRisk?.title ?? backupRisk?.title}"**.`;
         bullets = [
-          `Category: ${(primaryRisk?.category ?? backupRisk?.category ?? "TECHNICAL").toUpperCase()}`,
-          `Impact: ${primaryRisk?.detail ?? backupRisk?.consequence ?? "Requires mitigation prior to Phase 2 sprint launch"}`,
-          `Remediation: ${primaryRisk?.remediation ?? backupRisk?.mitigationStrategy ?? "Review Risk Register in Roadmap & ROI"}`,
+          `Category: ${(primaryRisk?.category ?? backupRisk?.category ?? "COMPLIANCE").toUpperCase()}`,
+          `Severity Impact: ${primaryRisk?.detail ?? backupRisk?.consequence ?? "Requires 180-day resume purge routine under India DPDP Act"}`,
+          `Mitigation Strategy: ${primaryRisk?.remediation ?? backupRisk?.mitigationStrategy ?? "Implement automated retention triggers in PostgreSQL and complete Steering Committee sign-off."}`,
         ];
-      } else if (q.includes("rollout") || q.includes("timeline") || q.includes("plan") || q.includes("phase")) {
+      }
+      // Intent 4: Rollout Timeline & Phases
+      else if (q.includes("rollout") || q.includes("timeline") || q.includes("plan") || q.includes("phase") || q.includes("week") || q.includes("gantt") || q.includes("schedule")) {
         badge = "Delivery Roadmap";
-        responseText = `Your execution blueprint is sequenced into ${roadmap.phases.length} strategic phases spanning ${roadmap.targetTimelineWeeks} calendar weeks (${roadmap.totalPersonDays} Person-Days total effort).`;
+        responseText = `Your transformation is structured into **${roadmap.phases.length} strategic phases** over **${roadmap.targetTimelineWeeks} calendar weeks** (${roadmap.totalPersonDays} Person-Days total effort):`;
         bullets = roadmap.phases.map(
-          (p) => `${p.name}: Weeks ${p.startWeek + 1}–${p.startWeek + p.durationWeekCount} (${p.milestones.length} milestones, ${p.durationWeeks})`,
+          (p) => `📌 ${p.name}: Weeks ${p.startWeek + 1}–${p.startWeek + p.durationWeekCount} (${p.milestones.length} milestones — ${p.durationWeeks})`,
         );
-      } else if (q.includes("budget") || q.includes("cost") || q.includes("financial") || q.includes("roi")) {
-        badge = "Financial Model";
+      }
+      // Intent 5: Financials, Budget, ROI, Savings
+      else if (q.includes("budget") || q.includes("cost") || q.includes("financial") || q.includes("roi") || q.includes("saving") || q.includes("money") || q.includes("capex") || q.includes("price")) {
+        badge = "Financial Model & ROI";
         const estimatedCapex = roadmap.totalPersonDays * 12500;
-        responseText = `Estimated CapEx effort is ₹${(estimatedCapex / 100000).toFixed(1)} Lakhs based on ${roadmap.totalPersonDays} person-days of technical execution.`;
+        responseText = `Based on your team of 8 recruiters and 400 monthly applicants, here is your financial snapshot:`;
         bullets = [
-          "Phase 1 Foundation: ~35% of total budget",
-          "Phase 2 Core Implementation: ~45% of total budget",
-          "Phase 3 Hardening & Go-Live: ~20% of total budget",
-          "Projected net ROI recovery period: 5.2 months post deployment",
+          `Total Implementation CapEx: ~₹${(estimatedCapex / 100000).toFixed(1)} Lakhs (${roadmap.totalPersonDays} person-days)`,
+          "Net Annual Labor Savings: ~₹68,400+ per year",
+          "Payback Period: 4.2 to 5.2 months post-deployment",
+          "3-Year Cumulative ROI Multiple: 340% return on investment",
         ];
-      } else if (q.includes("action") || q.includes("next") || q.includes("todo")) {
+      }
+      // Intent 6: Next Action Items, Sprints & Tasks
+      else if (q.includes("action") || q.includes("next") || q.includes("todo") || q.includes("task") || q.includes("sprint") || q.includes("deliverable")) {
         badge = "Immediate Action Items";
-        responseText = `Here are your next 3 chronological execution deliverables ready for sprint kick-off:`;
+        responseText = `Here are your next high-priority execution deliverables ready for sprint kick-off:`;
         bullets = actionItems.map(
-          (item) => `${item.title} — Owner: ${item.owner} (${item.timeline})`,
+          (item) => `✅ ${item.title} — Assigned to: ${item.owner} (${item.timeline})`,
         );
-      } else if (q.includes("confidence") || q.includes("score")) {
-        badge = "Confidence Audit";
-        responseText = `Your current Blueprint Confidence Score is ${scoreResult.score}% (${scoreResult.grade}).`;
+      }
+      // Intent 7: Architecture, Tech Stack, Cloud, Backend
+      else if (q.includes("architecture") || q.includes("stack") || q.includes("tech") || q.includes("database") || q.includes("api") || q.includes("backend") || q.includes("hld") || q.includes("lld")) {
+        badge = "Solution Architecture";
+        responseText = `Your technical blueprint utilizes a cloud-native, event-driven architecture designed for high throughput:`;
         bullets = [
-          `Improvement Target: ${scoreResult.improvementHint}`,
-          `Domains Verified: ${scoreResult.breakdown.filter((d) => d.completed).length} / ${scoreResult.breakdown.length} blueprint domains`,
+          "Frontend: React 19 + TanStack Router + Tailwind CSS v4 (Sub-80ms client latency)",
+          "Edge & Gateway: Cloudflare Edge Worker with JWT authentication and rate limiting",
+          "Async AI Pipeline: Redis 7 + BullMQ queue handling asynchronous resume parsing and AI matching",
+          "Persistence & Data: PostgreSQL 16 with Row-Level Security (RLS) isolating tenant records",
         ];
-      } else {
-        badge = "Blueprint Synthesis";
-        responseText = `Analyzing blueprint context for "${workspaceName}": Your architecture, process BPMN, and roadmap are currently active.`;
+      }
+      // Intent 8: HR CRM, Solution, Features
+      else if (q.includes("crm") || q.includes("solution") || q.includes("candidate") || q.includes("pipeline") || q.includes("feature") || q.includes("punch")) {
+        badge = "Workable Solution";
+        responseText = `Your interactive HR CRM application includes 4 core functional modules:`;
         bullets = [
-          `Current Rollout: ${roadmap.scenarioName} (${roadmap.targetTimelineWeeks} Weeks)`,
-          `Top Risk: ${topRisks[0]?.title ?? "Data Migration Bottlenecks"}`,
-          `Confidence Score: ${scoreResult.score}% (${scoreResult.grade})`,
+          "🎯 Candidate Pipeline: Real-time candidate tracking across Screening, Interview, Offer, and Rejected stages",
+          "⏱️ Consultant Punch Clock: Instant daily check-in/out attendance logging with live hours tracked",
+          "⚡ Solution Studio (USP #2): Add custom candidate fields (e.g. Expected CTC, LinkedIn URL) with 1-click AI regeneration",
+          "📁 Instant CSV Export: One-click download of the complete active talent roster",
+        ];
+      }
+      // Intent 9: Confidence Score & Maturity
+      else if (q.includes("confidence") || q.includes("score") || q.includes("maturity") || q.includes("readiness")) {
+        badge = "Readiness Audit";
+        responseText = `Your current Blueprint Confidence Score is **${scoreResult.score}% (${scoreResult.grade})**.`;
+        bullets = [
+          `Verified Domains: ${scoreResult.breakdown.filter((d) => d.completed).length} of ${scoreResult.breakdown.length} blueprint domains complete`,
+          `Key Recommendation: ${scoreResult.improvementHint}`,
+        ];
+      }
+      // Intent 10: General Contextual Assistant Fallback
+      else {
+        badge = "Blueprint Advisory";
+        responseText = `Regarding **"${textToSend}"**: Based on the active **${workspaceName}** enterprise blueprint, here are the key contextual details:`;
+        bullets = [
+          `Current Modernization Scope: ${roadmap.scenarioName} (${roadmap.targetTimelineWeeks} Weeks critical path)`,
+          `Active Architecture: Cloud-native ATS with PostgreSQL 16 and BullMQ async workers`,
+          `Confidence & Health: ${scoreResult.score}% (${scoreResult.grade}) with ${topRisks.length} open risk mitigations monitored`,
+          "Tip: You can ask me about scaling, ROI, timeline, tech stack, or immediate action items!",
         ];
       }
 
@@ -301,33 +360,53 @@ export function AiCopilotPanel() {
                   )}
 
                   <div
-                    className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed ${
+                    className={`max-w-[88%] rounded-2xl p-4 text-xs leading-relaxed shadow-sm ${
                       m.sender === "user"
                         ? "bg-primary text-primary-foreground font-medium rounded-tr-xs"
-                        : "neu bg-surface text-foreground rounded-tl-xs"
+                        : "rounded-tl-xs border border-border/80 bg-background/90 text-foreground"
                     }`}
                   >
                     {m.badge && (
-                      <div className="mb-2 inline-flex items-center gap-1 rounded-md bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+                      <div className="mb-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">
                         <Sparkles className="size-3" />
                         {m.badge}
                       </div>
                     )}
-                    <p>{m.text}</p>
+                    <p className="whitespace-pre-wrap text-xs leading-relaxed text-foreground font-normal">
+                      {m.text.split(/(\*\*.*?\*\*)/g).map((part, i) =>
+                        part.startsWith("**") && part.endsWith("**") ? (
+                          <strong key={i} className="font-semibold text-primary">
+                            {part.slice(2, -2)}
+                          </strong>
+                        ) : (
+                          part
+                        ),
+                      )}
+                    </p>
 
                     {m.bullets && m.bullets.length > 0 && (
-                      <ul className="mt-2.5 space-y-1.5 border-t border-border/60 pt-2 text-[11px]">
+                      <div className="mt-3 space-y-2 border-t border-border/60 pt-2.5">
                         {m.bullets.map((b, idx) => (
-                          <li key={idx} className="flex items-start gap-1.5 text-muted-foreground">
-                            <span className="mt-1 size-1 shrink-0 rounded-full bg-primary" />
-                            <span className="leading-snug">{b}</span>
-                          </li>
+                          <div key={idx} className="flex items-start gap-2 text-[11px] leading-relaxed">
+                            <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary/70" />
+                            <span className="text-muted-foreground font-normal">
+                              {b.split(/(\*\*.*?\*\*)/g).map((part, i) =>
+                                part.startsWith("**") && part.endsWith("**") ? (
+                                  <strong key={i} className="font-medium text-foreground">
+                                    {part.slice(2, -2)}
+                                  </strong>
+                                ) : (
+                                  part
+                                ),
+                              )}
+                            </span>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     )}
 
                     <div
-                      className={`mt-2 text-[9px] ${
+                      className={`mt-2.5 text-[9px] ${
                         m.sender === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
                       } text-right`}
                     >
