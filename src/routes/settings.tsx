@@ -82,6 +82,13 @@ function SettingsPage() {
 
   useEffect(() => {
     setWallet(loadCreditWallet());
+    const handleWalletChange = (e: Event) => {
+      const ce = e as CustomEvent<CreditWallet>;
+      if (ce.detail) setWallet(ce.detail);
+      else setWallet(loadCreditWallet());
+    };
+    window.addEventListener("bizzmitra:wallet-changed", handleWalletChange);
+    return () => window.removeEventListener("bizzmitra:wallet-changed", handleWalletChange);
   }, []);
 
   useEffect(() => {

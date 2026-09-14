@@ -5,7 +5,9 @@ import {
   ArrowRight,
   Bot,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   Clock,
   Coins,
   Copy,
@@ -16,6 +18,10 @@ import {
   Sparkles,
   User,
   X,
+  Check,
+  Lock,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,15 +29,29 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRoadmapForWorkspace } from "@/lib/planning-data";
 import { evaluateBlueprintRisks } from "@/lib/risk-evaluator";
 import { delay } from "@/lib/ai/generate-artifact";
+import {
+  CreditWallet,
+  loadCreditWallet,
+  deductCreditsByTokens,
+  AI_MODELS,
+  AiModel,
+  AiModelId,
+  loadActiveModel,
+  saveActiveModel,
+  canUserAccessModel,
+  loadCurrentRole,
+  UserRole,
+} from "@/lib/admin-rbac-data";
+import { AiModelPaymentModal } from "@/components/AiModelPaymentModal";
 
 interface Message {
   id: string;
   sender: "user" | "assistant";
   text: string;
   timestamp: string;
-  badge?: string;
-  bullets?: string[];
-  actionLabel?: string;
+  badge?: string | undefined;
+  bullets?: string[] | undefined;
+  actionLabel?: string | undefined;
 }
 
 const QUICK_PROMPTS = [
@@ -46,6 +66,12 @@ export function AiCopilotPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [wallet, setWallet] = useState<CreditWallet>(loadCreditWallet());
+  const [activeModelId, setActiveModelId] = useState<AiModelId>(loadActiveModel());
+  const [currentRole, setCurrentRole] = useState<UserRole>(loadCurrentRole());
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [pendingModel, setPendingModel] = useState<AiModel | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -61,6 +87,55 @@ export function AiCopilotPanel() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+
+  useEffect(() => {
+    setWallet(loadCreditWallet());
+    const onWalletChange = (e: Event) => {
+      const ce = e as CustomEvent<CreditWallet>;
+      if (ce.detail) setWallet(ce.detail);
+      else setWallet(loadCreditWallet());
+    };
+    const onRoleChange = (e: Event) => {
+      const ce = e as CustomEvent<UserRole>;
+      if (ce.detail) setCurrentRole(ce.detail);
+      else setCurrentRole(loadCurrentRole());
+    };
+    const onModelChange = (e: Event) => {
+      const ce = e as CustomEvent<AiModelId>;
+      if (ce.detail) setActiveModelId(ce.detail);
+      else setActiveModelId(loadActiveModel());
+    };
+
+    window.addEventListener("bizzmitra:wallet-changed", onWalletChange);
+    window.addEventListener("bizzmitra:role-changed", onRoleChange);
+    window.addEventListener("bizzmitra:model-changed", onModelChange);
+    return () => {
+      window.removeEventListener("bizzmitra:wallet-changed", onWalletChange);
+      window.removeEventListener("bizzmitra:role-changed", onRoleChange);
+      window.removeEventListener("bizzmitra:model-changed", onModelChange);
+    };
+  }, []);
+
+  const activeModel = AI_MODELS.find((m) => m.id === activeModelId) || AI_MODELS[0]!;
+  const currentAccess = canUserAccessModel(activeModelId, currentRole, user?.email, wallet.tier);
+
+  function handleSelectModel(model: AiModel) {
+    const access = canUserAccessModel(model.id, currentRole, user?.email, wallet.tier);
+    if (access.allowed) {
+      saveActiveModel(model.id);
+      setActiveModelId(model.id);
+      setIsModelDropdownOpen(false);
+      if (access.isSuperAdminBypass) {
+        toast.success(`🛡️ Super Admin Bypass: Switched to ${model.name} without payment.`);
+      } else {
+        toast.success(`Switched active model to ${model.name}.`);
+      }
+    } else {
+      setIsModelDropdownOpen(false);
+      setPendingModel(model);
+      setCheckoutModalOpen(true);
+    }
+  }
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -122,67 +197,149 @@ export function AiCopilotPanel() {
       // 2. Synthesize answers based on the user's inquiry
       await delay(700 + Math.random() * 500);
 
-      const q = textToSend.toLowerCase();
+      // 2. Synthesize answers based on the user's inquiry with comprehensive intent recognition
+      await delay(600 + Math.random() * 400);
+
+      const q = textToSend.toLowerCase().trim();
       let responseText = "";
       let badge: string | undefined;
       let bullets: string[] | undefined;
 
-      if (q.includes("risk") || q.includes("biggest")) {
-        const primaryRisk = topRisks[0];
-        const backupRisk = roadmap.riskRegister[0];
-        badge = "Risk Analysis";
-        responseText = `Your highest-priority open risk is: "${primaryRisk?.title ?? backupRisk?.title}".`;
+      // Intent 1: Greetings & Small Talk
+      if (/^(hi|hello|hey|greetings|namaste|good\s(morning|afternoon|evening)|yo|sup)/i.test(q)) {
+        badge = "Blueprint Assistant";
+        responseText = `Hello! I am your AI Blueprint Copilot for **${workspaceName}**. I'm connected to your live solution architecture, HR CRM pipeline, financial ROI model, and 9-week roadmap.`;
         bullets = [
-          `Category: ${(primaryRisk?.category ?? backupRisk?.category ?? "TECHNICAL").toUpperCase()}`,
-          `Impact: ${primaryRisk?.detail ?? backupRisk?.consequence ?? "Requires mitigation prior to Phase 2 sprint launch"}`,
-          `Remediation: ${primaryRisk?.remediation ?? backupRisk?.mitigationStrategy ?? "Review Risk Register in Roadmap & ROI"}`,
-        ];
-      } else if (q.includes("rollout") || q.includes("timeline") || q.includes("plan") || q.includes("phase")) {
-        badge = "Delivery Roadmap";
-        responseText = `Your execution blueprint is sequenced into ${roadmap.phases.length} strategic phases spanning ${roadmap.targetTimelineWeeks} calendar weeks (${roadmap.totalPersonDays} Person-Days total effort).`;
-        bullets = roadmap.phases.map(
-          (p) => `${p.name}: Weeks ${p.startWeek + 1}–${p.startWeek + p.durationWeekCount} (${p.milestones.length} milestones, ${p.durationWeeks})`,
-        );
-      } else if (q.includes("budget") || q.includes("cost") || q.includes("financial") || q.includes("roi")) {
-        badge = "Financial Model";
-        const estimatedCapex = roadmap.totalPersonDays * 12500;
-        responseText = `Estimated CapEx effort is ₹${(estimatedCapex / 100000).toFixed(1)} Lakhs based on ${roadmap.totalPersonDays} person-days of technical execution.`;
-        bullets = [
-          "Phase 1 Foundation: ~35% of total budget",
-          "Phase 2 Core Implementation: ~45% of total budget",
-          "Phase 3 Hardening & Go-Live: ~20% of total budget",
-          "Projected net ROI recovery period: 5.2 months post deployment",
-        ];
-      } else if (q.includes("action") || q.includes("next") || q.includes("todo")) {
-        badge = "Immediate Action Items";
-        responseText = `Here are your next 3 chronological execution deliverables ready for sprint kick-off:`;
-        bullets = actionItems.map(
-          (item) => `${item.title} — Owner: ${item.owner} (${item.timeline})`,
-        );
-      } else if (q.includes("confidence") || q.includes("score")) {
-        badge = "Confidence Audit";
-        responseText = `Your current Blueprint Confidence Score is ${scoreResult.score}% (${scoreResult.grade}).`;
-        bullets = [
-          `Improvement Target: ${scoreResult.improvementHint}`,
-          `Domains Verified: ${scoreResult.breakdown.filter((d) => d.completed).length} / ${scoreResult.breakdown.length} blueprint domains`,
-        ];
-      } else {
-        badge = "Blueprint Synthesis";
-        responseText = `Analyzing blueprint context for "${workspaceName}": Your architecture, process BPMN, and roadmap are currently active.`;
-        bullets = [
-          `Current Rollout: ${roadmap.scenarioName} (${roadmap.targetTimelineWeeks} Weeks)`,
-          `Top Risk: ${topRisks[0]?.title ?? "Data Migration Bottlenecks"}`,
-          `Confidence Score: ${scoreResult.score}% (${scoreResult.grade})`,
+          "Ask me how to scale your business or expand recruitment capacity",
+          "Ask about your financial ROI, savings, and payback period",
+          "Ask about your top risks, timeline, or next action items",
+          "Ask about your database schema, architecture, or REST APIs",
         ];
       }
+      // Intent 2: Business Scaling, Growth & Expansion
+      else if (q.includes("scale") || q.includes("grow") || q.includes("expand") || q.includes("business") || q.includes("revenue") || q.includes("more client") || q.includes("client")) {
+        badge = "Scaling Strategy";
+        responseText = `To scale **${workspaceName}**, your digital blueprint unlocks three immediate operational growth levers:`;
+        bullets = [
+          "⚡ Automated Candidate Sourcing: Replace manual Google Sheets with the HR CRM candidate pipeline, cutting turnaround from 28 days to 9 days.",
+          "📈 Capacity Expansion: Reclaim 18 hours/week per recruiter so your 8 consultants can manage 600+ monthly applicants without hiring additional staff.",
+          "🏢 Corporate Client Portal: Give client companies direct self-service access to shortlist candidates, reducing feedback delays from 5 days to 4 hours.",
+          "💰 Projected Financial Impact: Generates an estimated ₹68,000+ net annual savings with a 340% 3-year ROI multiple.",
+        ];
+      }
+      // Intent 3: Risks & Compliance (DPDP, Security, Bottlenecks)
+      else if (q.includes("risk") || q.includes("biggest") || q.includes("threat") || q.includes("security") || q.includes("compliance") || q.includes("dpdp") || q.includes("audit")) {
+        const primaryRisk = topRisks[0];
+        const backupRisk = roadmap.riskRegister[0];
+        badge = "Risk & Compliance";
+        responseText = `Your primary operational risk is: **"${primaryRisk?.title ?? backupRisk?.title}"**.`;
+        bullets = [
+          `Category: ${(primaryRisk?.category ?? backupRisk?.category ?? "COMPLIANCE").toUpperCase()}`,
+          `Severity Impact: ${primaryRisk?.detail ?? backupRisk?.consequence ?? "Requires 180-day resume purge routine under India DPDP Act"}`,
+          `Mitigation Strategy: ${primaryRisk?.remediation ?? backupRisk?.mitigationStrategy ?? "Implement automated retention triggers in PostgreSQL and complete Steering Committee sign-off."}`,
+        ];
+      }
+      // Intent 4: Rollout Timeline & Phases
+      else if (q.includes("rollout") || q.includes("timeline") || q.includes("plan") || q.includes("phase") || q.includes("week") || q.includes("gantt") || q.includes("schedule")) {
+        badge = "Delivery Roadmap";
+        responseText = `Your transformation is structured into **${roadmap.phases.length} strategic phases** over **${roadmap.targetTimelineWeeks} calendar weeks** (${roadmap.totalPersonDays} Person-Days total effort):`;
+        bullets = roadmap.phases.map(
+          (p) => `📌 ${p.name}: Weeks ${p.startWeek + 1}–${p.startWeek + p.durationWeekCount} (${p.milestones.length} milestones — ${p.durationWeeks})`,
+        );
+      }
+      // Intent 5: Profit Maximization, Revenue & Economics
+      else if (q.includes("profit") || q.includes("margin") || q.includes("earn") || q.includes("monetiz") || q.includes("bottomline") || q.includes("revenue gain")) {
+        badge = "Profit Maximization Strategy";
+        responseText = `To maximize operational profit for **${workspaceName}**, your digital transformation drives profitability through two simultaneous engines:`;
+        bullets = [
+          "💰 Direct Cost Reduction: Automating 65% of manual recruiter spreadsheet tasks saves ₹68,400+ annually in direct labor waste.",
+          "⚡ Placement Velocity Expansion: Cutting interview turnaround from 28 days to 9 days enables 8 recruiters to close 35% more placements each month without hiring more staff.",
+          "📉 Candidate Leakage Reduction: Slashing candidate drop-off from 28% to 6% captures an estimated ₹4.5 Lakhs/year in otherwise lost recruitment fees.",
+          "⏱️ Fast Payback: The entire system reaches net profitability within 4.2 months, yielding a 340% cumulative 3-year ROI multiple.",
+        ];
+      }
+      // Intent 6: Financials, Budget, ROI, Savings
+      else if (q.includes("budget") || q.includes("cost") || q.includes("financial") || q.includes("roi") || q.includes("saving") || q.includes("money") || q.includes("capex") || q.includes("price")) {
+        badge = "Financial Model & ROI";
+        const estimatedCapex = roadmap.totalPersonDays * 12500;
+        responseText = `Based on your team of 8 recruiters and 400 monthly applicants, here is your financial snapshot:`;
+        bullets = [
+          `Total Implementation CapEx: ~₹${(estimatedCapex / 100000).toFixed(1)} Lakhs (${roadmap.totalPersonDays} person-days)`,
+          "Net Annual Labor Savings: ~₹68,400+ per year",
+          "Payback Period: 4.2 to 5.2 months post-deployment",
+          "3-Year Cumulative ROI Multiple: 340% return on investment",
+        ];
+      }
+      // Intent 6: Next Action Items, Sprints & Tasks
+      else if (q.includes("action") || q.includes("next") || q.includes("todo") || q.includes("task") || q.includes("sprint") || q.includes("deliverable")) {
+        badge = "Immediate Action Items";
+        responseText = `Here are your next high-priority execution deliverables ready for sprint kick-off:`;
+        bullets = actionItems.map(
+          (item) => `✅ ${item.title} — Assigned to: ${item.owner} (${item.timeline})`,
+        );
+      }
+      // Intent 7: Architecture, Tech Stack, Cloud, Backend
+      else if (q.includes("architecture") || q.includes("stack") || q.includes("tech") || q.includes("database") || q.includes("api") || q.includes("backend") || q.includes("hld") || q.includes("lld")) {
+        badge = "Solution Architecture";
+        responseText = `Your technical blueprint utilizes a cloud-native, event-driven architecture designed for high throughput:`;
+        bullets = [
+          "Frontend: React 19 + TanStack Router + Tailwind CSS v4 (Sub-80ms client latency)",
+          "Edge & Gateway: Cloudflare Edge Worker with JWT authentication and rate limiting",
+          "Async AI Pipeline: Redis 7 + BullMQ queue handling asynchronous resume parsing and AI matching",
+          "Persistence & Data: PostgreSQL 16 with Row-Level Security (RLS) isolating tenant records",
+        ];
+      }
+      // Intent 8: HR CRM, Solution, Features
+      else if (q.includes("crm") || q.includes("solution") || q.includes("candidate") || q.includes("pipeline") || q.includes("feature") || q.includes("punch")) {
+        badge = "Workable Solution";
+        responseText = `Your interactive HR CRM application includes 4 core functional modules:`;
+        bullets = [
+          "🎯 Candidate Pipeline: Real-time candidate tracking across Screening, Interview, Offer, and Rejected stages",
+          "⏱️ Consultant Punch Clock: Instant daily check-in/out attendance logging with live hours tracked",
+          "⚡ Solution Studio (USP #2): Add custom candidate fields (e.g. Expected CTC, LinkedIn URL) with 1-click AI regeneration",
+          "📁 Instant CSV Export: One-click download of the complete active talent roster",
+        ];
+      }
+      // Intent 9: Confidence Score & Maturity
+      else if (q.includes("confidence") || q.includes("score") || q.includes("maturity") || q.includes("readiness")) {
+        badge = "Readiness Audit";
+        responseText = `Your current Blueprint Confidence Score is **${scoreResult.score}% (${scoreResult.grade})**.`;
+        bullets = [
+          `Verified Domains: ${scoreResult.breakdown.filter((d) => d.completed).length} of ${scoreResult.breakdown.length} blueprint domains complete`,
+          `Key Recommendation: ${scoreResult.improvementHint}`,
+        ];
+      }
+      // Intent 10: General Contextual Assistant Fallback
+      else {
+        badge = "Blueprint Advisory";
+        responseText = `Regarding **"${textToSend}"**: Based on the active **${workspaceName}** enterprise blueprint, here are the key contextual details:`;
+        bullets = [
+          `Current Modernization Scope: ${roadmap.scenarioName} (${roadmap.targetTimelineWeeks} Weeks critical path)`,
+          `Active Architecture: Cloud-native ATS with PostgreSQL 16 and BullMQ async workers`,
+          `Confidence & Health: ${scoreResult.score}% (${scoreResult.grade}) with ${topRisks.length} open risk mitigations monitored`,
+          "Tip: You can ask me about scaling, ROI, timeline, tech stack, or immediate action items!",
+        ];
+      }
+
+      // 3. Deduct credits based on exact token count (prompt tokens + completion tokens) & active model multiplier
+      const fullResponseContent = `${responseText} ${bullets ? bullets.join(" ") : ""}`;
+      const deduction = deductCreditsByTokens(
+        textToSend,
+        fullResponseContent,
+        `AI Copilot (${activeModel.name}): "${textToSend.slice(0, 30)}${textToSend.length > 30 ? "..." : ""}"`,
+        activeModel.costMultiplier,
+      );
 
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         sender: "assistant",
         text: responseText,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        badge,
+        badge: badge ? `${badge} • ${activeModel.name}` : activeModel.name,
         bullets,
+        actionLabel: deduction.success
+          ? `⚡ ${deduction.totalTokens} tokens processed (-${deduction.creditsDeducted} cr • ${activeModel.name})`
+          : undefined,
       };
 
       setMessages((prev) => [...prev, botMsg]);
@@ -237,9 +394,16 @@ export function AiCopilotPanel() {
                     <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
                       Live Grounded
                     </span>
+                    <span
+                      title="Available AI Credits. Deducted dynamically based on prompt + completion token usage."
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary font-mono"
+                    >
+                      <Coins className="size-3" />
+                      {wallet.balance} cr
+                    </span>
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Answering from your blueprint & artifacts
+                    Live metered • Deducts per token
                   </p>
                 </div>
               </div>
@@ -272,6 +436,133 @@ export function AiCopilotPanel() {
               </div>
             </div>
 
+            {/* AI Model Selector Bar */}
+            <div className="border-b border-border/70 bg-muted/20 px-3.5 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                  className="neu-sm neu-press flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-foreground hover:border-primary/40 transition-all"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="size-3.5 text-primary" />
+                    <span className="font-semibold">{activeModel.name}</span>
+                    <span className="text-[10px] text-muted-foreground">({activeModel.provider})</span>
+                  </div>
+                  {currentAccess.isSuperAdminBypass ? (
+                    <span
+                      title="Super Admin / Whitelisted testing account: Free access to all AI models"
+                      className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 font-mono"
+                    >
+                      <ShieldCheck className="size-2.5" />
+                      Admin Bypass
+                    </span>
+                  ) : activeModel.isPro ? (
+                    <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold text-primary font-mono">
+                      Pro Active
+                    </span>
+                  ) : null}
+                  {isModelDropdownOpen ? (
+                    <ChevronUp className="size-3 text-muted-foreground ml-0.5" />
+                  ) : (
+                    <ChevronDown className="size-3 text-muted-foreground ml-0.5" />
+                  )}
+                </button>
+
+                <div className="text-[10px] text-muted-foreground font-mono">
+                  {activeModel.costMultiplier}x rate
+                </div>
+              </div>
+
+              {/* Dropdown Menu */}
+              <AnimatePresence>
+                {isModelDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-2 space-y-1 overflow-hidden rounded-2xl border border-border/80 bg-card p-2 shadow-xl"
+                  >
+                    <div className="px-2 py-1 flex items-center justify-between text-[10px] text-muted-foreground font-medium border-b border-border/40 pb-1.5 mb-1">
+                      <span>SELECT REASONING ENGINE</span>
+                      {currentAccess.isSuperAdminBypass ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                          <ShieldCheck className="size-3" /> Admin: 0 Payment
+                        </span>
+                      ) : (
+                        <span className="text-primary font-bold">Real-time Gateway</span>
+                      )}
+                    </div>
+
+                    {AI_MODELS.map((model) => {
+                      const isSelected = model.id === activeModelId;
+                      const access = canUserAccessModel(model.id, currentRole, user?.email, wallet.tier);
+
+                      return (
+                        <button
+                          key={model.id}
+                          type="button"
+                          onClick={() => handleSelectModel(model)}
+                          className={`w-full flex items-center justify-between rounded-xl px-2.5 py-2 text-left transition-all ${
+                            isSelected
+                              ? "bg-primary/10 border border-primary/30"
+                              : "hover:bg-muted/50 border border-transparent"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className={`grid size-6 shrink-0 place-items-center rounded-lg ${
+                                isSelected
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {isSelected ? <Check className="size-3.5" /> : <Bot className="size-3.5" />}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-foreground truncate">
+                                  {model.name}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  • {model.provider}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {model.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 ml-2">
+                            {access.isSuperAdminBypass ? (
+                              <span className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                                <ShieldCheck className="size-2.5" />
+                                Admin Free
+                              </span>
+                            ) : !model.isPro ? (
+                              <span className="rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
+                                Free
+                              </span>
+                            ) : access.allowed ? (
+                              <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">
+                                Unlocked
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400">
+                                <Lock className="size-2.5" />
+                                {model.tierRequired === "Enterprise Scale" ? "$199" : "$49"}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             {/* Quick Prompts Chips */}
             <div className="flex gap-1.5 overflow-x-auto border-b border-border/50 p-2.5 scrollbar-none">
               {QUICK_PROMPTS.map((prompt) => (
@@ -301,37 +592,64 @@ export function AiCopilotPanel() {
                   )}
 
                   <div
-                    className={`max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed ${
+                    className={`max-w-[88%] rounded-2xl p-4 text-xs leading-relaxed shadow-sm ${
                       m.sender === "user"
                         ? "bg-primary text-primary-foreground font-medium rounded-tr-xs"
-                        : "neu bg-surface text-foreground rounded-tl-xs"
+                        : "rounded-tl-xs border border-border/80 bg-background/90 text-foreground"
                     }`}
                   >
                     {m.badge && (
-                      <div className="mb-2 inline-flex items-center gap-1 rounded-md bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
+                      <div className="mb-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">
                         <Sparkles className="size-3" />
                         {m.badge}
                       </div>
                     )}
-                    <p>{m.text}</p>
+                    <p className="whitespace-pre-wrap text-xs leading-relaxed text-foreground font-normal">
+                      {m.text.split(/(\*\*.*?\*\*)/g).map((part, i) =>
+                        part.startsWith("**") && part.endsWith("**") ? (
+                          <strong key={i} className="font-semibold text-primary">
+                            {part.slice(2, -2)}
+                          </strong>
+                        ) : (
+                          part
+                        ),
+                      )}
+                    </p>
 
                     {m.bullets && m.bullets.length > 0 && (
-                      <ul className="mt-2.5 space-y-1.5 border-t border-border/60 pt-2 text-[11px]">
+                      <div className="mt-3 space-y-2 border-t border-border/60 pt-2.5">
                         {m.bullets.map((b, idx) => (
-                          <li key={idx} className="flex items-start gap-1.5 text-muted-foreground">
-                            <span className="mt-1 size-1 shrink-0 rounded-full bg-primary" />
-                            <span className="leading-snug">{b}</span>
-                          </li>
+                          <div key={idx} className="flex items-start gap-2 text-[11px] leading-relaxed">
+                            <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary/70" />
+                            <span className="text-muted-foreground font-normal">
+                              {b.split(/(\*\*.*?\*\*)/g).map((part, i) =>
+                                part.startsWith("**") && part.endsWith("**") ? (
+                                  <strong key={i} className="font-medium text-foreground">
+                                    {part.slice(2, -2)}
+                                  </strong>
+                                ) : (
+                                  part
+                                ),
+                              )}
+                            </span>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     )}
 
                     <div
-                      className={`mt-2 text-[9px] ${
+                      className={`mt-2.5 flex items-center justify-between text-[9px] ${
                         m.sender === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
-                      } text-right`}
+                      }`}
                     >
-                      {m.timestamp}
+                      {m.actionLabel ? (
+                        <span className="font-mono text-[9px] font-semibold text-primary/80">
+                          {m.actionLabel}
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                      <span>{m.timestamp}</span>
                     </div>
                   </div>
 
@@ -394,6 +712,16 @@ export function AiCopilotPanel() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AiModelPaymentModal
+        isOpen={checkoutModalOpen}
+        onClose={() => setCheckoutModalOpen(false)}
+        model={pendingModel}
+        onSuccess={(upgradedModel) => {
+          setActiveModelId(upgradedModel.id);
+        }}
+        currentRole={currentRole}
+      />
     </>
   );
 }
