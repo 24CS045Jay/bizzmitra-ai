@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -16,6 +17,8 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
   CreditWallet,
@@ -65,6 +68,7 @@ const TIERS = [
 
 function SettingsPage() {
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [fullName, setFullName] = useState("");
   const [plan, setPlan] = useState("free");
   const [workspaceName, setWorkspaceName] = useState("");
@@ -351,6 +355,39 @@ function SettingsPage() {
                 </div>
               );
             })}
+          </div>
+        </StaggerItem>
+
+        <StaggerItem className="neu p-6 lg:col-span-2">
+          <h2 className="font-display text-lg font-bold">Appearance & Theme</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Switch between Warm Graphite (light) and Ambient Ray (dark) modes.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => setTheme("light")}
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all",
+                theme === "light"
+                  ? "bg-primary text-primary-foreground glow-primary"
+                  : "neu-sm neu-press text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Sun className="size-4" /> Light (Warm Graphite)
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme("dark")}
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all",
+                theme === "dark"
+                  ? "bg-primary text-primary-foreground glow-primary"
+                  : "neu-sm neu-press text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Moon className="size-4" /> Dark (Ambient Ray)
+            </button>
           </div>
         </StaggerItem>
 

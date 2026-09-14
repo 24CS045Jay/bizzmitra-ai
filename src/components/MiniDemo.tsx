@@ -113,14 +113,14 @@ export function MiniDemo() {
             animate={{ opacity: 1, y: 0 }}
             className="mt-4 space-y-3"
           >
-            <div className="rounded-xl bg-card p-4">
+            <div className="rounded-xl bg-card border border-border/80 p-4 shadow-sm neu-reflect">
               <p className="text-xs font-semibold text-primary">BizzMitra · discovery</p>
               <p className="mt-1.5 text-sm leading-relaxed">
                 <Typewriter text={QUESTIONS[0]!} speed={14} />
               </p>
             </div>
             <motion.div
-              className="rounded-xl bg-card p-4"
+              className="rounded-xl bg-card border border-border/80 p-4 shadow-sm neu-reflect"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 2.2 }}

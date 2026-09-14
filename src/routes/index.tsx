@@ -4,6 +4,14 @@ import { ArrowRight, Check, Minus } from "lucide-react";
 
 import { MiniDemo } from "@/components/MiniDemo";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { LightRays } from "@/components/effects/LightRays";
+import { Navigation12 } from "@/components/Navigation12";
+import { LiveProcessStreamer } from "@/components/LiveProcessStreamer";
+import { Pricing13 } from "@/components/Pricing13";
+import { Footer11 } from "@/components/Footer11";
+import { ThreeDLetterSwap } from "@/components/ThreeDLetterSwap";
 
 import { Reveal, Stagger, StaggerItem, WordReveal } from "@/components/motion/primitives";
 import { COMPETITOR_ROWS, MODULES, PRICING, TESTIMONIALS } from "@/lib/demo-data";
@@ -53,12 +61,13 @@ function Nav() {
             Pricing
           </a>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          <ThemeToggle />
           {session ? (
             <>
               <Link
                 to="/dashboard"
-                className="neu-press rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+                className="neu-press rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground glow-primary"
               >
                 Go to workspace
               </Link>
@@ -76,7 +85,7 @@ function Nav() {
               </Link>
               <Link
                 to="/signup"
-                className="neu-press rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+                className="neu-press rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground glow-primary"
               >
                 Start free
               </Link>
@@ -139,10 +148,25 @@ function ConnectingLines() {
 }
 
 function Hero() {
+  const { theme } = useTheme();
+
   return (
     <section className="grain relative overflow-hidden">
+      {theme === "dark" && (
+        <div className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-hidden opacity-40">
+          <LightRays
+            raysOrigin="top-center"
+            raysColor="#ff5a3c"
+            rayLength={1.1}
+            lightSpread={0.7}
+            followMouse={false}
+            noiseAmount={0.05}
+            pulsating={false}
+          />
+        </div>
+      )}
       <ConnectingLines />
-      <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-16 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:pb-28 lg:pt-24">
+      <div className="relative z-10 mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-16 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:pb-28 lg:pt-24">
         <div>
           <motion.p
             initial={{ opacity: 0 }}
@@ -152,12 +176,17 @@ function Hero() {
           >
             AI business transformation companion
           </motion.p>
-          <h1 className="mt-5 font-display text-[clamp(3rem,8.4vw,7rem)] font-extrabold leading-[0.92] text-balance-tight">
-            <WordReveal text="From business problem" />
+          <h1 className="mt-5 font-display text-[clamp(3rem,8.4vw,7rem)] font-extrabold leading-[0.98] sm:leading-[0.95] text-balance-tight">
+            <ThreeDLetterSwap text="From business problem" delay={0.08} />
             <br />
-            <WordReveal text="to blueprint," accentWords={["blueprint"]} delay={0.16} />
+            <ThreeDLetterSwap
+              text="to blueprint,"
+              accentWords={["blueprint"]}
+              accentClassName="text-primary italic font-display"
+              delay={0.2}
+            />
             <br />
-            <WordReveal text="in one workspace." delay={0.3} />
+            <ThreeDLetterSwap text="in one workspace." delay={0.32} />
           </h1>
           <motion.p
             initial={{ opacity: 0, y: 12 }}
@@ -176,7 +205,7 @@ function Hero() {
           >
             <Link
               to="/signup"
-              className="neu-press inline-flex items-center gap-2 rounded-2xl bg-primary px-7 py-4 text-base font-semibold text-primary-foreground"
+              className="neu-press inline-flex items-center gap-2 rounded-2xl bg-primary px-7 py-4 text-base font-semibold text-primary-foreground glow-primary"
             >
               Frame your first problem <ArrowRight className="size-4" />
             </Link>
@@ -216,7 +245,7 @@ function Compare() {
           </p>
         </Reveal>
 
-        <Stagger className="mt-12 overflow-hidden rounded-2xl bg-card">
+        <Stagger className="mt-12 overflow-hidden rounded-2xl bg-card border border-border/70 neu-reflect shadow-sm">
           <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-4 border-b border-border px-5 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground sm:px-7">
             <span>Capability</span>
             <span>Today&apos;s stack</span>
@@ -264,7 +293,7 @@ function Modules() {
               <motion.article
                 whileHover={{ y: -4, scale: 1.015 }}
                 transition={{ duration: 0.15 }}
-                className="h-full rounded-2xl bg-card p-6 shadow-[0_1px_0_var(--color-border)] hover:shadow-lift"
+                className="neu-reflect-hover neu-reflect group h-full rounded-2xl bg-card p-6 border border-border/80 shadow-[0_1px_0_var(--color-border)]"
               >
                 <span className="font-mono text-xs text-muted-foreground">
                   {String(i + 1).padStart(2, "0")}
@@ -283,58 +312,19 @@ function Modules() {
 function Pricing() {
   return (
     <section id="pricing" className="border-t border-border bg-surface/60 py-20 sm:py-28">
-      <div className="mx-auto max-w-6xl px-5 sm:px-8">
+      <div className="mx-auto max-w-6xl px-5 sm:px-8 mb-12 text-center">
         <Reveal>
-          <h2 className="font-display text-[clamp(2.2rem,5vw,4rem)] font-extrabold leading-[0.98] text-balance-tight">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
+            Flexible Consulting Tiers
+          </p>
+        </Reveal>
+        <Reveal delay={0.06}>
+          <h2 className="mt-3 font-display text-[clamp(2.2rem,5vw,4rem)] font-extrabold leading-[0.98] text-balance-tight">
             Pricing that scales with the squad.
           </h2>
         </Reveal>
-        <Stagger className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {PRICING.map((p) => (
-            <StaggerItem key={p.name}>
-              <motion.div
-                whileHover={{ y: -4 }}
-                transition={{ duration: 0.15 }}
-                className={cn(
-                  "flex h-full flex-col rounded-2xl p-6",
-                  p.featured ? "neu ring-1 ring-primary/40" : "bg-card",
-                )}
-              >
-                {p.featured ? (
-                  <span className="mb-3 w-fit rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary-foreground">
-                    Most picked
-                  </span>
-                ) : null}
-                <h3 className="font-display text-xl font-bold">{p.name}</h3>
-                <p className="mt-2 font-display text-4xl font-extrabold">
-                  {p.price}
-                  <span className="text-sm font-medium text-muted-foreground">{p.period}</span>
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">{p.blurb}</p>
-                <ul className="mt-5 flex-1 space-y-2 text-sm">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex gap-2">
-                      <Check className="mt-0.5 size-3.5 shrink-0 text-sage" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  to="/signup"
-                  className={cn(
-                    "neu-press mt-6 rounded-xl px-4 py-3 text-center text-sm font-semibold",
-                    p.featured
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground",
-                  )}
-                >
-                  {p.cta}
-                </Link>
-              </motion.div>
-            </StaggerItem>
-          ))}
-        </Stagger>
       </div>
+      <Pricing13 />
     </section>
   );
 }
@@ -357,7 +347,7 @@ function Testimonials() {
         <Stagger className="mt-14 grid gap-4 md:grid-cols-3">
           {TESTIMONIALS.map((t) => (
             <StaggerItem key={t.name}>
-              <figure className="h-full rounded-2xl bg-card p-6">
+              <figure className="neu-reflect-hover neu-reflect h-full rounded-2xl bg-card p-6 border border-border/80">
                 <blockquote className="font-display text-lg font-semibold leading-snug">
                   “{t.quote}”
                 </blockquote>
@@ -373,57 +363,19 @@ function Testimonials() {
   );
 }
 
-function Footer() {
-  return (
-    <footer className="border-t border-border bg-surface/60 py-12">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-6 px-5 sm:px-8">
-        <div>
-          <p className="font-display text-2xl font-extrabold">BizzMitra-AI</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Your AI business transformation companion.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm text-muted-foreground">
-          <a href="#modules" className="hover:text-foreground">
-            Modules
-          </a>
-          <a href="#pricing" className="hover:text-foreground">
-            Pricing
-          </a>
-          <Link to="/login" className="hover:text-foreground">
-            Log in
-          </Link>
-          <Link to="/signup" className="hover:text-foreground">
-            Start free
-          </Link>
-          <Link to="/" className="hover:text-foreground">
-            Privacy
-          </Link>
-          <Link to="/" className="hover:text-foreground">
-            Terms
-          </Link>
-          <Link to="/" className="hover:text-foreground">
-            Contact
-          </Link>
-        </div>
-      </div>
-      <p className="mx-auto mt-8 max-w-6xl px-5 text-xs text-muted-foreground sm:px-8">
-        © {new Date().getFullYear()} BizzMitra-AI. Prototype build.
-      </p>
-    </footer>
-  );
-}
-
 function Landing() {
   return (
-    <div className="min-h-screen">
-      <Nav />
+    <div className="min-h-screen pt-4">
+      <Navigation12 />
+      <div className="pt-20 sm:pt-22">
+        <LiveProcessStreamer />
+      </div>
       <Hero />
       <Compare />
       <Modules />
       <Testimonials />
       <Pricing />
-      <Footer />
+      <Footer11 />
     </div>
   );
 }

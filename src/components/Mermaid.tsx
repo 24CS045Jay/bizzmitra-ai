@@ -1,11 +1,13 @@
 import { motion } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 
 let initialised = false;
 
 export function Mermaid({ chart, className }: { chart: string; className?: string }) {
+  const { theme } = useTheme();
   const id = useId().replace(/[:]/g, "");
   const ref = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>("");
@@ -46,7 +48,7 @@ export function Mermaid({ chart, className }: { chart: string; className?: strin
     return () => {
       cancelled = true;
     };
-  }, [chart, id]);
+  }, [chart, id, theme]);
 
   if (failed) {
     return (

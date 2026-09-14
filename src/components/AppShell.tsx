@@ -20,11 +20,16 @@ import {
   ChevronDown,
   FileCheck2,
   Package,
+  ArrowRight,
+  Home,
   Shield,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { AppSidebar2 } from "@/components/AppSidebar2";
+import { AiCopilotPanel } from "@/components/AiCopilotPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { DEMO_WORKSPACE } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
@@ -92,7 +97,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         });
         return;
       }
-    } catch {}
+    } catch { }
 
     if (user && wsId && !wsId.startsWith("ws-")) {
       supabase
@@ -114,11 +119,41 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col gap-6 p-4">
-      <Link to="/" className="flex items-center gap-2.5 px-2 pt-2">
-        <span className="grid size-8 place-items-center rounded-lg bg-primary font-display text-sm font-extrabold text-primary-foreground">
-          B
-        </span>
-        <span className="font-display text-lg font-extrabold tracking-tight">BizzMitra</span>
+      <Link
+        to="/"
+        onClick={onNavigate}
+        className="group relative flex items-center justify-between rounded-xl px-2.5 py-2 transition-all duration-200 hover:bg-surface-2/80 dark:hover:bg-surface-2/60 border border-transparent hover:border-border/60 hover:shadow-sm"
+        title="Return to Landing Page"
+      >
+        <div className="flex items-center gap-2.5">
+          <motion.div
+            whileHover={{ scale: 1.12, rotate: -6 }}
+            whileTap={{ scale: 0.92, rotate: 6 }}
+            transition={{ type: "spring", stiffness: 420, damping: 22 }}
+            className="relative grid size-8.5 place-items-center rounded-xl bg-gradient-to-br from-primary via-primary to-primary/85 font-display text-sm font-black text-primary-foreground shadow-sm glow-primary"
+          >
+            <span className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+            B
+          </motion.div>
+          <div className="flex flex-col">
+            <span className="font-display text-base font-extrabold tracking-tight text-foreground group-hover:text-primary transition-colors">
+              BizzMitra
+            </span>
+            <span className="text-[10px] font-mono text-muted-foreground/80 flex items-center gap-1">
+              <span className="inline-block size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Workspace</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Animated Return-to-Home indicator */}
+        <motion.div
+          className="flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-primary opacity-0 group-hover:opacity-100 transition-all duration-200 -translate-x-1 group-hover:translate-x-0"
+        >
+          <Home className="size-2.5" />
+          <span>Home</span>
+          <ArrowRight className="size-2.5 transition-transform group-hover:translate-x-0.5" />
+        </motion.div>
       </Link>
 
       <div className="neu-sm neu-press flex cursor-pointer items-center justify-between gap-3 px-3.5 py-3">
@@ -153,7 +188,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               {active ? (
                 <motion.span
                   layoutId="nav-pill"
-                  className="absolute inset-0 rounded-lg bg-primary"
+                  className="absolute inset-0 rounded-lg bg-primary glow-primary"
                   transition={{ type: "spring", stiffness: 420, damping: 34 }}
                 />
               ) : null}
@@ -185,7 +220,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </select>
         </div>
 
-        <p className="truncate px-1 text-xs text-muted-foreground">{user?.email}</p>
+        <div className="flex items-center justify-between px-2">
+          <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+          <ThemeToggle />
+        </div>
         <button
           onClick={() => signOut()}
           className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:text-primary"
@@ -222,27 +260,46 @@ export function AppShell({ children }: { children: ReactNode }) {
   const roleDef = ROLE_DEFINITIONS[currentRole];
 
   return (
-    <div className="min-h-screen lg:flex">
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-border bg-sidebar lg:block">
-        <SidebarContent />
-      </aside>
+    <div className="min-h-screen">
+      {/* React Bits Pro App Sidebar 2 (Icon rail with left-to-right hover slide expansion) */}
+      <AppSidebar2 />
 
+      {/* Mobile Top Navigation Header */}
       <div className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 lg:hidden">
-        <Link to="/dashboard" className="flex items-center gap-2">
-          <span className="grid size-7 place-items-center rounded-lg bg-primary font-display text-xs font-extrabold text-primary-foreground">
-            B
-          </span>
-          <span className="font-display text-base font-extrabold">BizzMitra</span>
-        </Link>
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Open navigation"
-          className="neu-sm neu-press grid size-9 place-items-center"
+        <Link
+          to="/"
+          className="group flex items-center gap-2 rounded-lg p-1 transition-all active:scale-95"
+          title="Return to Landing Page"
         >
-          <Menu className="size-4" />
-        </button>
+          <motion.span
+            whileHover={{ scale: 1.1, rotate: -6 }}
+            whileTap={{ scale: 0.9, rotate: 6 }}
+            transition={{ type: "spring", stiffness: 420, damping: 22 }}
+            className="grid size-7.5 place-items-center rounded-lg bg-primary font-display text-xs font-black text-primary-foreground shadow-sm glow-primary"
+          >
+            B
+          </motion.span>
+          <span className="font-display text-base font-extrabold group-hover:text-primary transition-colors">
+            BizzMitra
+          </span>
+          <span className="text-[10px] font-mono text-primary font-semibold rounded bg-primary/10 px-1.5 py-0.2 ml-1 flex items-center gap-0.5">
+            <Home className="size-2.5" />
+            Home
+          </span>
+        </Link>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            onClick={() => setOpen(true)}
+            aria-label="Open navigation"
+            className="neu-sm neu-press grid size-9 place-items-center"
+          >
+            <Menu className="size-4" />
+          </button>
+        </div>
       </div>
 
+      {/* Mobile Sidebar Drawer */}
       <AnimatePresence>
         {open ? (
           <motion.div
@@ -275,7 +332,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         ) : null}
       </AnimatePresence>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-[86px]">
         {currentRole !== "admin" ? (
           <div className="border-b border-amber-500/20 bg-amber-500/10 px-6 py-2 text-xs font-medium text-amber-700 dark:text-amber-300">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -302,8 +359,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           </div>
         ) : null}
-        <main className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-12 lg:py-12">{children}</main>
+
+        {/* Main Workspace Portal View where all tasks are performed */}
+        <main className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:pr-10 lg:py-10">{children}</main>
       </div>
+
+      {/* Persistent AI Copilot Panel across all authenticated screens */}
+      <AiCopilotPanel />
     </div>
   );
 }

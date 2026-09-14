@@ -68,7 +68,29 @@ export function PageTransition({ children }: { children: ReactNode }) {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22, ease: "easeOut" }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/** Horizontal shake micro-animation for input validation & OTP errors. */
+export function Shake({
+  children,
+  shakeKey,
+  className,
+}: {
+  children: ReactNode;
+  shakeKey: number | string | boolean;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      key={String(shakeKey)}
+      animate={shakeKey ? { x: [0, -8, 8, -6, 6, -3, 3, 0] } : { x: 0 }}
+      transition={{ duration: 0.45, ease: "easeInOut" }}
+      className={className}
     >
       {children}
     </motion.div>
