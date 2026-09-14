@@ -34,9 +34,9 @@ interface Message {
   sender: "user" | "assistant";
   text: string;
   timestamp: string;
-  badge?: string;
-  bullets?: string[];
-  actionLabel?: string;
+  badge?: string | undefined;
+  bullets?: string[] | undefined;
+  actionLabel?: string | undefined;
 }
 
 const QUICK_PROMPTS = [
