@@ -3,6 +3,62 @@
  * Powers enterprise tenant management, dynamic role simulation, and AI credit billing.
  */
 
+export type AiModelId = "gpt-4o" | "claude-3-5-sonnet" | "gemini-2-flash" | "deepseek-v3";
+
+export type AiModel = {
+  id: AiModelId;
+  name: string;
+  provider: string;
+  badge: string;
+  tierRequired: "Free Starter" | "Growth Pro" | "Enterprise Scale";
+  isPro: boolean;
+  costMultiplier: number;
+  description: string;
+};
+
+export const AI_MODELS: AiModel[] = [
+  {
+    id: "gemini-2-flash",
+    name: "Gemini 2.0 Flash",
+    provider: "Google Cloud",
+    badge: "Free Included",
+    tierRequired: "Free Starter",
+    isPro: false,
+    costMultiplier: 1.0,
+    description: "Fast, low-latency reasoning suitable for daily discovery and Q&A.",
+  },
+  {
+    id: "gpt-4o",
+    name: "GPT-4o Omnichannel",
+    provider: "OpenAI",
+    badge: "Pro Required",
+    tierRequired: "Growth Pro",
+    isPro: true,
+    costMultiplier: 2.0,
+    description: "High-precision architecture design, schema synthesis, and complex analysis.",
+  },
+  {
+    id: "claude-3-5-sonnet",
+    name: "Claude 3.5 Sonnet",
+    provider: "Anthropic",
+    badge: "Pro Required",
+    tierRequired: "Growth Pro",
+    isPro: true,
+    costMultiplier: 2.5,
+    description: "Superior coding ability, complex BPMN workflows, and technical writing.",
+  },
+  {
+    id: "deepseek-v3",
+    name: "DeepSeek V3 Reasoner",
+    provider: "DeepSeek Cloud",
+    badge: "Enterprise",
+    tierRequired: "Enterprise Scale",
+    isPro: true,
+    costMultiplier: 1.5,
+    description: "Deep chain-of-thought mathematical planning and financial ROI modeling.",
+  },
+];
+
 export type UserRole = "admin" | "architect" | "analyst" | "viewer";
 
 export type RoleDefinition = {
@@ -17,6 +73,7 @@ export type RoleDefinition = {
     canExportDeliverables: boolean;
     canManageUsers: boolean;
     canManageBilling: boolean;
+    canSwitchModelsWithoutPayment: boolean;
   };
 };
 
@@ -33,6 +90,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       canExportDeliverables: true,
       canManageUsers: true,
       canManageBilling: true,
+      canSwitchModelsWithoutPayment: true,
     },
   },
   architect: {
@@ -47,6 +105,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       canExportDeliverables: true,
       canManageUsers: false,
       canManageBilling: false,
+      canSwitchModelsWithoutPayment: true,
     },
   },
   analyst: {
@@ -61,6 +120,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       canExportDeliverables: true,
       canManageUsers: false,
       canManageBilling: false,
+      canSwitchModelsWithoutPayment: false,
     },
   },
   viewer: {
@@ -75,6 +135,7 @@ export const ROLE_DEFINITIONS: Record<UserRole, RoleDefinition> = {
       canExportDeliverables: false,
       canManageUsers: false,
       canManageBilling: false,
+      canSwitchModelsWithoutPayment: false,
     },
   },
 };
@@ -271,14 +332,16 @@ export function deductCreditsByTokens(
   promptText: string,
   completionText: string,
   activityDescription: string,
+  costMultiplier: number = 1.0,
 ): TokenDeductionResult {
   const currentWallet = loadCreditWallet();
   const promptTokens = estimateTokensForText(promptText);
   const completionTokens = estimateTokensForText(completionText);
   const totalTokens = promptTokens + completionTokens;
 
-  // 1 credit per 250 tokens (standardized tier), minimum 1 credit for an inference turn
-  const creditsDeducted = Math.max(1, Math.ceil(totalTokens / 250));
+  // 1 credit per 250 tokens scaled by model costMultiplier, minimum 1 credit for an inference turn
+  const baseCredits = Math.ceil(totalTokens / 250);
+  const creditsDeducted = Math.max(1, Math.round(baseCredits * (costMultiplier || 1.0)));
 
   if (currentWallet.balance < creditsDeducted) {
     return {
@@ -295,7 +358,7 @@ export function deductCreditsByTokens(
   const newBalance = currentWallet.balance - creditsDeducted;
   const newTx: CreditTransaction = {
     id: `tx-${Date.now().toString().slice(-5)}`,
-    description: `${activityDescription} (${totalTokens} tokens / ${creditsDeducted} credits)`,
+    description: `${activityDescription} (${totalTokens} tokens • ${creditsDeducted} cr)`,
     type: "deduction",
     amount: creditsDeducted,
     timestamp: "Just now",
@@ -317,5 +380,79 @@ export function deductCreditsByTokens(
     totalTokens,
     creditsDeducted,
     newBalance,
+  };
+}
+
+export const STORAGE_KEY_ACTIVE_MODEL = "bizzmitra.activeAiModel";
+
+export function loadActiveModel(): AiModelId {
+  if (typeof window === "undefined") return "gemini-2-flash";
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_ACTIVE_MODEL) as AiModelId | null;
+    return stored && AI_MODELS.some((m) => m.id === stored) ? stored : "gemini-2-flash";
+  } catch {
+    return "gemini-2-flash";
+  }
+}
+
+export function saveActiveModel(modelId: AiModelId): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY_ACTIVE_MODEL, modelId);
+    window.dispatchEvent(new CustomEvent("bizzmitra:model-changed", { detail: modelId }));
+  } catch {}
+}
+
+export function canUserAccessModel(
+  modelId: AiModelId,
+  userRole: UserRole,
+  userEmail?: string | null,
+  walletTier?: string,
+): { allowed: boolean; reason?: string; isSuperAdminBypass: boolean } {
+  const model = AI_MODELS.find((m) => m.id === modelId) || AI_MODELS[0]!;
+
+  // 1. Super Admin Whitelist Check:
+  // Role is "admin" or "architect", OR email matches developer testing account
+  const isSuperAdmin =
+    userRole === "admin" ||
+    userRole === "architect" ||
+    userEmail === "admin@bizzmitra.ai" ||
+    userEmail === "param@talentcraft.co" ||
+    (userEmail && userEmail.endsWith("@talentcraft.co"));
+
+  if (isSuperAdmin) {
+    return {
+      allowed: true,
+      isSuperAdminBypass: true,
+    };
+  }
+
+  // 2. Standard user tier check
+  const tier = walletTier || loadCreditWallet().tier;
+  if (!model.isPro) {
+    return {
+      allowed: true,
+      isSuperAdminBypass: false,
+    };
+  }
+
+  if (model.tierRequired === "Growth Pro" && (tier === "Growth Pro" || tier === "Enterprise Scale")) {
+    return {
+      allowed: true,
+      isSuperAdminBypass: false,
+    };
+  }
+
+  if (model.tierRequired === "Enterprise Scale" && tier === "Enterprise Scale") {
+    return {
+      allowed: true,
+      isSuperAdminBypass: false,
+    };
+  }
+
+  return {
+    allowed: false,
+    reason: `${model.name} is a high-precision reasoning model locked to the ${model.tierRequired} tier. Upgrade your account or switch to an Administrator role to test.`,
+    isSuperAdminBypass: false,
   };
 }

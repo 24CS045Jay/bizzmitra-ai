@@ -5,7 +5,9 @@ import {
   ArrowRight,
   Bot,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   Clock,
   Coins,
   Copy,
@@ -16,6 +18,10 @@ import {
   Sparkles,
   User,
   X,
+  Check,
+  Lock,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,7 +33,16 @@ import {
   CreditWallet,
   loadCreditWallet,
   deductCreditsByTokens,
+  AI_MODELS,
+  AiModel,
+  AiModelId,
+  loadActiveModel,
+  saveActiveModel,
+  canUserAccessModel,
+  loadCurrentRole,
+  UserRole,
 } from "@/lib/admin-rbac-data";
+import { AiModelPaymentModal } from "@/components/AiModelPaymentModal";
 
 interface Message {
   id: string;
@@ -52,6 +67,11 @@ export function AiCopilotPanel() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [wallet, setWallet] = useState<CreditWallet>(loadCreditWallet());
+  const [activeModelId, setActiveModelId] = useState<AiModelId>(loadActiveModel());
+  const [currentRole, setCurrentRole] = useState<UserRole>(loadCurrentRole());
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [pendingModel, setPendingModel] = useState<AiModel | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -75,9 +95,47 @@ export function AiCopilotPanel() {
       if (ce.detail) setWallet(ce.detail);
       else setWallet(loadCreditWallet());
     };
+    const onRoleChange = (e: Event) => {
+      const ce = e as CustomEvent<UserRole>;
+      if (ce.detail) setCurrentRole(ce.detail);
+      else setCurrentRole(loadCurrentRole());
+    };
+    const onModelChange = (e: Event) => {
+      const ce = e as CustomEvent<AiModelId>;
+      if (ce.detail) setActiveModelId(ce.detail);
+      else setActiveModelId(loadActiveModel());
+    };
+
     window.addEventListener("bizzmitra:wallet-changed", onWalletChange);
-    return () => window.removeEventListener("bizzmitra:wallet-changed", onWalletChange);
+    window.addEventListener("bizzmitra:role-changed", onRoleChange);
+    window.addEventListener("bizzmitra:model-changed", onModelChange);
+    return () => {
+      window.removeEventListener("bizzmitra:wallet-changed", onWalletChange);
+      window.removeEventListener("bizzmitra:role-changed", onRoleChange);
+      window.removeEventListener("bizzmitra:model-changed", onModelChange);
+    };
   }, []);
+
+  const activeModel = AI_MODELS.find((m) => m.id === activeModelId) || AI_MODELS[0]!;
+  const currentAccess = canUserAccessModel(activeModelId, currentRole, user?.email, wallet.tier);
+
+  function handleSelectModel(model: AiModel) {
+    const access = canUserAccessModel(model.id, currentRole, user?.email, wallet.tier);
+    if (access.allowed) {
+      saveActiveModel(model.id);
+      setActiveModelId(model.id);
+      setIsModelDropdownOpen(false);
+      if (access.isSuperAdminBypass) {
+        toast.success(`🛡️ Super Admin Bypass: Switched to ${model.name} without payment.`);
+      } else {
+        toast.success(`Switched active model to ${model.name}.`);
+      }
+    } else {
+      setIsModelDropdownOpen(false);
+      setPendingModel(model);
+      setCheckoutModalOpen(true);
+    }
+  }
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -263,12 +321,13 @@ export function AiCopilotPanel() {
         ];
       }
 
-      // 3. Deduct credits based on exact token count (prompt tokens + completion tokens)
+      // 3. Deduct credits based on exact token count (prompt tokens + completion tokens) & active model multiplier
       const fullResponseContent = `${responseText} ${bullets ? bullets.join(" ") : ""}`;
       const deduction = deductCreditsByTokens(
         textToSend,
         fullResponseContent,
-        `AI Copilot Query: "${textToSend.slice(0, 32)}${textToSend.length > 32 ? "..." : ""}"`,
+        `AI Copilot (${activeModel.name}): "${textToSend.slice(0, 30)}${textToSend.length > 30 ? "..." : ""}"`,
+        activeModel.costMultiplier,
       );
 
       const botMsg: Message = {
@@ -276,10 +335,10 @@ export function AiCopilotPanel() {
         sender: "assistant",
         text: responseText,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        badge,
+        badge: badge ? `${badge} • ${activeModel.name}` : activeModel.name,
         bullets,
         actionLabel: deduction.success
-          ? `⚡ ${deduction.totalTokens} tokens processed (-${deduction.creditsDeducted} credit)`
+          ? `⚡ ${deduction.totalTokens} tokens processed (-${deduction.creditsDeducted} cr • ${activeModel.name})`
           : undefined,
       };
 
@@ -375,6 +434,133 @@ export function AiCopilotPanel() {
                   <X className="size-4" />
                 </button>
               </div>
+            </div>
+
+            {/* AI Model Selector Bar */}
+            <div className="border-b border-border/70 bg-muted/20 px-3.5 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                  className="neu-sm neu-press flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-foreground hover:border-primary/40 transition-all"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="size-3.5 text-primary" />
+                    <span className="font-semibold">{activeModel.name}</span>
+                    <span className="text-[10px] text-muted-foreground">({activeModel.provider})</span>
+                  </div>
+                  {currentAccess.isSuperAdminBypass ? (
+                    <span
+                      title="Super Admin / Whitelisted testing account: Free access to all AI models"
+                      className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 font-mono"
+                    >
+                      <ShieldCheck className="size-2.5" />
+                      Admin Bypass
+                    </span>
+                  ) : activeModel.isPro ? (
+                    <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold text-primary font-mono">
+                      Pro Active
+                    </span>
+                  ) : null}
+                  {isModelDropdownOpen ? (
+                    <ChevronUp className="size-3 text-muted-foreground ml-0.5" />
+                  ) : (
+                    <ChevronDown className="size-3 text-muted-foreground ml-0.5" />
+                  )}
+                </button>
+
+                <div className="text-[10px] text-muted-foreground font-mono">
+                  {activeModel.costMultiplier}x rate
+                </div>
+              </div>
+
+              {/* Dropdown Menu */}
+              <AnimatePresence>
+                {isModelDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-2 space-y-1 overflow-hidden rounded-2xl border border-border/80 bg-card p-2 shadow-xl"
+                  >
+                    <div className="px-2 py-1 flex items-center justify-between text-[10px] text-muted-foreground font-medium border-b border-border/40 pb-1.5 mb-1">
+                      <span>SELECT REASONING ENGINE</span>
+                      {currentAccess.isSuperAdminBypass ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                          <ShieldCheck className="size-3" /> Admin: 0 Payment
+                        </span>
+                      ) : (
+                        <span className="text-primary font-bold">Real-time Gateway</span>
+                      )}
+                    </div>
+
+                    {AI_MODELS.map((model) => {
+                      const isSelected = model.id === activeModelId;
+                      const access = canUserAccessModel(model.id, currentRole, user?.email, wallet.tier);
+
+                      return (
+                        <button
+                          key={model.id}
+                          type="button"
+                          onClick={() => handleSelectModel(model)}
+                          className={`w-full flex items-center justify-between rounded-xl px-2.5 py-2 text-left transition-all ${
+                            isSelected
+                              ? "bg-primary/10 border border-primary/30"
+                              : "hover:bg-muted/50 border border-transparent"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className={`grid size-6 shrink-0 place-items-center rounded-lg ${
+                                isSelected
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {isSelected ? <Check className="size-3.5" /> : <Bot className="size-3.5" />}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-foreground truncate">
+                                  {model.name}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  • {model.provider}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {model.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 ml-2">
+                            {access.isSuperAdminBypass ? (
+                              <span className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+                                <ShieldCheck className="size-2.5" />
+                                Admin Free
+                              </span>
+                            ) : !model.isPro ? (
+                              <span className="rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
+                                Free
+                              </span>
+                            ) : access.allowed ? (
+                              <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">
+                                Unlocked
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400">
+                                <Lock className="size-2.5" />
+                                {model.tierRequired === "Enterprise Scale" ? "$199" : "$49"}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Quick Prompts Chips */}
@@ -526,6 +712,16 @@ export function AiCopilotPanel() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AiModelPaymentModal
+        isOpen={checkoutModalOpen}
+        onClose={() => setCheckoutModalOpen(false)}
+        model={pendingModel}
+        onSuccess={(upgradedModel) => {
+          setActiveModelId(upgradedModel.id);
+        }}
+        currentRole={currentRole}
+      />
     </>
   );
 }
