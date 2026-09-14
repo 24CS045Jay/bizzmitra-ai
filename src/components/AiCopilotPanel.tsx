@@ -172,7 +172,18 @@ export function AiCopilotPanel() {
           (p) => `📌 ${p.name}: Weeks ${p.startWeek + 1}–${p.startWeek + p.durationWeekCount} (${p.milestones.length} milestones — ${p.durationWeeks})`,
         );
       }
-      // Intent 5: Financials, Budget, ROI, Savings
+      // Intent 5: Profit Maximization, Revenue & Economics
+      else if (q.includes("profit") || q.includes("margin") || q.includes("earn") || q.includes("monetiz") || q.includes("bottomline") || q.includes("revenue gain")) {
+        badge = "Profit Maximization Strategy";
+        responseText = `To maximize operational profit for **${workspaceName}**, your digital transformation drives profitability through two simultaneous engines:`;
+        bullets = [
+          "💰 Direct Cost Reduction: Automating 65% of manual recruiter spreadsheet tasks saves ₹68,400+ annually in direct labor waste.",
+          "⚡ Placement Velocity Expansion: Cutting interview turnaround from 28 days to 9 days enables 8 recruiters to close 35% more placements each month without hiring more staff.",
+          "📉 Candidate Leakage Reduction: Slashing candidate drop-off from 28% to 6% captures an estimated ₹4.5 Lakhs/year in otherwise lost recruitment fees.",
+          "⏱️ Fast Payback: The entire system reaches net profitability within 4.2 months, yielding a 340% cumulative 3-year ROI multiple.",
+        ];
+      }
+      // Intent 6: Financials, Budget, ROI, Savings
       else if (q.includes("budget") || q.includes("cost") || q.includes("financial") || q.includes("roi") || q.includes("saving") || q.includes("money") || q.includes("capex") || q.includes("price")) {
         badge = "Financial Model & ROI";
         const estimatedCapex = roadmap.totalPersonDays * 12500;
