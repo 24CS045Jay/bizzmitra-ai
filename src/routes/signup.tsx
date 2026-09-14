@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Reveal } from "@/components/motion/primitives";
-import { Turnstile } from "@/components/Turnstile";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LightRays } from "@/components/effects/LightRays";
 import { Auth6 } from "@/components/Auth6";
@@ -33,11 +32,10 @@ function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [captchaToken, setCaptchaToken] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [busy, setBusy] = useState(false);
 
-  const { session } = useAuth();
+  const { session, signInAsDemoAdmin } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
 
@@ -56,18 +54,12 @@ function SignupPage() {
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
-    if (!captchaToken) {
-      toast.error("Please complete the security check to continue.");
-      return;
-    }
-
     setBusy(true);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName },
-        captchaToken,
       },
     });
     setBusy(false);
@@ -161,13 +153,25 @@ function SignupPage() {
 
                   <button
                     type="button"
+                    onClick={() => {
+                      signInAsDemoAdmin();
+                      toast.success("Logged in as Super Admin (Testing Session)");
+                      navigate({ to: "/dashboard" });
+                    }}
+                    className="neu-press mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-md hover:bg-emerald-500 transition-colors"
+                  >
+                    <span>⚡ One-Click Sign In as Administrator</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={google}
-                    className="neu-sm neu-press mt-6 flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium"
+                    className="neu-sm neu-press mt-2.5 flex w-full items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium"
                   >
                     Continue with Google
                   </button>
 
-                  <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                     <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
                   </div>
 
@@ -212,19 +216,10 @@ function SignupPage() {
                       />
                     </div>
 
-                    {/* Turnstile Captcha Widget */}
-                    <div className="pt-2">
-                      <Turnstile
-                        onVerify={(token) => setCaptchaToken(token)}
-                        onError={() => setCaptchaToken("")}
-                        onExpire={() => setCaptchaToken("")}
-                      />
-                    </div>
-
                     <button
                       type="submit"
-                      disabled={busy || !captchaToken}
-                      className="neu-press w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={busy}
+                      className="neu-press w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-50"
                     >
                       {busy ? "Creating account…" : "Create account"}
                     </button>
