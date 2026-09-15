@@ -54,18 +54,35 @@ export async function loadRazorpayScript(): Promise<boolean> {
   });
 }
 
-/**
- * Launches the real-time Razorpay checkout window for Indian Rupees (₹).
- */
+
+export function getRazorpayKeyId(): string {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("bizzmitra.razorpayKeyId");
+    if (saved && saved.trim()) return saved.trim();
+  }
+  return (
+    (typeof import.meta !== "undefined" &&
+      (import.meta.env as Record<string, string | undefined>)["VITE_RAZORPAY_KEY_ID"]) ||
+    ""
+  );
+}
+
+export function saveRazorpayKeyId(key: string): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("bizzmitra.razorpayKeyId", key.trim());
+  }
+}
+
 export async function initiateRazorpayPayment(options: RazorpayCheckoutOptions): Promise<boolean> {
   const isLoaded = await loadRazorpayScript();
   if (!isLoaded || !window.Razorpay) {
     throw new Error("Unable to load Razorpay payment gateway SDK. Please check your internet connection.");
   }
 
-  const keyId =
-    (typeof import.meta !== "undefined" && (import.meta.env as Record<string, string | undefined>)["VITE_RAZORPAY_KEY_ID"]) ||
-    "rzp_test_1DP5mmOlF5G5ag";
+  const keyId = getRazorpayKeyId();
+  if (!keyId) {
+    throw new Error("Razorpay Key ID is not configured. Please enter your Razorpay Key ID (rzp_test_... or rzp_live_...) to proceed.");
+  }
 
   const amountInPaise = Math.round(options.amountInRupees * 100);
 
@@ -104,6 +121,9 @@ export async function initiateRazorpayPayment(options: RazorpayCheckoutOptions):
 
   try {
     const rzp = new window.Razorpay(razorpayOptions);
+    rzp.on("payment.failed", (err: any) => {
+      console.error("Razorpay payment failed:", err);
+    });
     rzp.open();
     return true;
   } catch (err) {

@@ -30,7 +30,11 @@ import {
   saveCreditWallet,
 } from "@/lib/admin-rbac-data";
 import { AiModelPaymentModal } from "@/components/AiModelPaymentModal";
-import { initiateRazorpayPayment } from "@/lib/razorpay";
+import {
+  initiateRazorpayPayment,
+  getRazorpayKeyId,
+  saveRazorpayKeyId,
+} from "@/lib/razorpay";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -87,6 +91,8 @@ function SettingsPage() {
   const isSuperAdmin = isSuperAdminEmail(user?.email);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedModelForPayment, setSelectedModelForPayment] = useState<AiModel | null>(null);
+  const [razorpayKey, setRazorpayKey] = useState<string>(getRazorpayKeyId());
+  const [isEditingKey, setIsEditingKey] = useState<boolean>(false);
 
   useEffect(() => {
     setWallet(loadCreditWallet());
@@ -322,6 +328,54 @@ function SettingsPage() {
               >
                 <Sparkles className="size-3.5" /> +1,000 Credits (₹2,799)
               </button>
+            </div>
+          </div>
+
+          {/* Razorpay Gateway Status / Config Bar */}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/70 bg-background/50 p-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <div className={`size-2.5 rounded-full ${razorpayKey ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+              <div>
+                <span className="font-semibold text-foreground">
+                  Razorpay Real-time Gateway: {razorpayKey ? "Active (INR ₹ Ready)" : "Key Configuration Required"}
+                </span>
+                <p className="text-[10px] text-muted-foreground font-mono">
+                  Key ID: {razorpayKey || "Not set. Set VITE_RAZORPAY_KEY_ID in .env or configure below."}
+                </p>
+              </div>
+            </div>
+            <div>
+              {isEditingKey ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={razorpayKey}
+                    onChange={(e) => {
+                      setRazorpayKey(e.target.value);
+                      saveRazorpayKeyId(e.target.value);
+                    }}
+                    placeholder="rzp_test_... or rzp_live_..."
+                    className="neu-inset px-2.5 py-1 text-xs font-mono outline-none w-56"
+                  />
+                  <button
+                    onClick={() => {
+                      saveRazorpayKeyId(razorpayKey);
+                      setIsEditingKey(false);
+                      toast.success("Razorpay Key ID saved!");
+                    }}
+                    className="neu-sm neu-press px-2.5 py-1 text-xs font-bold text-primary"
+                  >
+                    Save
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsEditingKey(true)}
+                  className="neu-sm neu-press px-3 py-1 text-xs font-semibold text-primary hover:underline"
+                >
+                  Configure Key
+                </button>
+              )}
             </div>
           </div>
 

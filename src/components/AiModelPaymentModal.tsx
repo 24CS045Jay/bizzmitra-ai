@@ -28,7 +28,12 @@ import {
   isSuperAdminEmail,
 } from "@/lib/admin-rbac-data";
 import { useAuth } from "@/hooks/useAuth";
-import { initiateRazorpayPayment, RazorpayPaymentSuccessResponse } from "@/lib/razorpay";
+import {
+  initiateRazorpayPayment,
+  RazorpayPaymentSuccessResponse,
+  getRazorpayKeyId,
+  saveRazorpayKeyId,
+} from "@/lib/razorpay";
 
 interface AiModelPaymentModalProps {
   isOpen: boolean;
@@ -58,6 +63,8 @@ export function AiModelPaymentModal({
   const [cardName, setCardName] = useState<string>(
     (user?.user_metadata as Record<string, any> | undefined)?.["full_name"] || "Enterprise Customer",
   );
+  const [razorpayKey, setRazorpayKey] = useState<string>(getRazorpayKeyId());
+  const [isEditingKey, setIsEditingKey] = useState<boolean>(false);
 
   if (!isOpen || !model) return null;
   const targetModel = model;
@@ -364,6 +371,43 @@ export function AiModelPaymentModal({
                         <p className="text-[10px] text-muted-foreground">RuPay, Visa, Mastercard, SBI, HDFC</p>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="rounded-xl bg-background/50 border border-border/70 p-3 text-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-foreground flex items-center gap-1.5">
+                        <span className={`size-2 rounded-full ${razorpayKey ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                        Razorpay Key ID
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingKey(!isEditingKey)}
+                        className="text-[11px] font-bold text-primary hover:underline"
+                      >
+                        {isEditingKey ? "Save Key" : "Change Key"}
+                      </button>
+                    </div>
+                    {isEditingKey ? (
+                      <div className="space-y-1.5">
+                        <input
+                          type="text"
+                          value={razorpayKey}
+                          onChange={(e) => {
+                            setRazorpayKey(e.target.value);
+                            saveRazorpayKeyId(e.target.value);
+                          }}
+                          placeholder="rzp_test_... or rzp_live_..."
+                          className="neu-inset w-full px-2.5 py-1.5 text-xs font-mono bg-transparent outline-none"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          Get your key from <a href="https://dashboard.razorpay.com/app/keys" target="_blank" rel="noreferrer" className="text-primary underline">Razorpay Dashboard → Settings → API Keys</a>.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="font-mono text-[11px] text-muted-foreground truncate">
+                        {razorpayKey || "No key set (Click 'Change Key' to paste rzp_test_...)"}
+                      </p>
+                    )}
                   </div>
 
                   <div className="rounded-xl bg-background/40 border border-border/60 p-2 text-[11px] text-muted-foreground flex items-center justify-between">
