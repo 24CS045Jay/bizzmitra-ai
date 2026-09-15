@@ -30,6 +30,7 @@ import {
   saveCreditWallet,
 } from "@/lib/admin-rbac-data";
 import { AiModelPaymentModal } from "@/components/AiModelPaymentModal";
+import { initiateRazorpayPayment } from "@/lib/razorpay";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -46,7 +47,7 @@ export const Route = createFileRoute("/settings")({
 const TIERS = [
   {
     name: "Free Starter",
-    price: "$0",
+    price: "₹0",
     cadence: "forever free",
     credits: "100 credits/mo",
     features: ["Single workspace", "Standard LLM intake", "Basic HLD export", "Community support"],
@@ -54,7 +55,7 @@ const TIERS = [
   },
   {
     name: "Growth Pro",
-    price: "$49",
+    price: "₹3,999",
     cadence: "per seat / month",
     credits: "1,000 credits/mo",
     features: ["Unlimited workspaces", "Solution Studio customizer", "PostgreSQL DDL & REST APIs", "Executive pitch deck export", "Role-based access preview"],
@@ -62,7 +63,7 @@ const TIERS = [
   },
   {
     name: "Enterprise Scale",
-    price: "$199",
+    price: "₹15,999",
     cadence: "per org / month",
     credits: "5,000 credits/mo",
     features: ["Dedicated compute cluster", "Custom BPMN 2.0 pipelines", "Full Git multi-tier versioning", "99.99% SLA guarantee", "SOC2 compliance attestation"],
@@ -138,29 +139,64 @@ function SettingsPage() {
     }
   }
 
-  function handleAddCredits(amount: number) {
-    if (!isSuperAdmin) {
-      toast.info("Credit top-ups require an active subscription plan. Please select a plan below.");
+  async function handleAddCredits(amount: number, priceRupees: number) {
+    if (isSuperAdmin) {
+      const updated: CreditWallet = {
+        ...wallet,
+        balance: wallet.balance + amount,
+        transactions: [
+          {
+            id: `tx-${Date.now().toString().slice(-4)}`,
+            description: `Super Admin Testing Grant (+${amount} credits)`,
+            type: "credit",
+            amount: amount,
+            timestamp: "Just now",
+            balanceAfter: wallet.balance + amount,
+          },
+          ...wallet.transactions,
+        ],
+      };
+      setWallet(updated);
+      saveCreditWallet(updated);
+      toast.success(`Admin bypass: Added ${amount} credits! New balance: ${updated.balance}`);
       return;
     }
-    const updated: CreditWallet = {
-      ...wallet,
-      balance: wallet.balance + amount,
-      transactions: [
-        {
-          id: `tx-${Date.now().toString().slice(-4)}`,
-          description: `Super Admin Testing Grant (+${amount} credits)`,
-          type: "credit",
-          amount: amount,
-          timestamp: "Just now",
-          balanceAfter: wallet.balance + amount,
+
+    try {
+      await initiateRazorpayPayment({
+        amountInRupees: priceRupees,
+        planName: `Credit Top-Up (+${amount} Credits)`,
+        creditsGranted: amount,
+        customerName: (user?.user_metadata as Record<string, any> | undefined)?.["full_name"] || fullName || "Enterprise Customer",
+        customerEmail: user?.email || undefined,
+        onSuccess: (resp) => {
+          const newBalance = wallet.balance + amount;
+          const updated: CreditWallet = {
+            ...wallet,
+            balance: newBalance,
+            transactions: [
+              {
+                id: `tx-rzp-${Date.now().toString().slice(-6)}`,
+                description: `Razorpay Payment (${resp.razorpay_payment_id}): +${amount} Credits (₹${priceRupees})`,
+                type: "credit",
+                amount: amount,
+                timestamp: "Just now",
+                balanceAfter: newBalance,
+              },
+              ...wallet.transactions,
+            ],
+          };
+          setWallet(updated);
+          saveCreditWallet(updated);
+          toast.success(`🎉 Payment of ₹${priceRupees} confirmed! Added ${amount} credits.`);
         },
-        ...wallet.transactions,
-      ],
-    };
-    setWallet(updated);
-    saveCreditWallet(updated);
-    toast.success(`Admin bypass: Added ${amount} credits! New balance: ${updated.balance}`);
+        onDismiss: () => {
+          toast.info("Payment window closed.");
+        },
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to initialize Razorpay checkout.");
+    }
   }
 
   function handleUpgradeTier(tierName: "Free Starter" | "Growth Pro" | "Enterprise Scale") {
@@ -266,25 +302,27 @@ function SettingsPage() {
                 <p className="text-xs text-muted-foreground">Live metering for LLM synthesis, solution regeneration, and blueprint exports.</p>
               </div>
             </div>
-            {isSuperAdmin ? (
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {isSuperAdmin && (
                 <span className="rounded bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                  Super Admin Testing Bypass
+                  Admin Testing Bypass
                 </span>
-                <button
-                  onClick={() => handleAddCredits(250)}
-                  className="neu-sm neu-press flex items-center gap-1.5 px-3 py-2 text-xs font-semibold hover:text-primary"
-                >
-                  <PlusCircle className="size-3.5 text-primary" /> +250 Credits
-                </button>
-                <button
-                  onClick={() => handleAddCredits(1000)}
-                  className="neu-press flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground"
-                >
-                  <Sparkles className="size-3.5" /> +1,000 Credits
-                </button>
-              </div>
-            ) : null}
+              )}
+              <button
+                onClick={() => handleAddCredits(250, 799)}
+                className="neu-sm neu-press flex items-center gap-1.5 px-3 py-2 text-xs font-semibold hover:text-primary transition-colors"
+                title="Purchase 250 AI Credits via Razorpay"
+              >
+                <PlusCircle className="size-3.5 text-primary" /> +250 Credits (₹799)
+              </button>
+              <button
+                onClick={() => handleAddCredits(1000, 2799)}
+                className="neu-press flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3.5 py-2 text-xs font-semibold text-white shadow-sm glow-primary transition-colors"
+                title="Purchase 1,000 AI Credits via Razorpay"
+              >
+                <Sparkles className="size-3.5" /> +1,000 Credits (₹2,799)
+              </button>
+            </div>
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
