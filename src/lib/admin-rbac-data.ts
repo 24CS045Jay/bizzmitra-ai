@@ -173,7 +173,24 @@ export type CreditWallet = {
   transactions: CreditTransaction[];
 };
 
-export const INITIAL_WALLET: CreditWallet = {
+export const INITIAL_FREE_WALLET: CreditWallet = {
+  balance: 100,
+  monthlyQuota: 100,
+  tier: "Free Starter",
+  nextBillingDate: "Oct 01, 2026",
+  transactions: [
+    {
+      id: "tx-init-free",
+      description: "Welcome Free Starter Grant (100 credits/mo)",
+      type: "credit",
+      amount: 100,
+      timestamp: "Today",
+      balanceAfter: 100,
+    },
+  ],
+};
+
+export const INITIAL_ADMIN_WALLET: CreditWallet = {
   balance: 840,
   monthlyQuota: 1000,
   tier: "Growth Pro",
@@ -213,6 +230,8 @@ export const INITIAL_WALLET: CreditWallet = {
     },
   ],
 };
+
+export const INITIAL_WALLET: CreditWallet = INITIAL_FREE_WALLET;
 
 export type ManagedTenantWorkspace = {
   id: string;
@@ -270,12 +289,12 @@ export const STORAGE_KEY_CURRENT_ROLE = "bizzmitra.activeUserRole";
 export const STORAGE_KEY_WALLET = "bizzmitra.creditWallet";
 
 export function loadCurrentRole(): UserRole {
-  if (typeof window === "undefined") return "admin";
+  if (typeof window === "undefined") return "viewer";
   try {
     const role = localStorage.getItem(STORAGE_KEY_CURRENT_ROLE) as UserRole | null;
-    return role && ROLE_DEFINITIONS[role] ? role : "admin";
+    return role && ROLE_DEFINITIONS[role] ? role : "viewer";
   } catch {
-    return "admin";
+    return "viewer";
   }
 }
 
@@ -283,7 +302,49 @@ export function saveCurrentRole(role: UserRole): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY_CURRENT_ROLE, role);
+    window.dispatchEvent(new CustomEvent("bizzmitra:role-changed", { detail: role }));
   } catch {}
+}
+
+export function isSuperAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const normalized = email.trim().toLowerCase();
+  return (
+    normalized === "admin@bizzmitra.ai" ||
+    normalized === "param@talentcraft.co" ||
+    normalized.endsWith("@talentcraft.co")
+  );
+}
+
+export function syncUserRoleAndWallet(
+  email?: string | null,
+  forceReset: boolean = false,
+): { role: UserRole; wallet: CreditWallet } {
+  const isSuperAdmin = isSuperAdminEmail(email);
+
+  if (isSuperAdmin) {
+    saveCurrentRole("admin");
+    const currentWallet = loadCreditWallet();
+    if (forceReset || currentWallet.tier === "Free Starter" || currentWallet.balance < 500) {
+      saveCreditWallet(INITIAL_ADMIN_WALLET);
+      return { role: "admin", wallet: INITIAL_ADMIN_WALLET };
+    }
+    return { role: "admin", wallet: currentWallet };
+  } else {
+    // Normal client users: strictly viewer role and Free Starter tier (100 credits/mo)
+    saveCurrentRole("viewer");
+    const currentWallet = loadCreditWallet();
+    // If forced reset or coming from an admin wallet state or uninitialized
+    if (
+      forceReset ||
+      (currentWallet.tier !== "Growth Pro" && currentWallet.tier !== "Enterprise Scale") ||
+      currentWallet.balance === 840
+    ) {
+      saveCreditWallet(INITIAL_FREE_WALLET);
+      return { role: "viewer", wallet: INITIAL_FREE_WALLET };
+    }
+    return { role: "viewer", wallet: currentWallet };
+  }
 }
 
 export function loadCreditWallet(): CreditWallet {
@@ -412,13 +473,8 @@ export function canUserAccessModel(
   const model = AI_MODELS.find((m) => m.id === modelId) || AI_MODELS[0]!;
 
   // 1. Super Admin Whitelist Check:
-  // Role is "admin" or "architect", OR email matches developer testing account
-  const isSuperAdmin =
-    userRole === "admin" ||
-    userRole === "architect" ||
-    userEmail === "admin@bizzmitra.ai" ||
-    userEmail === "param@talentcraft.co" ||
-    (userEmail && userEmail.endsWith("@talentcraft.co"));
+  // Strictly verified super admin accounts get testing bypass automatically
+  const isSuperAdmin = isSuperAdminEmail(userEmail);
 
   if (isSuperAdmin) {
     return {

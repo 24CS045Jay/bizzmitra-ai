@@ -11,6 +11,7 @@ import { Auth6 } from "@/components/Auth6";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
+import { syncUserRoleAndWallet } from "@/lib/admin-rbac-data";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -76,6 +77,7 @@ function SignupPage() {
             password,
           });
           if (signInData?.session) {
+            syncUserRoleAndWallet(email, true);
             toast.success("Welcome back! Signed in to your workspace.");
             navigate({ to: "/dashboard" });
             return;
@@ -93,6 +95,7 @@ function SignupPage() {
 
       // If session was immediately created without email confirmation requirement
       if (data.session) {
+        syncUserRoleAndWallet(email, true);
         toast.success("Account created successfully!");
         navigate({ to: "/dashboard" });
         return;
@@ -104,6 +107,7 @@ function SignupPage() {
         password,
       });
       if (signInData?.session) {
+        syncUserRoleAndWallet(email, true);
         toast.success("Account created and signed in!");
         navigate({ to: "/dashboard" });
         return;
@@ -191,20 +195,8 @@ function SignupPage() {
 
                   <button
                     type="button"
-                    onClick={() => {
-                      signInAsDemoAdmin();
-                      toast.success("Logged in as Super Admin (Testing Session)");
-                      navigate({ to: "/dashboard" });
-                    }}
-                    className="neu-press mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-md hover:bg-emerald-500 transition-colors"
-                  >
-                    <span>⚡ One-Click Sign In as Administrator</span>
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={google}
-                    className="neu-sm neu-press mt-2.5 flex w-full items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium"
+                    className="neu-sm neu-press mt-5 flex w-full items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium"
                   >
                     Continue with Google
                   </button>

@@ -21,11 +21,15 @@ import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  AI_MODELS,
+  AiModel,
   CreditWallet,
   INITIAL_WALLET,
+  isSuperAdminEmail,
   loadCreditWallet,
   saveCreditWallet,
 } from "@/lib/admin-rbac-data";
+import { AiModelPaymentModal } from "@/components/AiModelPaymentModal";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -79,6 +83,9 @@ function SettingsPage() {
   } | null>(null);
 
   const [wallet, setWallet] = useState<CreditWallet>(INITIAL_WALLET);
+  const isSuperAdmin = isSuperAdminEmail(user?.email);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedModelForPayment, setSelectedModelForPayment] = useState<AiModel | null>(null);
 
   useEffect(() => {
     setWallet(loadCreditWallet());
@@ -132,13 +139,17 @@ function SettingsPage() {
   }
 
   function handleAddCredits(amount: number) {
+    if (!isSuperAdmin) {
+      toast.info("Credit top-ups require an active subscription plan. Please select a plan below.");
+      return;
+    }
     const updated: CreditWallet = {
       ...wallet,
       balance: wallet.balance + amount,
       transactions: [
         {
           id: `tx-${Date.now().toString().slice(-4)}`,
-          description: `Instant AI Credit Top-Up (+${amount} credits)`,
+          description: `Super Admin Testing Grant (+${amount} credits)`,
           type: "credit",
           amount: amount,
           timestamp: "Just now",
@@ -149,17 +160,36 @@ function SettingsPage() {
     };
     setWallet(updated);
     saveCreditWallet(updated);
-    toast.success(`Added ${amount} credits to your balance! New balance: ${updated.balance}`);
+    toast.success(`Admin bypass: Added ${amount} credits! New balance: ${updated.balance}`);
   }
 
   function handleUpgradeTier(tierName: "Free Starter" | "Growth Pro" | "Enterprise Scale") {
+    if (tierName === "Free Starter") {
+      const updated: CreditWallet = {
+        ...wallet,
+        tier: tierName,
+      };
+      setWallet(updated);
+      saveCreditWallet(updated);
+      toast.success("Account switched to Free Starter plan");
+      return;
+    }
+    if (!isSuperAdmin) {
+      const targetModel =
+        tierName === "Enterprise Scale"
+          ? AI_MODELS.find((m) => m.id === "deepseek-v3") || null
+          : AI_MODELS.find((m) => m.id === "gpt-4o") || null;
+      setSelectedModelForPayment(targetModel);
+      setIsPaymentModalOpen(true);
+      return;
+    }
     const updated: CreditWallet = {
       ...wallet,
       tier: tierName,
     };
     setWallet(updated);
     saveCreditWallet(updated);
-    toast.success(`Your account has been switched to ${tierName}!`);
+    toast.success(`Admin bypass: Switched to ${tierName}!`);
   }
 
   return (
@@ -236,20 +266,25 @@ function SettingsPage() {
                 <p className="text-xs text-muted-foreground">Live metering for LLM synthesis, solution regeneration, and blueprint exports.</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleAddCredits(250)}
-                className="neu-sm neu-press flex items-center gap-1.5 px-3 py-2 text-xs font-semibold hover:text-primary"
-              >
-                <PlusCircle className="size-3.5 text-primary" /> +250 Credits ($10)
-              </button>
-              <button
-                onClick={() => handleAddCredits(1000)}
-                className="neu-press flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground"
-              >
-                <Sparkles className="size-3.5" /> +1,000 Credits ($35)
-              </button>
-            </div>
+            {isSuperAdmin ? (
+              <div className="flex items-center gap-2">
+                <span className="rounded bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                  Super Admin Testing Bypass
+                </span>
+                <button
+                  onClick={() => handleAddCredits(250)}
+                  className="neu-sm neu-press flex items-center gap-1.5 px-3 py-2 text-xs font-semibold hover:text-primary"
+                >
+                  <PlusCircle className="size-3.5 text-primary" /> +250 Credits
+                </button>
+                <button
+                  onClick={() => handleAddCredits(1000)}
+                  className="neu-press flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground"
+                >
+                  <Sparkles className="size-3.5" /> +1,000 Credits
+                </button>
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -419,6 +454,18 @@ function SettingsPage() {
           </div>
         </StaggerItem>
       </Stagger>
+
+      <AiModelPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        model={selectedModelForPayment}
+        onSuccess={(m) => {
+          setWallet(loadCreditWallet());
+          setIsPaymentModalOpen(false);
+          toast.success(`Successfully activated ${m.tierRequired} tier!`);
+        }}
+        currentRole={isSuperAdmin ? "admin" : "viewer"}
+      />
     </AppShell>
   );
 }

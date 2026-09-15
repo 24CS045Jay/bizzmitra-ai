@@ -2,6 +2,12 @@ import type { Session, User } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import {
+  syncUserRoleAndWallet,
+  saveCurrentRole,
+  saveCreditWallet,
+  INITIAL_FREE_WALLET,
+} from "@/lib/admin-rbac-data";
 
 type AuthValue = {
   session: Session | null;
@@ -32,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const parsed = JSON.parse(storedDemo) as Session;
           setSession(parsed);
+          syncUserRoleAndWallet(parsed.user?.email);
           setLoading(false);
         } catch {}
       }
@@ -40,12 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       if (s) {
         setSession(s);
+        syncUserRoleAndWallet(s.user?.email);
       }
       setLoading(false);
     });
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         setSession(data.session);
+        syncUserRoleAndWallet(data.session.user?.email);
       }
       setLoading(false);
     });
@@ -63,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: "admin@bizzmitra.ai",
         aud: "authenticated",
         role: "authenticated",
-        user_metadata: { full_name: "Param Shah (Administrator)" },
+        user_metadata: { full_name: "Super Administrator" },
         app_metadata: { provider: "email" },
         created_at: new Date().toISOString(),
       },
@@ -72,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined") {
       localStorage.setItem("bizzmitra.demoSession", JSON.stringify(demoSession));
     }
+    syncUserRoleAndWallet("admin@bizzmitra.ai", true);
     setSession(demoSession);
   };
 
@@ -95,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined") {
       localStorage.setItem("bizzmitra.demoSession", JSON.stringify(customSession));
     }
+    syncUserRoleAndWallet(email, false);
     setSession(customSession);
   };
 
@@ -107,6 +118,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (typeof window !== "undefined") {
           localStorage.removeItem("bizzmitra.demoSession");
         }
+        saveCurrentRole("viewer");
+        saveCreditWallet(INITIAL_FREE_WALLET);
         await supabase.auth.signOut();
         setSession(null);
       },

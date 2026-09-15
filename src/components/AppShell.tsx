@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import {
   ROLE_DEFINITIONS,
   UserRole,
+  isSuperAdminEmail,
   loadCurrentRole,
   saveCurrentRole,
 } from "@/lib/admin-rbac-data";
@@ -62,19 +63,22 @@ const NAV = [
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, signOut } = useAuth();
+  const isSuperAdmin = isSuperAdminEmail(user?.email);
+
   const [activeWs, setActiveWs] = useState({
     name: "TalentCraft HR Consultancy",
     industry: "HR & Recruitment Services",
     mode: "consult",
     lang: "en",
   });
-  const [activeRole, setActiveRole] = useState<UserRole>("admin");
+  const [activeRole, setActiveRole] = useState<UserRole>("viewer");
 
   useEffect(() => {
     setActiveRole(loadCurrentRole());
   }, []);
 
   const handleRoleChange = (newRole: UserRole) => {
+    if (!isSuperAdmin) return;
     setActiveRole(newRole);
     saveCurrentRole(newRole);
     window.dispatchEvent(new CustomEvent("bizzmitra:role-changed", { detail: newRole }));
@@ -116,6 +120,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         });
     }
   }, [user]);
+
+  const visibleNav = NAV.filter((item) => item.to !== "/admin" || isSuperAdmin);
 
   return (
     <div className="flex h-full flex-col gap-6 p-4">
@@ -173,7 +179,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto">
-        {NAV.map((item) => {
+        {visibleNav.map((item) => {
           const active = pathname === item.to;
           return (
             <Link
@@ -204,20 +210,26 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Role</span>
             <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">
-              {ROLE_DEFINITIONS[activeRole].badge}
+              {ROLE_DEFINITIONS[activeRole]?.badge || "Viewer"}
             </span>
           </div>
-          <select
-            value={activeRole}
-            onChange={(e) => handleRoleChange(e.target.value as UserRole)}
-            className="mt-1.5 w-full rounded-md border border-input bg-background px-2 py-1 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            {(Object.keys(ROLE_DEFINITIONS) as UserRole[]).map((r) => (
-              <option key={r} value={r}>
-                {ROLE_DEFINITIONS[r].title}
-              </option>
-            ))}
-          </select>
+          {isSuperAdmin ? (
+            <select
+              value={activeRole}
+              onChange={(e) => handleRoleChange(e.target.value as UserRole)}
+              className="mt-1.5 w-full rounded-md border border-input bg-background px-2 py-1 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              {(Object.keys(ROLE_DEFINITIONS) as UserRole[]).map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_DEFINITIONS[r].title}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="mt-1.5 text-xs font-medium text-foreground">
+              {ROLE_DEFINITIONS[activeRole]?.title || "Stakeholder Viewer"}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center justify-between px-2">
@@ -237,9 +249,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [currentRole, setCurrentRole] = useState<UserRole>("admin");
+  const [currentRole, setCurrentRole] = useState<UserRole>("viewer");
   const { loading, session } = useAuth();
   const navigate = useNavigate();
+  const isSuperAdmin = isSuperAdminEmail(session?.user?.email);
 
   useEffect(() => {
     if (!loading && !session) navigate({ to: "/login" });
@@ -333,13 +346,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       </AnimatePresence>
 
       <div className="flex min-w-0 flex-1 flex-col lg:pl-[86px]">
-        {currentRole !== "admin" ? (
+        {isSuperAdmin && currentRole !== "admin" ? (
           <div className="border-b border-amber-500/20 bg-amber-500/10 px-6 py-2 text-xs font-medium text-amber-700 dark:text-amber-300">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="inline-block size-2 rounded-full bg-amber-500 animate-pulse" />
                 <span>
-                  <strong>RBAC Preview Active:</strong> Logged in as{" "}
+                  <strong>Super Admin Sandbox:</strong> Previewing role as{" "}
                   <span className="font-bold underline">{roleDef.title}</span> ({roleDef.badge}).
                   {!roleDef.permissions.canEditSchema && " Schema editing is disabled."}
                   {!roleDef.permissions.canRegenerateAI && " AI regeneration is restricted."}
