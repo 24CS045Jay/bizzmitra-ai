@@ -1,5 +1,6 @@
 import type { Session, User } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -10,6 +11,7 @@ type AuthValue = {
   signOut: () => Promise<void>;
   signInAsDemoAdmin: () => void;
   signInWithCustomUser: (email: string, fullName?: string) => void;
+  setSession: (session: Session | null) => void;
 };
 
 const AuthContext = createContext<AuthValue>({
@@ -19,6 +21,7 @@ const AuthContext = createContext<AuthValue>({
   signOut: async () => {},
   signInAsDemoAdmin: () => {},
   signInWithCustomUser: () => {},
+  setSession: () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -26,6 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let hasUrlAction = false;
+
     if (typeof window !== "undefined") {
       const storedDemo = localStorage.getItem("bizzmitra.demoSession");
       if (storedDemo) {
@@ -35,20 +40,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
         } catch {}
       }
+
+      // Handle email confirmation link redirect (token_hash or PKCE auth code)
+      const url = new URL(window.location.href);
+      const token_hash = url.searchParams.get("token_hash");
+      const type = url.searchParams.get("type") as "signup" | "email" | "recovery" | "invite" | null;
+      const code = url.searchParams.get("code");
+      const queryError = url.searchParams.get("error_description") || url.searchParams.get("error");
+
+      // Check hash parameters for errors or tokens
+      let hashError: string | null = null;
+      if (window.location.hash) {
+        try {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          hashError = hashParams.get("error_description") || hashParams.get("error");
+        } catch {}
+      }
+
+      if (queryError || hashError) {
+        const msg = decodeURIComponent((queryError || hashError)!.replace(/\+/g, " "));
+        toast.error(msg);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (token_hash && type) {
+        hasUrlAction = true;
+        setLoading(true);
+        supabase.auth.verifyOtp({ token_hash, type }).then(({ data, error }) => {
+          if (!error && data.session) {
+            setSession(data.session);
+            toast.success("Email verified successfully! Welcome to your workspace.");
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } else if (error) {
+            toast.error(error.message);
+          }
+          setLoading(false);
+        });
+      } else if (code) {
+        hasUrlAction = true;
+        setLoading(true);
+        supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+          if (!error && data.session) {
+            setSession(data.session);
+            toast.success("Email verified successfully! Welcome to your workspace.");
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } else if (error) {
+            toast.error(error.message);
+          }
+          setLoading(false);
+        });
+      }
     }
 
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       if (s) {
         setSession(s);
       }
-      setLoading(false);
+      if (!hasUrlAction) {
+        setLoading(false);
+      }
     });
+
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         setSession(data.session);
       }
-      setLoading(false);
+      if (!hasUrlAction) {
+        setLoading(false);
+      }
     });
+
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -112,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       signInAsDemoAdmin,
       signInWithCustomUser,
+      setSession,
     }),
     [session, loading],
   );
