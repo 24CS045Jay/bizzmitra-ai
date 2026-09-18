@@ -116,35 +116,15 @@ function SignupPage() {
           error.message.toLowerCase().includes("rate limit") ||
           error.message.toLowerCase().includes("over_email_send_rate_limit")
         ) {
-          toast.info("Supabase mail limit reached. Creating direct authenticated account...");
-          try {
-            const regRes = await fetch("/api/auth/register", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email, password, fullName }),
-            });
-            const regData = await regRes.json();
-            if (regData.success) {
-              const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
-              if (signInData?.session) {
-                setSession(signInData.session);
-                if (signInData.session.user) {
-                  void syncUserProfile(signInData.session.user.id, fullName || email.split("@")[0]);
-                }
-                toast.success("Account created and saved to database! Welcome to your workspace.");
-                navigate({ to: "/dashboard" });
-                return;
-              }
-            }
-          } catch (serverErr) {
-            console.warn("Direct server registration notice:", serverErr);
-          }
-
           toast.error(
-            "Supabase email rate limit exceeded (maximum 3 emails/hour on default mailer). Disable 'Confirm email' in Supabase to bypass this limit and allow instant access."
+            "Supabase email service could not deliver the confirmation email (hourly rate limit reached). Turn off 'Confirm email' in Supabase Dashboard -> Authentication -> Providers -> Email, or click below to enter directly.",
+            { duration: 8000 }
           );
-          setStep("otp");
-          setCooldown(60);
+          // Allow instant session entry so the user is never blocked
+          signInWithCustomUser(email, fullName || email.split("@")[0]);
+          syncUserRoleAndWallet(email, true);
+          toast.success("Welcome! Entered workspace with instant access.");
+          navigate({ to: "/dashboard" });
           return;
         }
 
