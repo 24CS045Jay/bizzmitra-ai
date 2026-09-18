@@ -35,6 +35,8 @@ import {
   getRazorpayKeyId,
   saveRazorpayKeyId,
 } from "@/lib/razorpay";
+import { LanguageSelector } from "@/components/LanguageSelector";
+import { SUPPORTED_LANGUAGES, getCurrentLanguage, setLanguage, SupportedLanguage } from "@/lib/i18n";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -522,6 +524,40 @@ function SettingsPage() {
             >
               <Moon className="size-4" /> Dark (Ambient Ray)
             </button>
+          </div>
+        </StaggerItem>
+
+        <StaggerItem className="neu p-6 lg:col-span-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-bold">Language & Multilingual Support</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Set your primary language for navigation, blueprints, and AI recommendations.
+              </p>
+            </div>
+            <LanguageSelector variant="button" />
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                type="button"
+                onClick={() => {
+                  setLanguage(lang.code);
+                  toast.success(`Language set to ${lang.name} (${lang.nativeName})`);
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all",
+                  getCurrentLanguage() === lang.code
+                    ? "bg-primary text-primary-foreground shadow-xs glow-primary"
+                    : "neu-sm neu-press text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <span>{lang.flag}</span>
+                <span>{lang.nativeName}</span>
+                <span className="text-[10px] opacity-70">({lang.name})</span>
+              </button>
+            ))}
           </div>
         </StaggerItem>
 

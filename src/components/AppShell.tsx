@@ -27,7 +27,8 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 
 import { useAuth } from "@/hooks/useAuth";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle } from "./ThemeToggle";
+import { LanguageSelector } from "./LanguageSelector";
 import { AppSidebar2 } from "@/components/AppSidebar2";
 import { AiCopilotPanel } from "@/components/AiCopilotPanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -324,6 +325,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </span>
         </Link>
         <div className="flex items-center gap-2">
+          <LanguageSelector variant="compact" />
           <ThemeToggle />
           <button
             onClick={() => setOpen(true)}
