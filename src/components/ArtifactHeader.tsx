@@ -8,6 +8,7 @@ import { ExportModal } from "@/components/ExportModal";
 import { VersionControlDrawer } from "@/components/VersionControlDrawer";
 import { cn } from "@/lib/utils";
 import { ROLE_DEFINITIONS, UserRole, loadCurrentRole } from "@/lib/admin-rbac-data";
+import { useTranslation } from "@/lib/i18n";
 
 export const CHAIN = [
   { id: "intake", label: "Intake", to: "/workspace/new" },
@@ -38,6 +39,7 @@ export function ArtifactHeader({
   const [regenerating, setRegenerating] = useState(false);
   const [versionDrawerOpen, setVersionDrawerOpen] = useState(false);
   const [role, setRole] = useState<UserRole>("admin");
+  const { t } = useTranslation();
 
   useEffect(() => {
     setRole(loadCurrentRole());
@@ -91,7 +93,7 @@ export function ArtifactHeader({
                       : "text-muted-foreground hover:bg-accent",
                 )}
               >
-                {c.label}
+                {t("chain." + c.id, c.label)}
               </Link>
             </li>
           ))}
@@ -128,7 +130,7 @@ export function ArtifactHeader({
             >
               <RefreshCw className="size-4" />
             </motion.span>
-            {regenerating ? "Regenerating" : "Regenerate"}
+            {regenerating ? t("chain.regenerate", "Regenerating") : t("chain.regenerate", "Regenerate")}
           </button>
           <button
             onClick={handleExportClick}
@@ -140,7 +142,7 @@ export function ArtifactHeader({
             )}
           >
             <Download className="size-4" />
-            Export
+            {t("chain.export", "Export")}
           </button>
         </div>
       </div>
@@ -151,14 +153,14 @@ export function ArtifactHeader({
       <div className="mt-6 flex items-center justify-between text-sm">
         {prev ? (
           <Link to={prev.to} className="flex items-center gap-1.5 text-muted-foreground hover:text-primary">
-            <ArrowLeft className="size-3.5" /> {prev.label}
+            <ArrowLeft className="size-3.5" /> {t("chain." + prev.id, prev.label)}
           </Link>
         ) : (
           <span />
         )}
         {next ? (
           <Link to={next.to} className="flex items-center gap-1.5 font-medium text-primary">
-            {next.label} <ArrowRight className="size-3.5" />
+            {t("chain." + next.id, next.label)} <ArrowRight className="size-3.5" />
           </Link>
         ) : null}
       </div>

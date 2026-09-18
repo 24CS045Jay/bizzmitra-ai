@@ -16,6 +16,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { PageTransition } from "@/components/motion/primitives";
 import { Toaster } from "@/components/ui/sonner";
+import { getCurrentLanguage, triggerGoogleTranslate } from "@/lib/i18n";
 
 
 function NotFoundComponent() {
@@ -136,11 +137,62 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("bizzmitra-theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");}else{document.documentElement.classList.remove("dark");}}catch(e){}})();`,
+            __html: `(function(){
+              try{
+                var t=localStorage.getItem("bizzmitra-theme");
+                if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){
+                  document.documentElement.classList.add("dark");
+                }else{
+                  document.documentElement.classList.remove("dark");
+                }
+              }catch(e){}
+
+              try{
+                var l=localStorage.getItem("bizzmitra.language");
+                if(l){
+                  document.documentElement.setAttribute("lang", l);
+                  if(l==="ar") document.documentElement.setAttribute("dir", "rtl");
+                  if(l!=="en"){
+                    var h=window.location.hostname;
+                    document.cookie="googtrans=/en/"+l+"; path=/;";
+                    document.cookie="googtrans=/en/"+l+"; domain="+h+"; path=/;";
+                    document.cookie="googtrans=/en/"+l+"; domain=."+h+"; path=/;";
+                  }
+                }
+              }catch(e){}
+
+              if(typeof Node==='function' && Node.prototype){
+                var origRemove=Node.prototype.removeChild;
+                Node.prototype.removeChild=function(child){
+                  if(child.parentNode!==this) return child;
+                  return origRemove.apply(this,arguments);
+                };
+                var origInsert=Node.prototype.insertBefore;
+                Node.prototype.insertBefore=function(newNode,refNode){
+                  if(refNode && refNode.parentNode!==this) return newNode;
+                  return origInsert.apply(this,arguments);
+                };
+              }
+            })();`,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.googleTranslateElementInit = function() {
+              if (window.google && window.google.translate) {
+                new window.google.translate.TranslateElement({
+                  pageLanguage: 'en',
+                  includedLanguages: 'en,hi,gu,es,fr,de,ja,ar',
+                  autoDisplay: false
+                }, 'google_translate_element');
+              }
+            };`,
+          }}
+        />
+        <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer />
       </head>
       <body>
+        <div id="google_translate_element" style={{ display: "none" }} />
         {children}
         <Scripts />
       </body>
@@ -151,6 +203,13 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const location = useRouterState({ select: (s) => s.location.pathname });
+
+  useEffect(() => {
+    const cur = getCurrentLanguage();
+    if (cur !== "en") {
+      triggerGoogleTranslate(cur);
+    }
+  }, [location]);
 
   return (
     <QueryClientProvider client={queryClient}>

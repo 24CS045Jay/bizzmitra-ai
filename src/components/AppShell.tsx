@@ -29,6 +29,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageSelector } from "./LanguageSelector";
+import { useTranslation } from "@/lib/i18n";
 import { AppSidebar2 } from "@/components/AppSidebar2";
 import { AiCopilotPanel } from "@/components/AiCopilotPanel";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
@@ -65,7 +66,31 @@ const NAV = [
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, signOut } = useAuth();
+  const { t } = useTranslation();
   const isSuperAdmin = isSuperAdminEmail(user?.email);
+
+  const getNavLabel = (item: (typeof NAV)[number]) => {
+    const map: Record<string, string> = {
+      "/dashboard": "nav.dashboard",
+      "/workspace/new": "nav.newIntake",
+      "/workspace/discovery": "nav.discovery",
+      "/workspace/solution": "nav.solution",
+      "/workspace/solution/crm": "nav.crm",
+      "/workspace/architecture": "nav.architecture",
+      "/workspace/process": "nav.process",
+      "/workspace/wireframes": "nav.wireframes",
+      "/workspace/data": "nav.data",
+      "/workspace/roadmap": "nav.roadmap",
+      "/workspace/insights": "nav.insights",
+      "/workspace/map": "nav.artifactMap",
+      "/workspace/collaboration": "nav.collaboration",
+      "/workspace/export": "nav.export",
+      "/admin": "nav.admin",
+      "/settings": "nav.settings",
+    };
+    const key = map[item.to] || "nav.dashboard";
+    return t(key, item.label);
+  };
 
   const [activeWs, setActiveWs] = useState({
     name: "TalentCraft HR Consultancy",
@@ -168,7 +193,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Active workspace
+              {t("settings.workspace", "Active workspace")}
             </p>
             <span className="neu-sm px-1.5 py-0.5 text-[9px] font-bold text-primary">
               {activeWs.mode === "know" ? "Direct" : "AI Guided"}
@@ -201,7 +226,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 />
               ) : null}
               <item.icon className="relative size-4 shrink-0" />
-              <span className="relative font-medium">{item.label}</span>
+              <span className="relative font-medium">{getNavLabel(item)}</span>
             </Link>
           );
         })}
