@@ -7,41 +7,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GridMotion } from "@/components/effects/GridMotion";
-import { LightRays } from "@/components/effects/LightRays";
 import { supabase } from "@/integrations/supabase/client";
 import { syncUserRoleAndWallet } from "@/lib/admin-rbac-data";
+import { gridMotionItems } from "@/lib/login-background";
 
-import grid01 from "@/assets/images/login-background/grid-01.jpg";
-import grid02 from "@/assets/images/login-background/grid-02.jpg";
-import grid03 from "@/assets/images/login-background/grid-03.jpg";
-import grid04 from "@/assets/images/login-background/grid-04.jpg";
-import grid05 from "@/assets/images/login-background/grid-05.jpg";
-import grid06 from "@/assets/images/login-background/grid-06.jpg";
-import grid07 from "@/assets/images/login-background/grid-07.jpg";
-import grid08 from "@/assets/images/login-background/grid-08.jpg";
-import grid09 from "@/assets/images/login-background/grid-09.jpg";
-import grid10 from "@/assets/images/login-background/grid-10.jpg";
-import grid11 from "@/assets/images/login-background/grid-11.jpg";
-
-const loginBackgroundImages = [
-  grid01,
-  grid02,
-  grid03,
-  grid04,
-  grid05,
-  grid06,
-  grid07,
-  grid08,
-  grid09,
-  grid10,
-  grid11,
-];
-
-// Cycle through the images until all 28 grid cells are filled
-const gridMotionItems: string[] = Array.from(
-  { length: 28 },
-  (_, index) => loginBackgroundImages[index % loginBackgroundImages.length]!,
-);
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -126,23 +95,13 @@ function LoginPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden px-5 py-12">
-      {/* Dimmed, non-interactive GridMotion background layer */}
-      {theme === "light" ? (
-        <div className="pointer-events-none absolute inset-0 opacity-15">
-          <GridMotion items={gridMotionItems} gradientColor="#f5efe6" />
-        </div>
-      ) : (
-        <div className="pointer-events-none absolute inset-0 opacity-20">
-          <LightRays
-            raysOrigin="top-center"
-            raysColor="#14b8a6"
-            raysSpeed={1.2}
-            lightSpread={0.8}
-            rayLength={1.1}
-            pulsating={false}
-          />
-        </div>
-      )}
+      {/* Dimmed, non-interactive GridMotion background layer in both light and dark themes */}
+      <div className="pointer-events-none absolute inset-0 opacity-15 dark:opacity-20">
+        <GridMotion
+          items={gridMotionItems}
+          gradientColor={theme === "dark" ? "#141417" : "#f5efe6"}
+        />
+      </div>
 
       <div className="absolute right-6 top-6 z-20">
         <ThemeToggle />
@@ -175,8 +134,8 @@ function LoginPage() {
             </div>
 
             <form onSubmit={submit} className="space-y-3">
-              <div className="neu-inset px-3.5 py-2.5">
-                <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="rounded-xl border border-border/80 bg-surface/70 px-3.5 py-2.5 transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 hover:border-border">
+                <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   Email
                 </label>
                 <input
@@ -184,12 +143,12 @@ function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-transparent text-sm outline-none"
+                  className="mt-0.5 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
                   placeholder="you@company.com"
                 />
               </div>
-              <div className="neu-inset px-3.5 py-2.5">
-                <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="rounded-xl border border-border/80 bg-surface/70 px-3.5 py-2.5 transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 hover:border-border">
+                <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   Password
                 </label>
                 <input
@@ -197,7 +156,7 @@ function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent text-sm outline-none"
+                  className="mt-0.5 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
                   placeholder="••••••••"
                 />
               </div>

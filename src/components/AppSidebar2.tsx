@@ -249,13 +249,27 @@ const PORTAL_GROUPS: PortalNavGroup[] = [
 
 export function AppSidebar2({
   onNavigate,
+  isPinned: externalPinned,
+  onTogglePin,
   className = "",
 }: {
   onNavigate?: () => void;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
   className?: string;
 }) {
   const [isHovered, setIsHovered] = React.useState<boolean>(false);
-  const [isPinned, setIsPinned] = React.useState<boolean>(false);
+  const [internalPinned, setInternalPinned] = React.useState<boolean>(false);
+  const isPinned = externalPinned !== undefined ? externalPinned : internalPinned;
+
+  const togglePinned = () => {
+    if (onTogglePin) {
+      onTogglePin();
+    } else {
+      setInternalPinned(!internalPinned);
+    }
+  };
+
   const [activeFlyout, setActiveFlyout] = React.useState<string | null>(null);
   const [flyoutPosition, setFlyoutPosition] = React.useState<{ top: number }>({ top: 0 });
 
@@ -403,7 +417,7 @@ export function AppSidebar2({
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                onClick={() => setIsPinned(!isPinned)}
+                onClick={togglePinned}
                 title={isPinned ? "Unpin sidebar (auto-collapse)" : "Pin sidebar open"}
                 className={cn(
                   "grid size-7 place-items-center rounded-lg border transition-colors",

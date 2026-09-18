@@ -46,6 +46,100 @@ function isH3SwallowedErrorBody(body: string): boolean {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const url = new URL(request.url);
+
+    // Direct registration endpoint using Supabase service role key (bypasses SMTP deliverability issues)
+    if (request.method === "POST" && url.pathname === "/api/auth/register") {
+      try {
+        const body = (await request.json()) as { email?: string; password?: string; fullName?: string };
+        const email = body.email?.trim().toLowerCase();
+        const password = body.password;
+        const fullName = body.fullName?.trim();
+
+        if (!email || !password) {
+          return new Response(JSON.stringify({ error: "Email and password are required." }), {
+            status: 400,
+            headers: { "content-type": "application/json" },
+          });
+        }
+
+        const supabaseUrl =
+          (env as any)?.SUPABASE_URL ||
+          (env as any)?.VITE_SUPABASE_URL ||
+          process.env["SUPABASE_URL"] ||
+          process.env["VITE_SUPABASE_URL"] ||
+          "https://pyqbmgkusnvyyjdsyqyj.supabase.co";
+
+        const serviceRoleKey =
+          (env as any)?.SUPABASE_SERVICE_ROLE_KEY ||
+          process.env["SUPABASE_SERVICE_ROLE_KEY"] ||
+          "sb_secret_r-9ktd2UNo0Dv1xZEJwhLQ_PQBKXa5n";
+
+        const { createClient } = await import("@supabase/supabase-js");
+        const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+          auth: { persistSession: false },
+        });
+
+        // 1. Create or confirm user in Supabase Auth
+        const { data: userRes, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: fullName || email.split("@")[0] },
+        });
+
+        if (createErr) {
+          // If already exists, update user password and confirm
+          if (
+            createErr.message.toLowerCase().includes("already") ||
+            createErr.message.toLowerCase().includes("exists")
+          ) {
+            const { data: listRes } = await supabaseAdmin.auth.admin.listUsers();
+            const existing = listRes?.users?.find((u) => u.email?.toLowerCase() === email);
+            if (existing) {
+              await supabaseAdmin.auth.admin.updateUserById(existing.id, {
+                password,
+                email_confirm: true,
+                user_metadata: { full_name: fullName || email.split("@")[0] },
+              });
+              await supabaseAdmin.from("profiles").upsert({
+                id: existing.id,
+                full_name: fullName || email.split("@")[0],
+                plan: "free",
+              });
+              return new Response(JSON.stringify({ success: true, userId: existing.id }), {
+                status: 200,
+                headers: { "content-type": "application/json" },
+              });
+            }
+          }
+          return new Response(JSON.stringify({ error: createErr.message }), {
+            status: 400,
+            headers: { "content-type": "application/json" },
+          });
+        }
+
+        // 2. Insert profile record in public.profiles table
+        if (userRes?.user) {
+          await supabaseAdmin.from("profiles").upsert({
+            id: userRes.user.id,
+            full_name: fullName || email.split("@")[0],
+            plan: "free",
+          });
+        }
+
+        return new Response(JSON.stringify({ success: true, userId: userRes?.user?.id }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ error: err?.message || "Registration failed" }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

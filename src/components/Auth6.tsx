@@ -5,7 +5,8 @@ import { Shake } from "./motion/primitives";
 
 interface Auth6Props {
   email?: string;
-  onVerify?: (code: string) => Promise<boolean | void> | boolean | void;
+  defaultLength?: 6 | 8;
+  onVerify?: (code: string) => Promise<boolean | string | void> | boolean | string | void;
   onResend?: () => Promise<void> | void;
   onBack?: () => void;
   initialCountdown?: number;
@@ -15,6 +16,7 @@ interface Auth6Props {
 
 export function Auth6({
   email = "alex@enterprise.com",
+  defaultLength = 8,
   onVerify,
   onResend,
   onBack,
@@ -22,10 +24,14 @@ export function Auth6({
   className = "",
   cardClassName = "neu neu-reflect p-7 sm:p-9 rounded-2xl relative overflow-hidden",
 }: Auth6Props) {
-  const [digits, setDigits] = React.useState<string[]>(["", "", "", "", "", ""]);
+  const [codeLength, setCodeLength] = React.useState<6 | 8>(defaultLength);
+  const [digits, setDigits] = React.useState<string[]>(() =>
+    Array(defaultLength).fill("")
+  );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [countdown, setCountdown] = React.useState(initialCountdown);
   const [hasError, setHasError] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [isSuccess, setIsSuccess] = React.useState(false);
   const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
 
@@ -36,10 +42,23 @@ export function Auth6({
     return () => clearInterval(timer);
   }, [countdown]);
 
-  // Focus first input on mount
+  // Sync initialCountdown when it changes
+  React.useEffect(() => {
+    setCountdown(initialCountdown);
+  }, [initialCountdown]);
+
+  // Focus first input on mount or length change
   React.useEffect(() => {
     inputRefs.current[0]?.focus();
-  }, []);
+  }, [codeLength]);
+
+  const switchLength = (newLen: 6 | 8) => {
+    if (newLen === codeLength) return;
+    setCodeLength(newLen);
+    setDigits(Array(newLen).fill(""));
+    setHasError(false);
+    setErrorMessage(null);
+  };
 
   const handleInputChange = (index: number, val: string) => {
     // Only accept numbers
@@ -47,21 +66,24 @@ export function Auth6({
     if (!clean && val !== "") return;
 
     setHasError(false);
+    setErrorMessage(null);
 
     // Handle paste of multiple digits
     if (clean.length > 1) {
-      const newDigits = [...digits];
-      const pastedChars = clean.slice(0, 6).split("");
-      pastedChars.forEach((ch, idx) => {
-        if (index + idx < 6) {
-          newDigits[index + idx] = ch;
-        }
+      const targetLen = clean.length >= 8 ? 8 : clean.length === 6 ? 6 : codeLength;
+      if (targetLen !== codeLength) {
+        setCodeLength(targetLen);
+      }
+      const newDigits = Array(targetLen).fill("");
+      const chars = clean.slice(0, targetLen).split("");
+      chars.forEach((ch, idx) => {
+        newDigits[idx] = ch;
       });
       setDigits(newDigits);
-      const nextIdx = Math.min(index + pastedChars.length, 5);
+      const nextIdx = Math.min(chars.length, targetLen - 1);
       inputRefs.current[nextIdx]?.focus();
 
-      if (newDigits.every((d) => d.length === 1)) {
+      if (newDigits.every((d) => d && d.length === 1)) {
         triggerSubmit(newDigits.join(""));
       }
       return;
@@ -72,11 +94,11 @@ export function Auth6({
     setDigits(newDigits);
 
     // Auto-advance
-    if (clean && index < 5) {
+    if (clean && index < codeLength - 1) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    if (newDigits.every((d) => d.length === 1)) {
+    if (newDigits.every((d) => d && d.length === 1)) {
       triggerSubmit(newDigits.join(""));
     }
   };
@@ -88,7 +110,7 @@ export function Auth6({
       }
     } else if (e.key === "ArrowLeft" && index > 0) {
       inputRefs.current[index - 1]?.focus();
-    } else if (e.key === "ArrowRight" && index < 5) {
+    } else if (e.key === "ArrowRight" && index < codeLength - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -97,15 +119,21 @@ export function Auth6({
     if (isSubmitting) return;
     setIsSubmitting(true);
     setHasError(false);
+    setErrorMessage(null);
     try {
       const res = await onVerify?.(code);
-      if (res === false) {
+      if (typeof res === "string") {
         setHasError(true);
+        setErrorMessage(res);
+      } else if (res === false) {
+        setHasError(true);
+        setErrorMessage("Invalid verification code. Please check and try again.");
       } else {
         setIsSuccess(true);
       }
-    } catch {
+    } catch (err: any) {
       setHasError(true);
+      setErrorMessage(err?.message || "Verification failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -113,12 +141,16 @@ export function Auth6({
 
   const handleResend = async () => {
     if (countdown > 0) return;
-    setDigits(["", "", "", "", "", ""]);
+    setDigits(Array(codeLength).fill(""));
     setHasError(false);
     setCountdown(initialCountdown);
     await onResend?.();
     inputRefs.current[0]?.focus();
   };
+
+  const half = codeLength / 2;
+  const firstGroup = Array.from({ length: half }, (_, i) => i);
+  const secondGroup = Array.from({ length: half }, (_, i) => i + half);
 
   return (
     <div className={`w-full max-w-md mx-auto ${className}`}>
@@ -146,17 +178,43 @@ export function Auth6({
           </div>
           <h2 className="mt-4 font-display text-2xl font-bold tracking-tight">Check your inbox</h2>
           <p className="mt-1 text-xs sm:text-sm text-muted-foreground max-w-xs">
-            We sent a 6-digit verification code to <span className="font-semibold text-foreground">{email}</span>
+            We sent a {codeLength}-digit verification code to <span className="font-semibold text-foreground">{email}</span>
           </p>
+
+          {/* Quick toggle for 8-digit vs 6-digit codes */}
+          <div className="mt-4 inline-flex items-center rounded-xl p-1 bg-muted/40 border border-border/60 text-xs">
+            <button
+              type="button"
+              onClick={() => switchLength(8)}
+              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                codeLength === 8
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              8-Digit Code
+            </button>
+            <button
+              type="button"
+              onClick={() => switchLength(6)}
+              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                codeLength === 6
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              6-Digit Code
+            </button>
+          </div>
         </div>
 
-        {/* Six-digit grouped OTP input */}
-        <div className="mt-8 flex flex-col items-center">
+        {/* Grouped OTP input */}
+        <div className="mt-6 flex flex-col items-center">
           <Shake shakeKey={hasError}>
-            <div className="flex items-center gap-2 sm:gap-2.5">
-              {/* First Group (3 digits) */}
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                {[0, 1, 2].map((idx) => (
+            <div className="flex items-center gap-1.5 sm:gap-2 justify-center flex-nowrap">
+              {/* First Group */}
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                {firstGroup.map((idx) => (
                   <input
                     key={idx}
                     ref={(el) => {
@@ -166,11 +224,15 @@ export function Auth6({
                     inputMode="numeric"
                     autoComplete="one-time-code"
                     maxLength={1}
-                    value={digits[idx]}
+                    value={digits[idx] || ""}
                     disabled={isSubmitting || isSuccess}
                     onChange={(e) => handleInputChange(idx, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(idx, e)}
-                    className={`size-11 sm:size-12 rounded-xl text-center font-mono text-xl font-extrabold outline-none transition-all duration-150 ${
+                    className={`${
+                      codeLength === 8
+                        ? "size-9 sm:size-11 rounded-lg sm:rounded-xl text-base sm:text-lg"
+                        : "size-11 sm:size-12 rounded-xl text-xl"
+                    } text-center font-mono font-extrabold outline-none transition-all duration-150 ${
                       hasError
                         ? "border-2 border-destructive bg-destructive/5 text-destructive"
                         : digits[idx]
@@ -182,11 +244,11 @@ export function Auth6({
               </div>
 
               {/* Group separator pill */}
-              <div className="w-2.5 h-0.5 rounded-full bg-muted-foreground/40" />
+              <div className="w-1.5 sm:w-2.5 h-0.5 rounded-full bg-muted-foreground/40 shrink-0" />
 
-              {/* Second Group (3 digits) */}
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                {[3, 4, 5].map((idx) => (
+              {/* Second Group */}
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                {secondGroup.map((idx) => (
                   <input
                     key={idx}
                     ref={(el) => {
@@ -196,11 +258,15 @@ export function Auth6({
                     inputMode="numeric"
                     autoComplete="one-time-code"
                     maxLength={1}
-                    value={digits[idx]}
+                    value={digits[idx] || ""}
                     disabled={isSubmitting || isSuccess}
                     onChange={(e) => handleInputChange(idx, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(idx, e)}
-                    className={`size-11 sm:size-12 rounded-xl text-center font-mono text-xl font-extrabold outline-none transition-all duration-150 ${
+                    className={`${
+                      codeLength === 8
+                        ? "size-9 sm:size-11 rounded-lg sm:rounded-xl text-base sm:text-lg"
+                        : "size-11 sm:size-12 rounded-xl text-xl"
+                    } text-center font-mono font-extrabold outline-none transition-all duration-150 ${
                       hasError
                         ? "border-2 border-destructive bg-destructive/5 text-destructive"
                         : digits[idx]
@@ -214,17 +280,21 @@ export function Auth6({
           </Shake>
 
           {hasError && (
-            <p className="mt-3 text-xs font-semibold text-destructive">
-              Invalid verification code. Please double check and try again.
+            <p className="mt-3 text-xs font-semibold text-destructive text-center max-w-xs">
+              {errorMessage || "Invalid verification code. Please double check and try again."}
             </p>
           )}
 
           {isSuccess && (
-            <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-sage">
+            <div className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-emerald-500">
               <CheckCircle2 className="size-4" />
               <span>Email verified successfully!</span>
             </div>
           )}
+
+          <p className="mt-3 text-[11px] text-muted-foreground text-center">
+            💡 Enter your {codeLength}-digit code above or paste it directly. You can also click the confirmation link in your inbox.
+          </p>
 
           {/* Resend Countdown */}
           <div className="mt-6 flex items-center justify-between w-full text-xs">
