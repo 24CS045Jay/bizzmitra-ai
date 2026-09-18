@@ -31,6 +31,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { LanguageSelector } from "./LanguageSelector";
 import { AppSidebar2 } from "@/components/AppSidebar2";
 import { AiCopilotPanel } from "@/components/AiCopilotPanel";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { supabase } from "@/integrations/supabase/client";
 import { DEMO_WORKSPACE } from "@/lib/demo-data";
 import { cn } from "@/lib/utils";
@@ -301,8 +302,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* React Bits Pro App Sidebar 2 (Icon rail with left-to-right hover slide expansion & pin) */}
       <AppSidebar2 isPinned={isPinned} onTogglePin={handleTogglePin} />
 
-      {/* Mobile Top Navigation Header */}
-      <div className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 lg:hidden">
+      {/* Mobile & Tablet Top Navigation Header */}
+      <div className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden">
         <Link
           to="/"
           className="group flex items-center gap-2 rounded-lg p-1 transition-all active:scale-95"
@@ -348,7 +349,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={() => setOpen(false)}
           >
             <motion.div
-              className="h-full w-72 bg-sidebar"
+              className="h-full w-72 bg-sidebar pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
               initial={{ x: -290 }}
               animate={{ x: 0 }}
               exit={{ x: -290 }}
@@ -403,10 +404,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         ) : null}
 
-        {/* Main Workspace Portal View where all tasks are performed */}
+        {/* Main Workspace Portal View with safe area bottom clearance for mobile nav */}
         <main
           className={cn(
-            "min-w-0 flex-1 px-5 py-8 sm:px-8 lg:pr-10 lg:py-10 transition-all duration-300 ease-in-out",
+            "min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:pb-10 transition-all duration-300 ease-in-out",
             isPinned && "scale-[0.985] origin-top-left",
           )}
         >
@@ -416,6 +417,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Persistent AI Copilot Panel across all authenticated screens */}
       <AiCopilotPanel />
+
+      {/* Sleek Floating Bottom Navigation for iOS, Android & Mobile Viewports */}
+      <MobileBottomNav />
     </div>
   );
 }

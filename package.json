@@ -9,6 +9,9 @@
     "build:dev": "vite build --mode development",
     "preview": "node .output/server/index.mjs",
     "start": "node .output/server/index.mjs",
+    "cap:sync": "cap sync",
+    "cap:open:ios": "cap open ios",
+    "cap:open:android": "cap open android",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
