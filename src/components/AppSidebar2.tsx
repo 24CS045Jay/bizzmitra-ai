@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "./ThemeToggle";
+import { LanguageSelector } from "./LanguageSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { isSuperAdminEmail } from "@/lib/admin-rbac-data";
 import { cn } from "@/lib/utils";
@@ -575,8 +576,9 @@ export function AppSidebar2({
         {/* BOTTOM USER ROW */}
         <div className="border-t border-border/60 p-2.5 space-y-2">
           <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2 overflow-hidden">
+            <div className="flex items-center gap-1.5 overflow-hidden">
               <ThemeToggle />
+              <LanguageSelector variant="compact" />
               <AnimatePresence>
                 {isExpanded && (
                   <motion.span

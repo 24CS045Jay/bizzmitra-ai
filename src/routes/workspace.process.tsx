@@ -13,6 +13,10 @@ import {
   Timer,
   Users,
   Zap,
+  Workflow,
+  ShieldCheck,
+  Split,
+  CornerDownRight,
 } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
@@ -47,7 +51,7 @@ export const Route = createFileRoute("/workspace/process")({
   component: ProcessPage,
 });
 
-type TabView = "comparison" | "swimlane" | "bottlenecks";
+type TabView = "comparison" | "swimlane" | "bottlenecks" | "decisionTree";
 type DiffViewMode = "split" | "before" | "after";
 
 function ProcessPage() {
@@ -180,6 +184,18 @@ function ProcessPage() {
                 >
                   <AlertTriangle className="h-3.5 w-3.5" />
                   Bottleneck Analysis ({BOTTLENECK_ANALYSIS.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("decisionTree")}
+                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
+                    activeTab === "decisionTree"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "neu hover:bg-accent/40"
+                  }`}
+                >
+                  <Workflow className="h-3.5 w-3.5" />
+                  Approval Workflows & Decision Trees
                 </button>
               </div>
 
@@ -369,6 +385,126 @@ function ProcessPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </StaggerItem>
+          )}
+
+          {/* Tab 4: Approval Workflows & Decision Trees */}
+          {activeTab === "decisionTree" && (
+            <StaggerItem className="space-y-6">
+              {/* Overview Card */}
+              <div className="rounded-2xl border border-border/80 bg-card/60 p-6 backdrop-blur-md space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-display text-base font-bold text-foreground">
+                      BPMN 2.0 Approval Gateways & Decision Trees
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Automated branching logic, multi-tier approval escalations, and AI decision routing.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                    SLA: Sub-2 Hour Resolution
+                  </span>
+                </div>
+
+                {/* 3-Tier Approval Workflow Strip */}
+                <div className="grid gap-3 sm:grid-cols-3 pt-2">
+                  {[
+                    {
+                      tier: "Tier 1: Recruiter Screening",
+                      actor: "Talent Consultant",
+                      criteria: "Skill match >= 70%, Experience valid, Notice <= 30d",
+                      action: "Instant Auto-Invite to Tech Evaluation",
+                      status: "Fully Automated (AI Agent)",
+                    },
+                    {
+                      tier: "Tier 2: Commercial Budget Check",
+                      actor: "Client Account Lead",
+                      criteria: "CTC <= Budget + 10%, Gross Margin >= 22%",
+                      action: "Proceed to Client Final Interview",
+                      status: "Automated Gateway",
+                    },
+                    {
+                      tier: "Tier 3: Executive Offer Sign-off",
+                      actor: "VP / Managing Partner",
+                      criteria: "Exceptions only: Custom sign-on bonus or > 15% budget variance",
+                      action: "Digital e-Signature via DocuSign / AdobeSign",
+                      status: "Escalation Queue (< 4 hours)",
+                    },
+                  ].map((step, idx) => (
+                    <div key={idx} className="rounded-xl border border-border/70 bg-surface/60 p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-foreground">{step.tier}</span>
+                        <ShieldCheck className="size-3.5 text-primary" />
+                      </div>
+                      <p className="text-[10px] font-mono text-primary font-semibold">Actor: {step.actor}</p>
+                      <p className="text-[11px] text-muted-foreground"><strong className="text-foreground">Rule:</strong> {step.criteria}</p>
+                      <div className="pt-2 border-t border-border/40 flex items-center justify-between text-[10px]">
+                        <span className="text-muted-foreground">{step.action}</span>
+                        <span className="font-bold text-emerald-600">{step.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Decision Tree Branching Diagram */}
+              <div className="rounded-2xl border border-border/80 bg-card/60 p-6 backdrop-blur-md space-y-4">
+                <div className="flex items-center gap-2 border-b border-border/60 pb-3">
+                  <Split className="size-4 text-primary" />
+                  <div>
+                    <h4 className="font-display text-sm font-bold text-foreground">
+                      Candidate Intake & Auto-Routing Decision Tree
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground">
+                      Visual flow diagram representing exclusive BPMN XOR and Inclusive OR decision gates.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto pt-2">
+                  <Mermaid
+                    chart={`graph TD
+  Start([📥 Resume Submitted]) --> Parse[⚡ AI Resume Extraction]
+  Parse --> Q1{Confidence > 85%?}
+  Q1 -- No --> ManualReview[👀 Recruiter Manual Review Queue]
+  Q1 -- Yes --> Q2{Skill Match Score}
+  Q2 -- Score >= 75% --> FastTrack[🚀 Fast-Track Auto Invite to Tech Screen]
+  Q2 -- 50% to 74% --> RecruiterScreen[📞 15-Min Phone Screen Scheduled]
+  Q2 -- Score < 50% --> AutoReject[✉️ Polite Automated Feedback Email]
+  FastTrack --> Interview[🎯 Technical Evaluation Passed]
+  RecruiterScreen --> Interview
+  Interview --> Q3{Expected CTC <= Budget?}
+  Q3 -- Yes --> DraftOffer[📝 Auto-Draft Offer Letter]
+  Q3 -- Exceeds Budget --> ApprovalGate[🛡️ VP Escalation Approval Gate]
+  ApprovalGate -- Approved --> DraftOffer
+  ApprovalGate -- Rejected --> Renegotiate[🤝 Client Rate Adjustment]
+  DraftOffer --> ClientSign([✅ Offer Dispatched via e-Signature])`}
+                  />
+                </div>
+              </div>
+
+              {/* Process Optimization Recommendations */}
+              <div className="rounded-2xl border border-border/80 bg-card/60 p-6 backdrop-blur-md space-y-3">
+                <h4 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
+                  <Sparkles className="size-4 text-primary" />
+                  AI Process Optimization Recommendations
+                </h4>
+                <div className="grid gap-3 sm:grid-cols-2 text-xs">
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-1">
+                    <p className="font-bold text-emerald-600 dark:text-emerald-400">1. Eliminate Manual Scheduling Handoffs</p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Replace recruiter back-and-forth emails with automated Calendly / Google Calendar webhooks. Saves 2.4 days per placement cycle.
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-1">
+                    <p className="font-bold text-emerald-600 dark:text-emerald-400">2. Async Candidate Video Screening</p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Use automated 3-question async video screens for Tier 1 applicants. Frees up 14 hours per week per recruiter.
+                    </p>
+                  </div>
+                </div>
               </div>
             </StaggerItem>
           )}

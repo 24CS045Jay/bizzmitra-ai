@@ -11,6 +11,8 @@ import {
   Sparkles,
   TrendingUp,
   Users,
+  Upload,
+  FileText,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -26,6 +28,7 @@ import {
 } from "@/lib/demo-data";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { DocumentIngestionModal } from "@/components/DocumentIngestionModal";
 
 export const Route = createFileRoute("/workspace/discovery")({
   head: () => ({
@@ -62,6 +65,7 @@ function DiscoveryPage() {
   const [thinking, setThinking] = useState(false);
   const [complete, setComplete] = useState(false);
   const [customInput, setCustomInput] = useState("");
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
   const script = getActiveDiscoveryScript(problemText);
   const summaryText = getActiveAiSummary(problemText);
@@ -206,6 +210,26 @@ function DiscoveryPage() {
         kicker="Step 02"
         title="AI Discovery & Business Analysis"
       />
+
+      {/* Business Document Upload Fast-Track Banner */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-card/60 p-3.5 shadow-xs backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <div className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
+            <Upload className="size-4.5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-foreground">Have an existing SOP, BRD, or PDF Specification?</h4>
+            <p className="text-[11px] text-muted-foreground">Upload your document to auto-extract context and fast-track discovery analysis.</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsDocModalOpen(true)}
+          className="rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground shadow-xs glow-primary hover:opacity-90 active:scale-95 flex items-center gap-1.5"
+        >
+          <Upload className="size-3.5" /> Upload SOP / BRD
+        </button>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_310px]">
         {/* Main Conversation Stream */}
@@ -631,6 +655,24 @@ function DiscoveryPage() {
           </div>
         </motion.section>
       )}
+
+      <DocumentIngestionModal
+        isOpen={isDocModalOpen}
+        onClose={() => setIsDocModalOpen(false)}
+        onApplyContext={(ctx) => {
+          const docMessage = `📄 Ingested Document: ${ctx.fileName} (${ctx.fileSizeFormatted})\n\nBusiness Domain: ${ctx.inferredTitle}\nIdentified Context: ${ctx.businessContext}\nDetected Bottlenecks: ${ctx.currentBottlenecks.join("; ")}\nRecommended Stack: ${ctx.suggestedStack.join(", ")}`;
+          setTurns((prev) => [
+            ...prev,
+            { role: "user", text: docMessage },
+            {
+              role: "ai",
+              text: `I have analyzed "${ctx.fileName}". Based on this document, I have ingested the operational bottlenecks and objectives. Let's incorporate this into your Business Analysis and Solution Blueprint!`,
+            },
+          ]);
+          setProblemText(ctx.businessContext);
+          toast.success(`Context from ${ctx.fileName} injected into Discovery!`);
+        }}
+      />
     </AppShell>
   );
 }
