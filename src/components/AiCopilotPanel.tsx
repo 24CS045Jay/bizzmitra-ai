@@ -551,7 +551,7 @@ export function AiCopilotPanel() {
                             ) : (
                               <span className="flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 dark:text-amber-400">
                                 <Lock className="size-2.5" />
-                                {model.tierRequired === "Enterprise Scale" ? "$199" : "$49"}
+                                {model.tierRequired === "Enterprise Scale" ? "₹15,999" : "₹3,999"}
                               </span>
                             )}
                           </div>

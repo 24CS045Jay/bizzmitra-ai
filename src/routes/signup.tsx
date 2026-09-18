@@ -11,7 +11,9 @@ import { Auth6 } from "@/components/Auth6";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
+import { syncUserRoleAndWallet } from "@/lib/admin-rbac-data";
 import { gridMotionItems } from "@/lib/login-background";
+
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -53,11 +55,12 @@ function SignupPage() {
     return () => clearInterval(interval);
   }, [cooldown]);
 
-  async function syncUserProfile(userId: string, name: string) {
+  async function syncUserProfile(userId: string, name?: string) {
     try {
+      const displayName = name || email.split("@")[0] || "User";
       await supabase.from("profiles").upsert({
         id: userId,
-        full_name: name,
+        full_name: displayName,
       });
     } catch (e) {
       console.warn("Profile upsert notice:", e);
@@ -93,6 +96,7 @@ function SignupPage() {
             if (signInData.session.user) {
               void syncUserProfile(signInData.session.user.id, fullName || email.split("@")[0]);
             }
+            syncUserRoleAndWallet(email, true);
             toast.success("Welcome back! Signed in to your workspace.");
             navigate({ to: "/dashboard" });
             return;
@@ -154,7 +158,24 @@ function SignupPage() {
         if (data.session.user) {
           void syncUserProfile(data.session.user.id, fullName || email.split("@")[0]);
         }
+        syncUserRoleAndWallet(email, true);
         toast.success("Account created! Welcome to your workspace.");
+        navigate({ to: "/dashboard" });
+        return;
+      }
+
+      // Try immediate password login in case auto-confirmation is active
+      const { data: signInData } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInData?.session) {
+        setSession(signInData.session);
+        if (signInData.session.user) {
+          void syncUserProfile(signInData.session.user.id, fullName || email.split("@")[0]);
+        }
+        syncUserRoleAndWallet(email, true);
+        toast.success("Account created and signed in!");
         navigate({ to: "/dashboard" });
         return;
       }
@@ -239,20 +260,8 @@ function SignupPage() {
 
                   <button
                     type="button"
-                    onClick={() => {
-                      signInAsDemoAdmin();
-                      toast.success("Logged in as Super Admin (Testing Session)");
-                      navigate({ to: "/dashboard" });
-                    }}
-                    className="neu-press mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-md hover:bg-emerald-500 transition-colors"
-                  >
-                    <span>⚡ One-Click Sign In as Administrator</span>
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={google}
-                    className="neu-sm neu-press mt-2.5 flex w-full items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium"
+                    className="neu-sm neu-press mt-5 flex w-full items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium"
                   >
                     Continue with Google
                   </button>

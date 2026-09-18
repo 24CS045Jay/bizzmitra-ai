@@ -30,6 +30,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "./ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
+import { isSuperAdminEmail } from "@/lib/admin-rbac-data";
 import { cn } from "@/lib/utils";
 
 interface SubMenuItem {
@@ -274,6 +275,14 @@ export function AppSidebar2({
 
   const { user, signOut } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isSuperAdmin = isSuperAdminEmail(user?.email);
+
+  const filteredPortalGroups = React.useMemo(() => {
+    return PORTAL_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => item.id !== "admin" || isSuperAdmin),
+    }));
+  }, [isSuperAdmin]);
 
   // Active workspace state
   const [activeWs, setActiveWs] = React.useState({
@@ -457,7 +466,7 @@ export function AppSidebar2({
 
         {/* NAVIGATION GROUPS WITH TASKS */}
         <div className="flex-1 overflow-y-auto px-2.5 py-3 scrollbar-none space-y-5">
-          {PORTAL_GROUPS.map((group) => (
+          {filteredPortalGroups.map((group) => (
             <div key={group.groupName} className="space-y-1">
               {/* Group Title (Visible when expanded) */}
               <AnimatePresence>
@@ -614,7 +623,7 @@ export function AppSidebar2({
           >
             {/* Flyout Header */}
             {(() => {
-              const allItems = PORTAL_GROUPS.flatMap((g) => g.items);
+              const allItems = filteredPortalGroups.flatMap((g) => g.items);
               const cur = allItems.find((i) => i.id === activeFlyout);
               if (!cur) return null;
               const Icon = cur.icon;
@@ -634,7 +643,7 @@ export function AppSidebar2({
             {/* Sub-items List */}
             <div className="space-y-1">
               {(() => {
-                const allItems = PORTAL_GROUPS.flatMap((g) => g.items);
+                const allItems = filteredPortalGroups.flatMap((g) => g.items);
                 const cur = allItems.find((i) => i.id === activeFlyout);
                 return cur?.subItems?.map((sub) => (
                   <Link

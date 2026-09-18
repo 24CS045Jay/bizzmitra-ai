@@ -24,12 +24,15 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
+import { useAuth } from "@/hooks/useAuth";
 import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
 import {
   MANAGED_WORKSPACES,
   ManagedTenantWorkspace,
   SYSTEM_HEALTH_SERVICES,
   SystemHealthService,
+  isSuperAdminEmail,
+  loadCurrentRole,
 } from "@/lib/admin-rbac-data";
 
 export const Route = createFileRoute("/admin")({
@@ -48,9 +51,42 @@ export const Route = createFileRoute("/admin")({
 });
 
 export function AdminConsolePage() {
+  const { user } = useAuth();
+  const currentRole = loadCurrentRole();
+  const isAdmin = currentRole === "admin" && isSuperAdminEmail(user?.email);
+
   const [workspaces, setWorkspaces] = useState<ManagedTenantWorkspace[]>(MANAGED_WORKSPACES);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  if (!isAdmin) {
+    return (
+      <AppShell>
+        <div className="flex min-h-[60vh] flex-col items-center justify-center text-center px-4">
+          <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-destructive/10 text-destructive mb-4 border border-destructive/20 shadow-sm">
+            <Lock className="size-8" />
+          </div>
+          <span className="rounded-full bg-destructive/10 px-3 py-1 font-mono text-xs font-bold text-destructive">
+            HTTP 403 • FORBIDDEN
+          </span>
+          <h1 className="mt-3 font-display text-2xl font-extrabold sm:text-3xl">Access Restricted to Super Admin</h1>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">
+            The Central Admin Console is restricted to authorized Enterprise Super Administrators. Your current role is{" "}
+            <span className="font-semibold text-foreground uppercase tracking-wider">{currentRole}</span> (Free Starter).
+          </p>
+          <div className="mt-6 flex items-center gap-3">
+            <Link
+              to="/dashboard"
+              className="neu-press inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground"
+            >
+              <span>Return to Workspace Dashboard</span>
+              <ArrowRight className="size-3.5" />
+            </Link>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
 
   const handleRefreshHealth = () => {
     setIsRefreshing(true);

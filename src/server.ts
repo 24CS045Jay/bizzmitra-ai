@@ -66,13 +66,13 @@ export default {
         const supabaseUrl =
           (env as any)?.SUPABASE_URL ||
           (env as any)?.VITE_SUPABASE_URL ||
-          process.env.SUPABASE_URL ||
-          process.env.VITE_SUPABASE_URL ||
+          process.env["SUPABASE_URL"] ||
+          process.env["VITE_SUPABASE_URL"] ||
           "https://pyqbmgkusnvyyjdsyqyj.supabase.co";
 
         const serviceRoleKey =
           (env as any)?.SUPABASE_SERVICE_ROLE_KEY ||
-          process.env.SUPABASE_SERVICE_ROLE_KEY ||
+          process.env["SUPABASE_SERVICE_ROLE_KEY"] ||
           "sb_secret_r-9ktd2UNo0Dv1xZEJwhLQ_PQBKXa5n";
 
         const { createClient } = await import("@supabase/supabase-js");
