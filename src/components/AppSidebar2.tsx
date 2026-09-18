@@ -30,6 +30,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageSelector } from "./LanguageSelector";
+import { useTranslation } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { isSuperAdminEmail } from "@/lib/admin-rbac-data";
 import { cn } from "@/lib/utils";
@@ -275,8 +276,45 @@ export function AppSidebar2({
   const [flyoutPosition, setFlyoutPosition] = React.useState<{ top: number }>({ top: 0 });
 
   const { user, signOut } = useAuth();
+  const { t } = useTranslation();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isSuperAdmin = isSuperAdminEmail(user?.email);
+
+  const getGroupTitle = (name: string) => {
+    switch (name) {
+      case "Workspace & Intake": return t("group.workspace", name);
+      case "Intelligence & Solution": return t("group.intelligence", name);
+      case "Systems & Design": return t("group.systems", name);
+      case "Delivery & Governance": return t("group.delivery", name);
+      case "Execution & Strategy": return t("group.execution", name);
+      case "Collaboration & Artifacts": return t("group.collaboration", name);
+      case "Governance & Admin": return t("group.governance", name);
+      default: return name;
+    }
+  };
+
+  const getItemLabel = (item: PortalNavItem) => {
+    const keyMap: Record<string, string> = {
+      dashboard: "nav.dashboard",
+      "new-intake": "nav.newIntake",
+      discovery: "nav.discovery",
+      solution: "nav.solution",
+      crm: "nav.crm",
+      architecture: "nav.architecture",
+      process: "nav.process",
+      wireframes: "nav.wireframes",
+      data: "nav.data",
+      roadmap: "nav.roadmap",
+      insights: "nav.insights",
+      map: "nav.artifactMap",
+      collaboration: "nav.collaboration",
+      export: "nav.export",
+      admin: "nav.admin",
+      settings: "nav.settings",
+    };
+    const key = keyMap[item.id] || `nav.${item.id}`;
+    return t(key, item.label);
+  };
 
   const filteredPortalGroups = React.useMemo(() => {
     return PORTAL_GROUPS.map((group) => ({
@@ -446,7 +484,7 @@ export function AppSidebar2({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-                      Active Workspace
+                      {t("settings.workspace", "Active Workspace")}
                     </span>
                     <span className="neu-sm px-1.5 py-0.2 text-[8px] font-bold text-primary">
                       {activeWs.mode === "know" ? "Direct" : "AI Guided"}
@@ -478,7 +516,7 @@ export function AppSidebar2({
                     exit={{ opacity: 0 }}
                     className="px-2 pb-1 font-mono text-[9px] font-bold uppercase tracking-wider text-muted-foreground"
                   >
-                    {group.groupName}
+                    {getGroupTitle(group.groupName)}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -529,7 +567,7 @@ export function AppSidebar2({
                           >
                             <div className="flex items-center justify-between gap-1">
                               <span className="truncate text-xs font-semibold leading-none">
-                                {item.label}
+                                {getItemLabel(item)}
                               </span>
                               {item.badge && (
                                 <span
@@ -635,7 +673,7 @@ export function AppSidebar2({
                     <Icon className="size-3.5" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-foreground leading-none">{cur.label}</h4>
+                    <h4 className="text-xs font-bold text-foreground leading-none">{getItemLabel(cur)}</h4>
                     <p className="text-[10px] text-muted-foreground mt-0.5">{cur.description}</p>
                   </div>
                 </div>

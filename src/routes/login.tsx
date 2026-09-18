@@ -6,6 +6,7 @@ import { Reveal } from "@/components/motion/primitives";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { GridMotion } from "@/components/effects/GridMotion";
 import { supabase } from "@/integrations/supabase/client";
 import { syncUserRoleAndWallet } from "@/lib/admin-rbac-data";
@@ -103,8 +104,9 @@ function LoginPage() {
         />
       </div>
 
-      <div className="absolute right-6 top-6 z-20">
+      <div className="absolute right-6 top-6 z-20 flex items-center gap-2">
         <ThemeToggle />
+        <LanguageSelector variant="compact" />
       </div>
 
       <div className="relative z-10 grid min-h-[calc(100vh-6rem)] place-items-center">

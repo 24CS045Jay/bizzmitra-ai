@@ -36,7 +36,7 @@ import {
   saveRazorpayKeyId,
 } from "@/lib/razorpay";
 import { LanguageSelector } from "@/components/LanguageSelector";
-import { SUPPORTED_LANGUAGES, getCurrentLanguage, setLanguage, SupportedLanguage } from "@/lib/i18n";
+import { SUPPORTED_LANGUAGES, getCurrentLanguage, setLanguage, SupportedLanguage, useTranslation } from "@/lib/i18n";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -80,6 +80,7 @@ const TIERS = [
 function SettingsPage() {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
   const [fullName, setFullName] = useState("");
   const [plan, setPlan] = useState("free");
   const [workspaceName, setWorkspaceName] = useState("");
@@ -240,12 +241,12 @@ function SettingsPage() {
     <AppShell>
       <Reveal>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Account & Billing</p>
-        <h1 className="mt-2 font-display text-4xl font-extrabold sm:text-5xl">Settings & Monetization</h1>
+        <h1 className="mt-2 font-display text-4xl font-extrabold sm:text-5xl">{t("settings.title", "Settings & Monetization")}</h1>
       </Reveal>
 
       <Stagger className="mt-8 grid gap-4 lg:grid-cols-2">
         <StaggerItem className="neu p-6">
-          <h2 className="font-display text-lg font-bold">Profile</h2>
+          <h2 className="font-display text-lg font-bold">{t("settings.profile", "Profile")}</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Email</dt>
@@ -268,13 +269,13 @@ function SettingsPage() {
               className="neu-inset min-w-0 flex-1 px-3 py-2 text-sm outline-none"
             />
             <button onClick={saveProfile} className="neu-sm neu-press px-3 py-2 text-xs font-semibold">
-              Save
+              {t("action.save", "Save")}
             </button>
           </div>
         </StaggerItem>
 
         <StaggerItem className="neu p-6">
-          <h2 className="font-display text-lg font-bold">Active workspace</h2>
+          <h2 className="font-display text-lg font-bold">{t("settings.workspace", "Active workspace")}</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Maturity</dt>
@@ -306,7 +307,7 @@ function SettingsPage() {
                 <Coins className="size-5" />
               </div>
               <div>
-                <h2 className="font-display text-xl font-bold">AI Token & Credit Wallet</h2>
+                <h2 className="font-display text-xl font-bold">{t("settings.wallet", "AI Token & Credit Wallet")}</h2>
                 <p className="text-xs text-muted-foreground">Live metering for LLM synthesis, solution regeneration, and blueprint exports.</p>
               </div>
             </div>
@@ -434,7 +435,7 @@ function SettingsPage() {
         {/* Pricing Tiers & Upgrade Engine */}
         <StaggerItem className="neu p-6 lg:col-span-2">
           <div className="text-center max-w-xl mx-auto mb-6">
-            <h2 className="font-display text-2xl font-extrabold">Subscription Plans & SaaS Tiers</h2>
+            <h2 className="font-display text-2xl font-extrabold">{t("settings.plans", "Subscription Plans & SaaS Tiers")}</h2>
             <p className="text-xs text-muted-foreground mt-1">
               Select the plan that fits your consultancy or enterprise transformation needs.
             </p>
@@ -495,7 +496,7 @@ function SettingsPage() {
         </StaggerItem>
 
         <StaggerItem className="neu p-6 lg:col-span-2">
-          <h2 className="font-display text-lg font-bold">Appearance & Theme</h2>
+          <h2 className="font-display text-lg font-bold">{t("settings.appearance", "Appearance & Theme")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Switch between Warm Graphite (light) and Ambient Ray (dark) modes.
           </p>
@@ -530,9 +531,9 @@ function SettingsPage() {
         <StaggerItem className="neu p-6 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-display text-lg font-bold">Language & Multilingual Support</h2>
+              <h2 className="font-display text-lg font-bold">{t("settings.language", "Language & Multilingual Support")}</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Set your primary language for navigation, blueprints, and AI recommendations.
+                {t("settings.languageDesc", "Set your primary language for navigation, blueprints, and AI recommendations.")}
               </p>
             </div>
             <LanguageSelector variant="button" />
