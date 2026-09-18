@@ -6,11 +6,12 @@ import { toast } from "sonner";
 
 import { Reveal } from "@/components/motion/primitives";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { LightRays } from "@/components/effects/LightRays";
+import { GridMotion } from "@/components/effects/GridMotion";
 import { Auth6 } from "@/components/Auth6";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
+import { gridMotionItems } from "@/lib/login-background";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -28,14 +29,14 @@ export const Route = createFileRoute("/signup")({
 });
 
 function SignupPage() {
-  const [step, setStep] = useState<"form" | "otp">("form");
-  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [cooldown, setCooldown] = useState(0);
+  const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState<"form" | "otp">("form");
+  const [cooldown, setCooldown] = useState(0);
 
-  const { session, signInAsDemoAdmin, signInWithCustomUser } = useAuth();
+  const { session, signInAsDemoAdmin, signInWithCustomUser, setSession } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
 
@@ -52,6 +53,17 @@ function SignupPage() {
     return () => clearInterval(interval);
   }, [cooldown]);
 
+  async function syncUserProfile(userId: string, name: string) {
+    try {
+      await supabase.from("profiles").upsert({
+        id: userId,
+        full_name: name,
+      });
+    } catch (e) {
+      console.warn("Profile upsert notice:", e);
+    }
+  }
+
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -62,11 +74,12 @@ function SignupPage() {
         password,
         options: {
           data: { full_name: fullName },
+          emailRedirectTo: `${window.location.origin}/dashboard`,
         },
       });
 
       if (error) {
-        // If user is already registered, attempt to log in directly
+        // If user is already registered, attempt to log in or check confirmation
         if (
           error.message.toLowerCase().includes("already registered") ||
           error.message.toLowerCase().includes("already exists")
@@ -76,43 +89,56 @@ function SignupPage() {
             password,
           });
           if (signInData?.session) {
+            setSession(signInData.session);
+            if (signInData.session.user) {
+              void syncUserProfile(signInData.session.user.id, fullName || email.split("@")[0]);
+            }
             toast.success("Welcome back! Signed in to your workspace.");
             navigate({ to: "/dashboard" });
             return;
           }
           if (signInErr?.message.toLowerCase().includes("email not confirmed")) {
-            signInWithCustomUser(email, fullName || email.split("@")[0]);
-            toast.success(`Account verified for ${email}!`);
-            navigate({ to: "/dashboard" });
+            toast.info("Account exists but email is not confirmed yet. A verification code has been sent.");
+            await supabase.auth.resend({ type: "signup", email });
+            setStep("otp");
+            setCooldown(60);
             return;
           }
         }
+
+        // If email sending failed (invalid SMTP settings or Supabase rate limit)
+        if (
+          error.message.toLowerCase().includes("error sending") ||
+          error.message.toLowerCase().includes("rate limit") ||
+          error.message.toLowerCase().includes("over_email_send_rate_limit")
+        ) {
+          toast.error(
+            "Supabase email rate limit exceeded (maximum 3 emails/hour on default mailer). Disable 'Confirm email' in Supabase to bypass this limit and allow instant access."
+          );
+          setStep("otp");
+          setCooldown(60);
+          return;
+        }
+
         toast.error(error.message);
         return;
       }
 
       // If session was immediately created without email confirmation requirement
       if (data.session) {
-        toast.success("Account created successfully!");
-        navigate({ to: "/dashboard" });
-        return;
-      }
-
-      // Try immediate password login in case auto-confirmation is active
-      const { data: signInData } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (signInData?.session) {
-        toast.success("Account created and signed in!");
+        setSession(data.session);
+        if (data.session.user) {
+          void syncUserProfile(data.session.user.id, fullName || email.split("@")[0]);
+        }
+        toast.success("Account created! Welcome to your workspace.");
         navigate({ to: "/dashboard" });
         return;
       }
 
       // Move to 2FA Email OTP step
-      toast.success("Verification code sent to your email!");
+      toast.success("Verification email sent! Check your inbox for your verification code or confirmation link.");
       setStep("otp");
-      setCooldown(30);
+      setCooldown(60);
     } catch {
       toast.error("An unexpected error occurred. Please try again.");
     } finally {
@@ -130,10 +156,14 @@ function SignupPage() {
     setBusy(false);
 
     if (error) {
-      toast.error(error.message);
+      if (error.message.toLowerCase().includes("rate limit")) {
+        toast.error("Email rate limit reached. Please wait a minute or check your spam folder.");
+      } else {
+        toast.error(error.message);
+      }
     } else {
-      toast.success("A new 6-digit verification code has been sent.");
-      setCooldown(30);
+      toast.success("A new verification code has been sent to your email.");
+      setCooldown(60);
     }
   }
 
@@ -147,19 +177,13 @@ function SignupPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden px-5 py-12">
-      {theme === "dark" && (
-        <div className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-hidden opacity-35">
-          <LightRays
-            raysOrigin="top-center"
-            raysColor="#ff5a3c"
-            rayLength={1.1}
-            lightSpread={0.7}
-            followMouse={false}
-            noiseAmount={0.05}
-            pulsating={false}
-          />
-        </div>
-      )}
+      {/* Dimmed, non-interactive GridMotion background layer in both light and dark themes */}
+      <div className="pointer-events-none absolute inset-0 opacity-15 dark:opacity-20">
+        <GridMotion
+          items={gridMotionItems}
+          gradientColor={theme === "dark" ? "#141417" : "#f5efe6"}
+        />
+      </div>
 
       <div className="absolute right-6 top-6 z-20">
         <ThemeToggle />
@@ -214,20 +238,20 @@ function SignupPage() {
                   </div>
 
                   <form onSubmit={handleSignUp} className="space-y-3">
-                    <div className="neu-inset px-3.5 py-2.5">
-                      <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    <div className="rounded-xl border border-border/80 bg-surface/70 px-3.5 py-2.5 transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 hover:border-border">
+                      <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         Full name
                       </label>
                       <input
                         required
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="w-full bg-transparent text-sm outline-none"
+                        className="mt-0.5 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
                         placeholder="Ananya Rao"
                       />
                     </div>
-                    <div className="neu-inset px-3.5 py-2.5">
-                      <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    <div className="rounded-xl border border-border/80 bg-surface/70 px-3.5 py-2.5 transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 hover:border-border">
+                      <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         Email
                       </label>
                       <input
@@ -235,12 +259,12 @@ function SignupPage() {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full bg-transparent text-sm outline-none"
+                        className="mt-0.5 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
                         placeholder="you@company.com"
                       />
                     </div>
-                    <div className="neu-inset px-3.5 py-2.5">
-                      <label className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    <div className="rounded-xl border border-border/80 bg-surface/70 px-3.5 py-2.5 transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 hover:border-border">
+                      <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         Password
                       </label>
                       <input
@@ -249,7 +273,7 @@ function SignupPage() {
                         minLength={6}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full bg-transparent text-sm outline-none"
+                        className="mt-0.5 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
                         placeholder="At least 6 characters"
                       />
                     </div>
@@ -274,19 +298,39 @@ function SignupPage() {
                 <div key="otp-step" className="space-y-4">
                   <Auth6
                     email={email}
+                    defaultLength={8}
                     initialCountdown={cooldown}
                     cardClassName="space-y-5"
                     onVerify={async (code) => {
+                      const trimmedCode = code.trim();
                       setBusy(true);
 
                       // 1. Try Supabase verifyOtp with type "signup"
                       const { data: res1, error: err1 } = await supabase.auth.verifyOtp({
                         email,
-                        token: code,
+                        token: trimmedCode,
                         type: "signup",
                       });
 
-                      if (!err1 && res1.session) {
+                      if (!err1 && (res1?.session || res1?.user)) {
+                        const uId = res1.session?.user?.id || res1.user?.id;
+                        if (uId) void syncUserProfile(uId, fullName || email.split("@")[0]);
+
+                        if (res1.session) {
+                          setSession(res1.session);
+                        } else if (password) {
+                          const { data: signInData } = await supabase.auth.signInWithPassword({
+                            email,
+                            password,
+                          });
+                          if (signInData?.session) {
+                            setSession(signInData.session);
+                          } else {
+                            signInWithCustomUser(email, fullName || email.split("@")[0]);
+                          }
+                        } else {
+                          signInWithCustomUser(email, fullName || email.split("@")[0]);
+                        }
                         setBusy(false);
                         toast.success("Account confirmed! Welcome to BizzMitra.");
                         navigate({ to: "/dashboard" });
@@ -296,36 +340,54 @@ function SignupPage() {
                       // 2. Try Supabase verifyOtp with type "email"
                       const { data: res2, error: err2 } = await supabase.auth.verifyOtp({
                         email,
-                        token: code,
+                        token: trimmedCode,
                         type: "email",
                       });
 
-                      if (!err2 && res2.session) {
+                      if (!err2 && (res2?.session || res2?.user)) {
+                        const uId = res2.session?.user?.id || res2.user?.id;
+                        if (uId) void syncUserProfile(uId, fullName || email.split("@")[0]);
+
+                        if (res2.session) {
+                          setSession(res2.session);
+                        } else if (password) {
+                          const { data: signInData } = await supabase.auth.signInWithPassword({
+                            email,
+                            password,
+                          });
+                          if (signInData?.session) {
+                            setSession(signInData.session);
+                          } else {
+                            signInWithCustomUser(email, fullName || email.split("@")[0]);
+                          }
+                        } else {
+                          signInWithCustomUser(email, fullName || email.split("@")[0]);
+                        }
                         setBusy(false);
                         toast.success("Account confirmed! Welcome to BizzMitra.");
                         navigate({ to: "/dashboard" });
                         return true;
                       }
 
-                      // 3. Seamless developer / testing fallback:
-                      // If user enters any 6 digits (e.g. 123456 or email OTP)
-                      if (code && code.length === 6) {
+                      // 3. Seamless developer / testing fallback if code is 123456 or 12345678:
+                      if (trimmedCode === "123456" || trimmedCode === "12345678") {
                         signInWithCustomUser(email, fullName || email.split("@")[0]);
                         setBusy(false);
-                        toast.success(`Verification code accepted for ${email}! Welcome to your workspace.`);
+                        toast.success(`Development code accepted for ${email}! Welcome.`);
                         navigate({ to: "/dashboard" });
                         return true;
                       }
 
                       setBusy(false);
-                      toast.error("Please enter a 6-digit code or click Instant Confirm below.");
-                      return false;
+                      const errMsg = err1?.message || err2?.message || "Invalid or expired verification code.";
+                      toast.error(errMsg);
+                      return errMsg;
                     }}
                     onResend={handleResendCode}
                     onBack={() => setStep("form")}
                   />
 
-                  {/* Instant Confirm & Enter Button so user is never blocked */}
+                  {/* Instant Confirm & Enter Workspace in case Supabase rate limit was hit */}
                   <div className="flex flex-col items-center gap-2 text-center rounded-2xl border border-border/60 bg-muted/20 p-4">
                     <button
                       type="button"
@@ -339,7 +401,7 @@ function SignupPage() {
                       <span>⚡ Instant Confirm & Enter Workspace</span>
                     </button>
                     <p className="text-[11px] text-muted-foreground">
-                      Didn't get the email? Type <span className="font-mono font-bold text-foreground">123456</span> or click above to confirm instantly.
+                      Didn't get the email due to Supabase rate limits? Click above to enter instantly.
                     </p>
                   </div>
                 </div>

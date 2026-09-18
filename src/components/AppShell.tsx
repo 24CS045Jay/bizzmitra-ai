@@ -238,11 +238,34 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [currentRole, setCurrentRole] = useState<UserRole>("admin");
+  const [isPinned, setIsPinned] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return window.localStorage.getItem("bizzmitra.sidebarPinned") === "true";
+    }
+    return false;
+  });
+
+  const handleTogglePin = () => {
+    setIsPinned((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("bizzmitra.sidebarPinned", String(next));
+      }
+      return next;
+    });
+  };
+
   const { loading, session } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !session) navigate({ to: "/login" });
+    if (!loading && !session) {
+      supabase.auth.getSession().then(({ data }) => {
+        if (!data.session) {
+          navigate({ to: "/login" });
+        }
+      });
+    }
   }, [loading, session, navigate]);
 
   useEffect(() => {
@@ -261,8 +284,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen">
-      {/* React Bits Pro App Sidebar 2 (Icon rail with left-to-right hover slide expansion) */}
-      <AppSidebar2 />
+      {/* React Bits Pro App Sidebar 2 (Icon rail with left-to-right hover slide expansion & pin) */}
+      <AppSidebar2 isPinned={isPinned} onTogglePin={handleTogglePin} />
 
       {/* Mobile Top Navigation Header */}
       <div className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 lg:hidden">
@@ -332,7 +355,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         ) : null}
       </AnimatePresence>
 
-      <div className="flex min-w-0 flex-1 flex-col lg:pl-[86px]">
+      <div
+        className={cn(
+          "flex min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out",
+          isPinned ? "lg:pl-[304px]" : "lg:pl-[86px]",
+        )}
+      >
         {currentRole !== "admin" ? (
           <div className="border-b border-amber-500/20 bg-amber-500/10 px-6 py-2 text-xs font-medium text-amber-700 dark:text-amber-300">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -361,7 +389,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         ) : null}
 
         {/* Main Workspace Portal View where all tasks are performed */}
-        <main className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:pr-10 lg:py-10">{children}</main>
+        <main
+          className={cn(
+            "min-w-0 flex-1 px-5 py-8 sm:px-8 lg:pr-10 lg:py-10 transition-all duration-300 ease-in-out",
+            isPinned && "scale-[0.985] origin-top-left",
+          )}
+        >
+          {children}
+        </main>
       </div>
 
       {/* Persistent AI Copilot Panel across all authenticated screens */}

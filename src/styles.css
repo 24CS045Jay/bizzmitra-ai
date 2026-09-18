@@ -353,3 +353,29 @@ button.neu-sm,
   text-wrap: balance;
   letter-spacing: -0.035em;
 }
+
+/* Prevent browser autofill from rendering harsh white or pale-blue boxes */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--foreground) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--surface) inset !important;
+  box-shadow: 0 0 0px 1000px var(--surface) inset !important;
+  transition: background-color 5000000s ease-in-out 0s, color 5000000s ease-in-out 0s;
+  caret-color: var(--foreground);
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active,
+.dark textarea:-webkit-autofill,
+.dark select:-webkit-autofill {
+  -webkit-text-fill-color: var(--foreground) !important;
+  -webkit-box-shadow: 0 0 0px 1000px oklch(0.18 0.008 60) inset !important;
+  box-shadow: 0 0 0px 1000px oklch(0.18 0.008 60) inset !important;
+  caret-color: var(--foreground);
+}
