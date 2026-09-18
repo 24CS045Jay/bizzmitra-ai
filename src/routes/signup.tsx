@@ -112,6 +112,30 @@ function SignupPage() {
           error.message.toLowerCase().includes("rate limit") ||
           error.message.toLowerCase().includes("over_email_send_rate_limit")
         ) {
+          toast.info("Supabase mail limit reached. Creating direct authenticated account...");
+          try {
+            const regRes = await fetch("/api/auth/register", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, password, fullName }),
+            });
+            const regData = await regRes.json();
+            if (regData.success) {
+              const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
+              if (signInData?.session) {
+                setSession(signInData.session);
+                if (signInData.session.user) {
+                  void syncUserProfile(signInData.session.user.id, fullName || email.split("@")[0]);
+                }
+                toast.success("Account created and saved to database! Welcome to your workspace.");
+                navigate({ to: "/dashboard" });
+                return;
+              }
+            }
+          } catch (serverErr) {
+            console.warn("Direct server registration notice:", serverErr);
+          }
+
           toast.error(
             "Supabase email rate limit exceeded (maximum 3 emails/hour on default mailer). Disable 'Confirm email' in Supabase to bypass this limit and allow instant access."
           );
@@ -391,7 +415,29 @@ function SignupPage() {
                   <div className="flex flex-col items-center gap-2 text-center rounded-2xl border border-border/60 bg-muted/20 p-4">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
+                        setBusy(true);
+                        try {
+                          const regRes = await fetch("/api/auth/register", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email, password, fullName }),
+                          });
+                          const regData = await regRes.json();
+                          if (regData.success) {
+                            const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
+                            if (signInData?.session) {
+                              setSession(signInData.session);
+                              if (signInData.session.user) {
+                                void syncUserProfile(signInData.session.user.id, fullName || email.split("@")[0]);
+                              }
+                              toast.success("Account confirmed and saved to database! Welcome.");
+                              navigate({ to: "/dashboard" });
+                              return;
+                            }
+                          }
+                        } catch {}
+                        setBusy(false);
                         signInWithCustomUser(email, fullName || email.split("@")[0]);
                         toast.success(`Account confirmed for ${email}! Welcome to your workspace.`);
                         navigate({ to: "/dashboard" });
