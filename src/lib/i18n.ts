@@ -583,8 +583,47 @@ export function getCurrentLanguage(): SupportedLanguage {
   return "en";
 }
 
+export function triggerGoogleTranslate(lang: SupportedLanguage): void {
+  if (typeof window === "undefined") return;
+
+  const host = window.location.hostname;
+  const isEn = lang === "en";
+  const cookieVal = isEn ? "" : `/en/${lang}`;
+  const expires = isEn
+    ? "expires=Thu, 01 Jan 1970 00:00:00 UTC;"
+    : "expires=Fri, 31 Dec 2030 23:59:59 GMT;";
+
+  // Set cookie on both current domain and with dot prefix
+  document.cookie = `googtrans=${cookieVal}; path=/; ${expires}`;
+  document.cookie = `googtrans=${cookieVal}; domain=.${host}; path=/; ${expires}`;
+  document.cookie = `googtrans=${cookieVal}; domain=${host}; path=/; ${expires}`;
+
+  const applyCombo = (): boolean => {
+    const combo = document.querySelector(".goog-te-combo") as HTMLSelectElement | null;
+    if (combo) {
+      if (combo.value !== lang) {
+        combo.value = lang;
+        combo.dispatchEvent(new Event("change"));
+      }
+      return true;
+    }
+    return false;
+  };
+
+  if (!applyCombo()) {
+    let tries = 0;
+    const interval = setInterval(() => {
+      tries++;
+      if (applyCombo() || tries > 25) {
+        clearInterval(interval);
+      }
+    }, 200);
+  }
+}
+
 export function setLanguage(lang: SupportedLanguage): void {
   if (typeof window !== "undefined") {
+    const previous = window.localStorage.getItem(STORAGE_KEY);
     window.localStorage.setItem(STORAGE_KEY, lang);
     const selected = SUPPORTED_LANGUAGES.find((l) => l.code === lang);
     if (selected?.direction) {
@@ -593,6 +632,18 @@ export function setLanguage(lang: SupportedLanguage): void {
       document.documentElement.setAttribute("dir", "ltr");
     }
     document.documentElement.setAttribute("lang", lang);
+
+    // Trigger universal whole-page translation
+    triggerGoogleTranslate(lang);
+
+    // If reverting from a foreign language back to English, reload if necessary to restore pure English DOM
+    if (lang === "en" && previous && previous !== "en") {
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+      return;
+    }
+
     window.dispatchEvent(new CustomEvent("bizzmitra:lang-changed", { detail: lang }));
   }
 }

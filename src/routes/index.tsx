@@ -6,6 +6,7 @@ import { MiniDemo } from "@/components/MiniDemo";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { LightRays } from "@/components/effects/LightRays";
 import { Navigation12 } from "@/components/Navigation12";
 import { LiveProcessStreamer } from "@/components/LiveProcessStreamer";
@@ -63,6 +64,7 @@ function Nav() {
         </nav>
         <div className="flex items-center gap-2.5">
           <ThemeToggle />
+          <LanguageSelector variant="compact" />
           {session ? (
             <>
               <Link

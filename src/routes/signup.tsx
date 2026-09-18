@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Reveal } from "@/components/motion/primitives";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { GridMotion } from "@/components/effects/GridMotion";
 import { Auth6 } from "@/components/Auth6";
 import { useAuth } from "@/hooks/useAuth";
@@ -230,8 +231,9 @@ function SignupPage() {
         />
       </div>
 
-      <div className="absolute right-6 top-6 z-20">
+      <div className="absolute right-6 top-6 z-20 flex items-center gap-2">
         <ThemeToggle />
+        <LanguageSelector variant="compact" />
       </div>
 
       <div className="relative z-10 grid min-h-[calc(100vh-6rem)] place-items-center">
