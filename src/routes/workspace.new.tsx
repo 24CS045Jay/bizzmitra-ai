@@ -32,6 +32,7 @@ import {
 } from "@/lib/demo-data";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { DocumentIngestionModal } from "@/components/DocumentIngestionModal";
 
 export const Route = createFileRoute("/workspace/new")({
   head: () => ({
@@ -77,6 +78,7 @@ function IntakePage() {
   // Document Upload Simulator State
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [uploadedDoc, setUploadedDoc] = useState<{
     name: string;
     size: string;
@@ -471,27 +473,37 @@ function IntakePage() {
                     Prototype Extractor will parse entities, goals, and constraints into your workspace context.
                   </p>
 
-                  <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                  <div className="mt-4 flex flex-wrap gap-2.5 justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setIsDocModalOpen(true)}
+                      className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground flex items-center gap-2 shadow-sm glow-primary hover:opacity-90 active:scale-95"
+                    >
+                      <Upload className="size-4" /> Upload Real Document (PDF, Word, PPTX, SOP, BRD)
+                    </button>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap gap-2 justify-center opacity-80">
                     <button
                       type="button"
                       onClick={() => handleSimulateUpload("TalentCraft_Recruitment_BRD_v2.pdf", "pdf")}
-                      className="neu-sm neu-press px-3 py-1.5 text-xs font-semibold text-primary flex items-center gap-1.5"
+                      className="neu-sm neu-press px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-primary flex items-center gap-1.5"
                     >
-                      <FileText className="size-3.5" /> Drop Sample BRD (.PDF)
+                      <FileText className="size-3" /> Sample BRD (.PDF)
                     </button>
                     <button
                       type="button"
                       onClick={() => handleSimulateUpload("Hiring_Operations_SOP.docx", "docx")}
-                      className="neu-sm neu-press px-3 py-1.5 text-xs font-semibold text-primary flex items-center gap-1.5"
+                      className="neu-sm neu-press px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-primary flex items-center gap-1.5"
                     >
-                      <FileText className="size-3.5" /> Drop Sample SOP (.DOCX)
+                      <FileText className="size-3" /> Sample SOP (.DOCX)
                     </button>
                     <button
                       type="button"
                       onClick={() => handleSimulateUpload("Transformation_Strategy.pptx", "pptx")}
-                      className="neu-sm neu-press px-3 py-1.5 text-xs font-semibold text-primary flex items-center gap-1.5"
+                      className="neu-sm neu-press px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-primary flex items-center gap-1.5"
                     >
-                      <FileSpreadsheet className="size-3.5" /> Drop Sample Deck (.PPTX)
+                      <FileSpreadsheet className="size-3" /> Sample Deck (.PPTX)
                     </button>
                   </div>
 
@@ -699,6 +711,23 @@ function IntakePage() {
           )}
         </button>
       </div>
+
+      <DocumentIngestionModal
+        isOpen={isDocModalOpen}
+        onClose={() => setIsDocModalOpen(false)}
+        onApplyContext={(ctx) => {
+          setBusinessName(ctx.inferredTitle);
+          setProblemStatement(ctx.businessContext);
+          setGoals(ctx.targetObjectives.join("; "));
+          setConstraints(ctx.currentBottlenecks.join("; "));
+          setUploadedDoc({
+            name: ctx.fileName,
+            size: ctx.fileSizeFormatted,
+            type: ctx.fileType,
+            extractedSummary: ctx.businessContext,
+          });
+        }}
+      />
     </AppShell>
   );
 }
