@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Sparkles,
   Zap,
+  Presentation,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
@@ -30,6 +31,11 @@ import {
   generatePostgreSqlDdl,
   generateTechnicalSpecMarkdown,
 } from "@/lib/export-engine";
+import {
+  exportToWordDoc,
+  exportToExcelWorkbook,
+  exportToPowerPointDeck,
+} from "@/lib/document-exporters";
 
 export const Route = createFileRoute("/workspace/export")({
   head: () => ({
@@ -104,6 +110,21 @@ export function ExportCenterPage() {
     window.print();
   };
 
+  const handleDownloadWord = () => {
+    exportToWordDoc(scenarioName);
+    toast.success("Downloaded Microsoft Word Blueprint (.doc)");
+  };
+
+  const handleDownloadExcel = () => {
+    exportToExcelWorkbook(scenarioName);
+    toast.success("Downloaded Microsoft Excel Estimates Model (.xls)");
+  };
+
+  const handleDownloadPowerPoint = () => {
+    exportToPowerPointDeck(scenarioName);
+    toast.success("Downloaded Microsoft PowerPoint Presentation (.ppt)");
+  };
+
   const handleDownloadCompleteBundle = () => {
     setPackagingProgress(10);
     const stages = [25, 55, 85, 100];
@@ -115,9 +136,10 @@ export function ExportCenterPage() {
         clearInterval(interval);
         setTimeout(() => {
           setPackagingProgress(null);
-          handleDownloadSpec();
-          setTimeout(() => handleDownloadOpenApi(), 300);
-          setTimeout(() => handleDownloadSql(), 600);
+          handleDownloadWord();
+          setTimeout(() => handleDownloadExcel(), 300);
+          setTimeout(() => handleDownloadPowerPoint(), 600);
+          setTimeout(() => handleDownloadOpenApi(), 900);
           toast.success("Universal Blueprint Package successfully bundled and downloaded!");
         }, 600);
       }
@@ -136,12 +158,30 @@ export function ExportCenterPage() {
     },
     {
       id: "word",
-      title: "Technical Spec (Markdown / Word)",
-      format: "Markdown / .docx",
-      desc: "Full implementation blueprint with system requirements, critical path schedules, and risk register.",
-      badge: "v1.3 Approved",
-      action: handleDownloadSpec,
+      title: "Microsoft Word Architecture Spec",
+      format: "Word Document (.doc)",
+      desc: "Full editable implementation blueprint with system requirements, schedules, and risk register.",
+      badge: "Microsoft Word",
+      action: handleDownloadWord,
       icon: FileText,
+    },
+    {
+      id: "excel",
+      title: "Microsoft Excel Estimates & Financial Model",
+      format: "Excel Workbook (.xls)",
+      desc: "Multi-sheet workbook containing sprint task estimates, cost breakdown, and ROI sensitivity analysis.",
+      badge: "Multi-Sheet Excel",
+      action: handleDownloadExcel,
+      icon: FileSpreadsheet,
+    },
+    {
+      id: "ppt",
+      title: "Microsoft PowerPoint Executive Deck",
+      format: "PowerPoint Deck (.ppt)",
+      desc: "Executive slide deck with problem definition, high-level architecture, roadmap, and payback metrics.",
+      badge: "PowerPoint Deck",
+      action: handleDownloadPowerPoint,
+      icon: Presentation,
     },
     {
       id: "openapi",
