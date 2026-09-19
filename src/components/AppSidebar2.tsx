@@ -27,7 +27,7 @@ import {
   ChevronDown,
   Shield,
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, isTestingAccount } from "@/hooks/useAuth";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageSelector } from "./LanguageSelector";
 import { useTranslation } from "@/lib/i18n";
@@ -323,48 +323,89 @@ export function AppSidebar2({
     }));
   }, [isSuperAdmin]);
 
+  const isTest = isTestingAccount(user?.email);
+
   // Active workspace state
   const [activeWs, setActiveWs] = React.useState({
-    name: "TalentCraft HR Consultancy",
-    industry: "HR & Recruitment Services",
+    name: isTest ? "TalentCraft HR Consultancy" : "No Active Workspace",
+    industry: isTest ? "HR & Recruitment Services" : "Create new workspace",
     mode: "consult",
     lang: "en",
   });
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    const wsId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
     const storedLang = window.localStorage.getItem("bizzmitra.language") || "en";
+    const isTestAcc = isTestingAccount(user?.email);
 
-    try {
+    // 1. Testing account: allow fallback to TalentCraft demo workspace
+    if (isTestAcc) {
       const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
       if (raw) {
-        const parsed = JSON.parse(raw);
-        setActiveWs({
-          name: parsed.businessName || "TalentCraft HR Consultancy",
-          industry: parsed.industry || "HR & Recruitment Services",
-          mode: parsed.intakeMode || "consult",
-          lang: storedLang,
-        });
-        return;
+        try {
+          const parsed = JSON.parse(raw);
+          setActiveWs({
+            name: parsed.businessName || "TalentCraft HR Consultancy",
+            industry: parsed.industry || "HR & Recruitment Services",
+            mode: parsed.intakeMode || "consult",
+            lang: storedLang,
+          });
+          return;
+        } catch {}
       }
-    } catch {}
+      setActiveWs({
+        name: "TalentCraft HR Consultancy",
+        industry: "HR & Recruitment Services",
+        mode: "consult",
+        lang: storedLang,
+      });
+      return;
+    }
 
-    if (user && wsId && !wsId.startsWith("ws-")) {
+    // 2. Standard user: Load their own workspace from Supabase
+    if (user?.id) {
       supabase
         .from("workspaces")
-        .select("name, problem_statement")
-        .eq("id", wsId)
-        .maybeSingle()
-        .then((res: { data: { name?: string } | null }) => {
-          const fetchedName = res.data?.name;
-          if (fetchedName) {
-            setActiveWs((prev) => ({
-              ...prev,
-              name: fetchedName,
-            }));
+        .select("id, name, problem_statement")
+        .eq("owner_id", user.id)
+        .order("updated_at", { ascending: false })
+        .then(({ data: wsList }) => {
+          if (wsList && wsList.length > 0 && wsList[0]) {
+            const wsId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
+            const currentWs = wsList.find((w) => w.id === wsId) || wsList[0];
+            setActiveWs({
+              name: currentWs.name,
+              industry: "Custom Workspace",
+              mode: "consult",
+              lang: storedLang,
+            });
+            window.localStorage.setItem("bizzmitra.activeWorkspaceId", currentWs.id);
+            window.localStorage.setItem(
+              "bizzmitra.workspaceContext",
+              JSON.stringify({
+                businessName: currentWs.name,
+                problemStatement: currentWs.problem_statement || "",
+                industry: "Custom Workspace",
+              }),
+            );
+          } else {
+            setActiveWs({
+              name: "No Active Workspace",
+              industry: "Click to create one",
+              mode: "consult",
+              lang: storedLang,
+            });
+            window.localStorage.removeItem("bizzmitra.activeWorkspaceId");
+            window.localStorage.removeItem("bizzmitra.workspaceContext");
           }
         });
+    } else {
+      setActiveWs({
+        name: "No Active Workspace",
+        industry: "Click to create one",
+        mode: "consult",
+        lang: storedLang,
+      });
     }
   }, [user]);
 
@@ -480,7 +521,11 @@ export function AppSidebar2({
               exit={{ opacity: 0, height: 0 }}
               className="px-3 pt-3 overflow-hidden"
             >
-              <div className="neu-sm neu-press flex cursor-pointer items-center justify-between gap-2.5 rounded-xl border border-border/70 bg-card p-2.5 shadow-xs">
+              <Link
+                to={activeWs.name === "No Active Workspace" ? "/workspace/new" : "/dashboard"}
+                onClick={onNavigate}
+                className="neu-sm neu-press flex cursor-pointer items-center justify-between gap-2.5 rounded-xl border border-border/70 bg-card p-2.5 shadow-xs"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -498,7 +543,7 @@ export function AppSidebar2({
                   </p>
                 </div>
                 <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-              </div>
+              </Link>
             </motion.div>
           )}
         </AnimatePresence>
