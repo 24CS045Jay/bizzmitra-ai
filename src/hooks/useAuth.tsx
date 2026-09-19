@@ -176,6 +176,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         if (typeof window !== "undefined") {
           localStorage.removeItem("bizzmitra.demoSession");
+          localStorage.removeItem("bizzmitra.workspaceContext");
+          localStorage.removeItem("bizzmitra.activeWorkspaceId");
+          localStorage.removeItem("bizzmitra.activeWorkspaceName");
         }
         saveCurrentRole("viewer");
         saveCreditWallet(INITIAL_FREE_WALLET);
@@ -194,4 +197,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   return useContext(AuthContext);
+}
+
+export const TESTING_ADMIN_EMAIL = "admin@bizzmitra.ai";
+
+export function isTestingAccount(email?: string | null): boolean {
+  if (!email) return false;
+  return email.trim().toLowerCase() === TESTING_ADMIN_EMAIL.toLowerCase();
 }

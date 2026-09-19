@@ -587,24 +587,35 @@ export function triggerGoogleTranslate(lang: SupportedLanguage): void {
   if (typeof window === "undefined") return;
 
   const host = window.location.hostname;
+  const isLocal = host === "localhost" || host === "127.0.0.1" || /^[0-9.]+$/.test(host);
   const isEn = lang === "en";
-  const cookieVal = isEn ? "" : `/en/${lang}`;
-  const expires = isEn
-    ? "expires=Thu, 01 Jan 1970 00:00:00 UTC;"
-    : "expires=Fri, 31 Dec 2030 23:59:59 GMT;";
 
-  // Set cookie on both current domain and with dot prefix
-  document.cookie = `googtrans=${cookieVal}; path=/; ${expires}`;
-  document.cookie = `googtrans=${cookieVal}; domain=.${host}; path=/; ${expires}`;
-  document.cookie = `googtrans=${cookieVal}; domain=${host}; path=/; ${expires}`;
+  if (isEn) {
+    const exp = "expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    const domains = isLocal ? [""] : ["", `; domain=${host}`, `; domain=.${host}`];
+    for (const d of domains) {
+      document.cookie = `googtrans=; path=/; ${exp}${d}`;
+      document.cookie = `googtrans=/en/en; path=/; ${exp}${d}`;
+      document.cookie = `googtrans=/auto/en; path=/; ${exp}${d}`;
+    }
+  } else {
+    const exp = "expires=Fri, 31 Dec 2030 23:59:59 GMT;";
+    document.cookie = `googtrans=/auto/${lang}; path=/; ${exp}`;
+    document.cookie = `googtrans=/en/${lang}; path=/; ${exp}`;
+    if (!isLocal) {
+      document.cookie = `googtrans=/auto/${lang}; domain=${host}; path=/; ${exp}`;
+      document.cookie = `googtrans=/en/${lang}; domain=${host}; path=/; ${exp}`;
+      document.cookie = `googtrans=/auto/${lang}; domain=.${host}; path=/; ${exp}`;
+      document.cookie = `googtrans=/en/${lang}; domain=.${host}; path=/; ${exp}`;
+    }
+  }
 
   const applyCombo = (): boolean => {
     const combo = document.querySelector(".goog-te-combo") as HTMLSelectElement | null;
     if (combo) {
-      if (combo.value !== lang) {
-        combo.value = lang;
-        combo.dispatchEvent(new Event("change"));
-      }
+      const targetVal = isEn ? "en" : lang;
+      combo.value = targetVal;
+      combo.dispatchEvent(new Event("change"));
       return true;
     }
     return false;
@@ -633,18 +644,18 @@ export function setLanguage(lang: SupportedLanguage): void {
     }
     document.documentElement.setAttribute("lang", lang);
 
-    // Trigger universal whole-page translation
+    // Set translation cookies and trigger Google Translate combo
     triggerGoogleTranslate(lang);
 
-    // If reverting from a foreign language back to English, reload if necessary to restore pure English DOM
-    if (lang === "en" && previous && previous !== "en") {
+    window.dispatchEvent(new CustomEvent("bizzmitra:lang-changed", { detail: lang }));
+
+    // Seamlessly reload when language changes so that every single component, header, card,
+    // sidebar, and dynamic view translates with 100% full efficiency from initial HTML
+    if (previous !== lang) {
       setTimeout(() => {
         window.location.reload();
       }, 100);
-      return;
     }
-
-    window.dispatchEvent(new CustomEvent("bizzmitra:lang-changed", { detail: lang }));
   }
 }
 

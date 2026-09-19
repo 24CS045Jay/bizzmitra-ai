@@ -143,9 +143,15 @@ function RootShell({ children }: { children: ReactNode }) {
                   if(l==="ar") document.documentElement.setAttribute("dir", "rtl");
                   if(l!=="en"){
                     var h=window.location.hostname;
+                    var isLocal = h === "localhost" || h === "127.0.0.1" || /^[0-9.]+$/.test(h);
+                    document.cookie="googtrans=/auto/"+l+"; path=/;";
                     document.cookie="googtrans=/en/"+l+"; path=/;";
-                    document.cookie="googtrans=/en/"+l+"; domain="+h+"; path=/;";
-                    document.cookie="googtrans=/en/"+l+"; domain=."+h+"; path=/;";
+                    if(!isLocal){
+                      document.cookie="googtrans=/auto/"+l+"; domain="+h+"; path=/;";
+                      document.cookie="googtrans=/en/"+l+"; domain="+h+"; path=/;";
+                      document.cookie="googtrans=/auto/"+l+"; domain=."+h+"; path=/;";
+                      document.cookie="googtrans=/en/"+l+"; domain=."+h+"; path=/;";
+                    }
                   }
                 }
               }catch(e){}
@@ -168,20 +174,40 @@ function RootShell({ children }: { children: ReactNode }) {
         <script
           dangerouslySetInnerHTML={{
             __html: `window.googleTranslateElementInit = function() {
-              if (window.google && window.google.translate) {
-                new window.google.translate.TranslateElement({
-                  pageLanguage: 'en',
-                  includedLanguages: 'en,hi,gu,es,fr,de,ja,ar',
-                  autoDisplay: false
-                }, 'google_translate_element');
+              function initElement() {
+                if (window.google && window.google.translate && window.google.translate.TranslateElement) {
+                  var el = document.getElementById('google_translate_element');
+                  if (el && !el.hasChildNodes()) {
+                    new window.google.translate.TranslateElement({
+                      pageLanguage: 'en',
+                      includedLanguages: 'en,hi,gu,es,fr,de,ja,ar',
+                      autoDisplay: false
+                    }, 'google_translate_element');
+                  }
+                }
               }
+              initElement();
+              var count = 0;
+              var poll = setInterval(function() {
+                count++;
+                var el = document.getElementById('google_translate_element');
+                if ((el && el.hasChildNodes()) || count > 20) {
+                  clearInterval(poll);
+                } else {
+                  initElement();
+                }
+              }, 250);
             };`,
           }}
         />
         <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer />
       </head>
       <body>
-        <div id="google_translate_element" style={{ display: "none" }} />
+        <div
+          id="google_translate_element"
+          className="fixed -left-[9999px] -top-[9999px] size-px opacity-0 pointer-events-none overflow-hidden"
+          suppressHydrationWarning
+        />
         {children}
         <Scripts />
       </body>
@@ -195,9 +221,11 @@ function RootComponent() {
 
   useEffect(() => {
     const cur = getCurrentLanguage();
-    if (cur !== "en") {
+    if (cur === "en") return;
+    const timer = setTimeout(() => {
       triggerGoogleTranslate(cur);
-    }
+    }, 150);
+    return () => clearTimeout(timer);
   }, [location]);
 
   return (

@@ -19,7 +19,7 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, isTestingAccount } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getRoadmapForWorkspace } from "@/lib/planning-data";
@@ -63,27 +63,37 @@ function ProgressRing({ value, size = 56, stroke = 5 }: { value: number; size?: 
 
 function DashboardPage() {
   const { user } = useAuth();
+  const isTest = isTestingAccount(user?.email);
   const [workspaces, setWorkspaces] = useState<Tables<"workspaces">[]>([]);
   const [artifactCount, setArtifactCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // Active workspace name
-  const [activeWsName, setActiveWsName] = useState("TalentCraft HR Consultancy");
+  const [activeWsName, setActiveWsName] = useState(() => (isTest ? "TalentCraft HR Consultancy" : ""));
 
   useEffect(() => {
     if (!user) return;
     async function loadWorkspaces() {
-      const { data, error } = await supabase
-        .from("workspaces")
-        .select("*")
-        .order("updated_at", { ascending: false });
+      let query = supabase.from("workspaces").select("*");
+      if (!isTest && user?.id) {
+        query = query.eq("owner_id", user.id);
+      }
+      const { data, error } = await query.order("updated_at", { ascending: false });
       if (error) toast.error(error.message);
       else {
-        setWorkspaces(data ?? []);
-        if (data && data.length > 0) {
+        const list = data ?? [];
+        setWorkspaces(list);
+        if (list.length > 0) {
           const activeId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
-          const found = data.find((w) => w.id === activeId);
-          if (found?.name) setActiveWsName(found.name);
+          const found = list.find((w) => w.id === activeId) || list[0];
+          if (found?.name) {
+            setActiveWsName(found.name);
+            window.localStorage.setItem("bizzmitra.activeWorkspaceId", found.id);
+          }
+        } else if (isTest) {
+          setActiveWsName("TalentCraft HR Consultancy");
+        } else {
+          setActiveWsName("");
         }
       }
 
@@ -94,12 +104,15 @@ function DashboardPage() {
       setLoading(false);
     }
     void loadWorkspaces();
-  }, [user]);
+  }, [user, isTest]);
 
   // Evaluate risks and action items for the active workspace
-  const blueprint = useMemo(() => getRoadmapForWorkspace({ name: activeWsName }), [activeWsName]);
+  const blueprint = useMemo(
+    () => getRoadmapForWorkspace({ name: activeWsName || "My Workspace" }),
+    [activeWsName],
+  );
   const { topRisks, actionItems, scoreResult, flaggedRisks } = useMemo(
-    () => evaluateBlueprintRisks(blueprint, { name: activeWsName }),
+    () => evaluateBlueprintRisks(blueprint, { name: activeWsName || "My Workspace" }),
     [blueprint, activeWsName],
   );
 
@@ -113,26 +126,70 @@ function DashboardPage() {
 
   return (
     <AppShell>
-      {/* Executive Command Center Header */}
-      <Reveal>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-0.5 text-[10px] font-bold text-primary uppercase tracking-wider">
-                <Sparkles className="size-3" />
-                Live Command Center
-              </span>
-              <span className="text-xs text-muted-foreground">· Active Blueprint: <strong className="text-foreground">{activeWsName}</strong></span>
+      {!loading && workspaces.length === 0 && !isTest ? (
+        <Reveal>
+          <div className="neu mt-4 p-8 sm:p-12 text-center rounded-3xl border border-dashed border-border/80 bg-gradient-to-b from-card/60 via-card to-background shadow-xl">
+            <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-primary/10 text-primary shadow-inner">
+              <Sparkles className="size-8" />
             </div>
-            <h1 className="mt-1 font-display text-3xl font-extrabold sm:text-4xl">
-              Transformation Cockpit
+            <h1 className="mt-5 font-display text-2xl font-extrabold text-foreground sm:text-3xl">
+              Welcome to BizzMitra AI
             </h1>
-            <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-              Real-time portfolio overview of blueprint completeness, active risk exposure, and immediate execution milestones.
+            <p className="mx-auto mt-2 max-w-lg text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              You haven't set up any business workspaces yet. Frame your operational challenge, upload your documents, or enter a prompt to generate your custom digital blueprint.
             </p>
-          </div>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                to="/workspace/new"
+                className="neu-press inline-flex items-center gap-2 rounded-2xl bg-primary px-6 py-3.5 text-xs sm:text-sm font-bold text-primary-foreground shadow-xl glow-primary hover:brightness-105"
+              >
+                <Plus className="size-4" />
+                <span>Create Your First Workspace</span>
+                <ArrowRight className="size-4" />
+              </Link>
+            </div>
 
-          <div className="flex items-center gap-3">
+            <div className="mt-10 grid gap-4 sm:grid-cols-3 text-left border-t border-border/60 pt-8 max-w-3xl mx-auto">
+              <div className="neu-inset p-4 space-y-1.5">
+                <span className="text-[10px] font-extrabold uppercase text-primary tracking-wider">Step 01</span>
+                <p className="text-xs font-bold text-foreground">Multi-Modal Intake</p>
+                <p className="text-[11px] text-muted-foreground">Enter text, upload PDFs/CSVs, or record voice input.</p>
+              </div>
+              <div className="neu-inset p-4 space-y-1.5">
+                <span className="text-[10px] font-extrabold uppercase text-primary tracking-wider">Step 02</span>
+                <p className="text-xs font-bold text-foreground">AI Diagnostic & Solution</p>
+                <p className="text-[11px] text-muted-foreground">Auto-generate interactive BPMN workflows, wireframes, and working CRM.</p>
+              </div>
+              <div className="neu-inset p-4 space-y-1.5">
+                <span className="text-[10px] font-extrabold uppercase text-primary tracking-wider">Step 03</span>
+                <p className="text-xs font-bold text-foreground">Roadmap & Governance</p>
+                <p className="text-[11px] text-muted-foreground">Track financial ROI models, DPDP compliance risks, and sprint timelines.</p>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      ) : (
+        <>
+          {/* Executive Command Center Header */}
+          <Reveal>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-0.5 text-[10px] font-bold text-primary uppercase tracking-wider">
+                    <Sparkles className="size-3" />
+                    Live Command Center
+                  </span>
+                  <span className="text-xs text-muted-foreground">· Active Blueprint: <strong className="text-foreground">{activeWsName}</strong></span>
+                </div>
+                <h1 className="mt-1 font-display text-3xl font-extrabold sm:text-4xl">
+                  Transformation Cockpit
+                </h1>
+                <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                  Real-time portfolio overview of blueprint completeness, active risk exposure, and immediate execution milestones.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => triggerCopilot("Summarize my current transformation status and top risk")}
@@ -415,6 +472,8 @@ function DashboardPage() {
           ))}
         </Stagger>
       </div>
+      </>
+      )}
     </AppShell>
   );
 }

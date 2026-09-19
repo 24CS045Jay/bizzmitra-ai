@@ -24,7 +24,7 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, isTestingAccount } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { getRoadmapForWorkspace } from "@/lib/planning-data";
 import { evaluateBlueprintRisks } from "@/lib/risk-evaluator";
@@ -76,12 +76,8 @@ export function AiCopilotPanel() {
     {
       id: "welcome",
       sender: "assistant",
-      text: "Hello! I am your BizzMitra Blueprint Copilot. Ask me anything about your active transformation workspace, risks, architecture, or rollout schedule.",
+      text: "Hello! I am your BizzMitra Blueprint Copilot. How can I help with your transformation workspace today?",
       timestamp: "Just now",
-      bullets: [
-        "Live data pulled from your Supabase blueprint artifacts",
-        "Trained on your active risk register & delivery roadmap",
-      ],
     },
   ]);
 
@@ -174,10 +170,12 @@ export function AiCopilotPanel() {
 
     try {
       // 1. Pull active workspace context and roadmap from storage/DB
-      const wsId = typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.activeWorkspaceId") : null;
-      let workspaceName = "TalentCraft HR Consultancy";
+      const isTestAcc = isTestingAccount(user?.email);
+      let workspaceName = isTestAcc ? "TalentCraft HR Consultancy" : "";
       let problem = "";
 
+      // 1. Pull active workspace context and roadmap from storage/DB
+      const wsId = typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.activeWorkspaceId") : null;
       if (wsId && !wsId.startsWith("ws-")) {
         const { data: ws } = await supabase
           .from("workspaces")
@@ -186,6 +184,43 @@ export function AiCopilotPanel() {
           .maybeSingle();
         if (ws?.name) workspaceName = ws.name;
         if (ws?.problem_statement) problem = ws.problem_statement;
+      } else if (wsId?.startsWith("ws-") && isTestAcc) {
+        try {
+          const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.businessName) workspaceName = parsed.businessName;
+            if (parsed.problemStatement) problem = parsed.problemStatement;
+          }
+        } catch {}
+      }
+
+      // If non-testing user and no workspace in localStorage, check their Supabase workspaces
+      if (!workspaceName && !isTestAcc && user?.id) {
+        const { data: wsList } = await supabase
+          .from("workspaces")
+          .select("id, name, problem_statement")
+          .eq("owner_id", user.id)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        if (wsList && wsList.length > 0 && wsList[0]) {
+          workspaceName = wsList[0].name;
+          problem = wsList[0].problem_statement || "";
+          window.localStorage.setItem("bizzmitra.activeWorkspaceId", wsList[0].id);
+        }
+      }
+
+      // If user has NO workspace created yet:
+      if (!workspaceName) {
+        await delay(400);
+        const botMsg: Message = {
+          id: `bot-${Date.now()}`,
+          sender: "assistant",
+          text: "Welcome to BizzMitra AI! You don't have an active workspace yet. Please create a new intake workspace to begin analyzing your digital blueprint.",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        };
+        setMessages((prev) => [...prev, botMsg]);
+        return;
       }
 
       const roadmap = getRoadmapForWorkspace({ name: workspaceName, industry: "HR Tech" });
@@ -194,131 +229,160 @@ export function AiCopilotPanel() {
         problemStatement: problem,
       });
 
-      // 2. Synthesize answers based on the user's inquiry
-      await delay(700 + Math.random() * 500);
-
-      // 2. Synthesize answers based on the user's inquiry with comprehensive intent recognition
-      await delay(600 + Math.random() * 400);
+      // 2. Synthesize answers with concise, to-the-point reasoning
+      await delay(500 + Math.random() * 300);
 
       const q = textToSend.toLowerCase().trim();
       let responseText = "";
       let badge: string | undefined;
       let bullets: string[] | undefined;
 
-      // Intent 1: Greetings & Small Talk
-      if (/^(hi|hello|hey|greetings|namaste|good\s(morning|afternoon|evening)|yo|sup)/i.test(q)) {
-        badge = "Blueprint Assistant";
-        responseText = `Hello! I am your AI Blueprint Copilot for **${workspaceName}**. I'm connected to your live solution architecture, HR CRM pipeline, financial ROI model, and 9-week roadmap.`;
+      // Intent 1: Greetings & Casual Openers
+      if (/^(hi|hello|hey|greetings|namaste|good\s(morning|afternoon|evening)|yo\b|sup\b|howdy)/i.test(q)) {
+        badge = "Blueprint Copilot";
+        responseText = `Hello! How can I assist with your **${workspaceName}** blueprint today?`;
+      }
+      // Intent 1b: Status & Well-being
+      else if (/how\s*(are|r)\s*you|how's\s*it\s*going|what'?s\s*up/i.test(q)) {
+        badge = "Blueprint Copilot";
+        responseText = `I'm doing well, ready to help! What would you like to explore for **${workspaceName}**?`;
+      }
+      // Intent 1c: Politeness & Closures
+      else if (/^(thanks|thank\s*you|thx|appreciate\s*it|great\s*thanks|bye|goodbye)/i.test(q)) {
+        badge = "Blueprint Copilot";
+        responseText = `You're welcome! Let me know whenever you need anything else for **${workspaceName}**.`;
+      }
+      // Intent 1d: Capabilities / Help
+      else if (q === "help" || /what\s*can\s*you\s*do|who\s*are\s*you/i.test(q)) {
+        badge = "Copilot Scope";
+        responseText = `I provide direct insights on **${workspaceName}** across:`;
         bullets = [
-          "Ask me how to scale your business or expand recruitment capacity",
-          "Ask about your financial ROI, savings, and payback period",
-          "Ask about your top risks, timeline, or next action items",
-          "Ask about your database schema, architecture, or REST APIs",
+          "Delivery timeline, milestones & phases",
+          "Top risks, DPDP compliance & mitigations",
+          "Budget estimates, CapEx & ROI payback",
+          "Technical architecture & database schema",
+          "Immediate sprint action items",
         ];
       }
       // Intent 2: Business Scaling, Growth & Expansion
-      else if (q.includes("scale") || q.includes("grow") || q.includes("expand") || q.includes("business") || q.includes("revenue") || q.includes("more client") || q.includes("client")) {
+      else if (q.includes("scale") || q.includes("grow") || q.includes("expand") || q.includes("more client")) {
         badge = "Scaling Strategy";
-        responseText = `To scale **${workspaceName}**, your digital blueprint unlocks three immediate operational growth levers:`;
+        responseText = `Three core operational levers to scale **${workspaceName}**:`;
         bullets = [
-          "⚡ Automated Candidate Sourcing: Replace manual Google Sheets with the HR CRM candidate pipeline, cutting turnaround from 28 days to 9 days.",
-          "📈 Capacity Expansion: Reclaim 18 hours/week per recruiter so your 8 consultants can manage 600+ monthly applicants without hiring additional staff.",
-          "🏢 Corporate Client Portal: Give client companies direct self-service access to shortlist candidates, reducing feedback delays from 5 days to 4 hours.",
-          "💰 Projected Financial Impact: Generates an estimated ₹68,000+ net annual savings with a 340% 3-year ROI multiple.",
+          "⚡ Automated Sourcing: Cuts turnaround from 28 to 9 days via the digital pipeline.",
+          "📈 Capacity Reclaim: Saves 18 hrs/week per recruiter to manage 600+ monthly applicants.",
+          "🏢 Client Self-Service: Direct portal reduces client feedback delays to 4 hours.",
         ];
       }
       // Intent 3: Risks & Compliance (DPDP, Security, Bottlenecks)
-      else if (q.includes("risk") || q.includes("biggest") || q.includes("threat") || q.includes("security") || q.includes("compliance") || q.includes("dpdp") || q.includes("audit")) {
+      else if (q.includes("risk") || q.includes("threat") || q.includes("security") || q.includes("compliance") || q.includes("dpdp") || q.includes("audit")) {
         const primaryRisk = topRisks[0];
         const backupRisk = roadmap.riskRegister[0];
         badge = "Risk & Compliance";
-        responseText = `Your primary operational risk is: **"${primaryRisk?.title ?? backupRisk?.title}"**.`;
+        responseText = `Primary operational risk: **"${primaryRisk?.title ?? backupRisk?.title}"** (${(primaryRisk?.category ?? backupRisk?.category ?? "Compliance").toUpperCase()}):`;
         bullets = [
-          `Category: ${(primaryRisk?.category ?? backupRisk?.category ?? "COMPLIANCE").toUpperCase()}`,
-          `Severity Impact: ${primaryRisk?.detail ?? backupRisk?.consequence ?? "Requires 180-day resume purge routine under India DPDP Act"}`,
-          `Mitigation Strategy: ${primaryRisk?.remediation ?? backupRisk?.mitigationStrategy ?? "Implement automated retention triggers in PostgreSQL and complete Steering Committee sign-off."}`,
+          `Impact: ${primaryRisk?.detail ?? backupRisk?.consequence ?? "Requires 180-day resume purge routine under India DPDP Act."}`,
+          `Mitigation: ${primaryRisk?.remediation ?? backupRisk?.mitigationStrategy ?? "Implement automated retention triggers in PostgreSQL and steering committee sign-off."}`,
         ];
       }
       // Intent 4: Rollout Timeline & Phases
-      else if (q.includes("rollout") || q.includes("timeline") || q.includes("plan") || q.includes("phase") || q.includes("week") || q.includes("gantt") || q.includes("schedule")) {
+      else if (q.includes("rollout") || q.includes("timeline") || q.includes("schedule") || q.includes("how long") || q.includes("duration") || q.includes("phase") || q.includes("week") || q.includes("gantt")) {
         badge = "Delivery Roadmap";
-        responseText = `Your transformation is structured into **${roadmap.phases.length} strategic phases** over **${roadmap.targetTimelineWeeks} calendar weeks** (${roadmap.totalPersonDays} Person-Days total effort):`;
+        responseText = `Rollout is **${roadmap.targetTimelineWeeks} calendar weeks** across **${roadmap.phases.length} phases** (${roadmap.totalPersonDays} person-days total effort):`;
         bullets = roadmap.phases.map(
-          (p) => `📌 ${p.name}: Weeks ${p.startWeek + 1}–${p.startWeek + p.durationWeekCount} (${p.milestones.length} milestones — ${p.durationWeeks})`,
+          (p) => `${p.name}: Weeks ${p.startWeek + 1}–${p.startWeek + p.durationWeekCount} (${p.durationWeeks})`,
         );
       }
-      // Intent 5: Profit Maximization, Revenue & Economics
-      else if (q.includes("profit") || q.includes("margin") || q.includes("earn") || q.includes("monetiz") || q.includes("bottomline") || q.includes("revenue gain")) {
-        badge = "Profit Maximization Strategy";
-        responseText = `To maximize operational profit for **${workspaceName}**, your digital transformation drives profitability through two simultaneous engines:`;
+      // Intent 5: Profit Maximization & Margins
+      else if (q.includes("profit") || q.includes("margin") || q.includes("earn") || q.includes("monetiz")) {
+        badge = "Profit Strategy";
+        responseText = `Key profitability drivers for **${workspaceName}**:`;
         bullets = [
-          "💰 Direct Cost Reduction: Automating 65% of manual recruiter spreadsheet tasks saves ₹68,400+ annually in direct labor waste.",
-          "⚡ Placement Velocity Expansion: Cutting interview turnaround from 28 days to 9 days enables 8 recruiters to close 35% more placements each month without hiring more staff.",
-          "📉 Candidate Leakage Reduction: Slashing candidate drop-off from 28% to 6% captures an estimated ₹4.5 Lakhs/year in otherwise lost recruitment fees.",
-          "⏱️ Fast Payback: The entire system reaches net profitability within 4.2 months, yielding a 340% cumulative 3-year ROI multiple.",
+          "Direct Labor Savings: ~₹68,400+/year from automating manual recruiter spreadsheet tasks.",
+          "Placement Velocity: 35% higher monthly placements with existing 8 consultants.",
+          "Payback: Reached in 4.2 months with a 340% 3-year cumulative ROI.",
         ];
       }
-      // Intent 6: Financials, Budget, ROI, Savings
-      else if (q.includes("budget") || q.includes("cost") || q.includes("financial") || q.includes("roi") || q.includes("saving") || q.includes("money") || q.includes("capex") || q.includes("price")) {
-        badge = "Financial Model & ROI";
+      // Intent 6: Financials, Budget, CapEx, ROI, Savings
+      else if (q.includes("budget") || q.includes("cost") || q.includes("financial") || q.includes("roi") || q.includes("saving") || q.includes("money") || q.includes("capex") || q.includes("price") || q.includes("how much")) {
+        badge = "Financial Model";
         const estimatedCapex = roadmap.totalPersonDays * 12500;
-        responseText = `Based on your team of 8 recruiters and 400 monthly applicants, here is your financial snapshot:`;
+        responseText = `Financial snapshot for **${workspaceName}** (8 recruiters, 400 monthly applicants):`;
         bullets = [
-          `Total Implementation CapEx: ~₹${(estimatedCapex / 100000).toFixed(1)} Lakhs (${roadmap.totalPersonDays} person-days)`,
-          "Net Annual Labor Savings: ~₹68,400+ per year",
-          "Payback Period: 4.2 to 5.2 months post-deployment",
-          "3-Year Cumulative ROI Multiple: 340% return on investment",
+          `Total CapEx: ~₹${(estimatedCapex / 100000).toFixed(1)} Lakhs (${roadmap.totalPersonDays} person-days)`,
+          "Net Annual Labor Savings: ~₹68,400+/year",
+          "Payback Period: 4.2 to 5.2 months post-launch",
+          "3-Year ROI Multiple: 340%",
         ];
       }
-      // Intent 6: Next Action Items, Sprints & Tasks
+      // Intent 7: Next Action Items, Sprints & Tasks
       else if (q.includes("action") || q.includes("next") || q.includes("todo") || q.includes("task") || q.includes("sprint") || q.includes("deliverable")) {
-        badge = "Immediate Action Items";
-        responseText = `Here are your next high-priority execution deliverables ready for sprint kick-off:`;
-        bullets = actionItems.map(
-          (item) => `✅ ${item.title} — Assigned to: ${item.owner} (${item.timeline})`,
+        badge = "Next Actions";
+        responseText = `Top immediate sprint deliverables:`;
+        bullets = actionItems.slice(0, 3).map(
+          (item) => `✅ ${item.title} — ${item.owner} (${item.timeline})`,
         );
       }
-      // Intent 7: Architecture, Tech Stack, Cloud, Backend
-      else if (q.includes("architecture") || q.includes("stack") || q.includes("tech") || q.includes("database") || q.includes("api") || q.includes("backend") || q.includes("hld") || q.includes("lld")) {
-        badge = "Solution Architecture";
-        responseText = `Your technical blueprint utilizes a cloud-native, event-driven architecture designed for high throughput:`;
+      // Intent 8: Architecture, Tech Stack, Database, API
+      else if (q.includes("database") || q.includes("postgres") || q.includes("schema") || q.includes("sql") || q.includes("tables")) {
+        badge = "Database";
+        responseText = `**PostgreSQL 16** with Row-Level Security (RLS) isolating tenant records, automated audit trails, and DPDP compliance retention triggers.`;
+      }
+      else if (q.includes("api") || q.includes("rest") || q.includes("endpoint")) {
+        badge = "API Surface";
+        responseText = `REST API on **Cloudflare Edge Workers** with JWT Bearer authentication, rate limiting, and OpenAPI 3.1 schema.`;
+      }
+      else if (q.includes("architecture") || q.includes("stack") || q.includes("tech") || q.includes("backend") || q.includes("frontend") || q.includes("hld") || q.includes("lld")) {
+        badge = "Architecture";
+        responseText = `Core technical stack for **${workspaceName}**:`;
         bullets = [
-          "Frontend: React 19 + TanStack Router + Tailwind CSS v4 (Sub-80ms client latency)",
-          "Edge & Gateway: Cloudflare Edge Worker with JWT authentication and rate limiting",
-          "Async AI Pipeline: Redis 7 + BullMQ queue handling asynchronous resume parsing and AI matching",
-          "Persistence & Data: PostgreSQL 16 with Row-Level Security (RLS) isolating tenant records",
+          "Frontend: React 19 + TanStack Router + Tailwind CSS v4",
+          "Edge / Gateway: Cloudflare Edge Worker with JWT auth",
+          "Async Workers: Redis 7 + BullMQ queue",
+          "Database: PostgreSQL 16 with Row-Level Security (RLS)",
         ];
       }
-      // Intent 8: HR CRM, Solution, Features
-      else if (q.includes("crm") || q.includes("solution") || q.includes("candidate") || q.includes("pipeline") || q.includes("feature") || q.includes("punch")) {
-        badge = "Workable Solution";
-        responseText = `Your interactive HR CRM application includes 4 core functional modules:`;
+      // Intent 9: HR CRM, Solution, Features
+      else if (q.includes("crm") || q.includes("candidate") || q.includes("pipeline") || q.includes("feature") || q.includes("punch")) {
+        badge = "HR CRM Modules";
+        responseText = `Core modules in your HR CRM solution:`;
         bullets = [
-          "🎯 Candidate Pipeline: Real-time candidate tracking across Screening, Interview, Offer, and Rejected stages",
-          "⏱️ Consultant Punch Clock: Instant daily check-in/out attendance logging with live hours tracked",
-          "⚡ Solution Studio (USP #2): Add custom candidate fields (e.g. Expected CTC, LinkedIn URL) with 1-click AI regeneration",
-          "📁 Instant CSV Export: One-click download of the complete active talent roster",
+          "Candidate Pipeline: Real-time 4-stage tracking (Screening → Offer)",
+          "Punch Clock: Daily attendance logging and active hours tracking",
+          "Solution Studio: Custom candidate attributes with AI regeneration",
+          "CSV Export: One-click complete talent roster download",
         ];
       }
-      // Intent 9: Confidence Score & Maturity
+      // Intent 10: Confidence Score & Maturity
       else if (q.includes("confidence") || q.includes("score") || q.includes("maturity") || q.includes("readiness")) {
-        badge = "Readiness Audit";
-        responseText = `Your current Blueprint Confidence Score is **${scoreResult.score}% (${scoreResult.grade})**.`;
+        badge = "Readiness Score";
+        responseText = `Confidence Score is **${scoreResult.score}% (${scoreResult.grade})**:`;
         bullets = [
-          `Verified Domains: ${scoreResult.breakdown.filter((d) => d.completed).length} of ${scoreResult.breakdown.length} blueprint domains complete`,
-          `Key Recommendation: ${scoreResult.improvementHint}`,
+          `${scoreResult.breakdown.filter((d) => d.completed).length} of ${scoreResult.breakdown.length} blueprint domains verified.`,
+          `Next step: ${scoreResult.improvementHint}`,
         ];
       }
-      // Intent 10: General Contextual Assistant Fallback
+      // Intent 11: Problem Statement
+      else if (q.includes("problem") || q.includes("challenge") || q.includes("context") || q.includes("about")) {
+        badge = "Context";
+        responseText = problem
+          ? `Active problem statement for **${workspaceName}**:\n"${problem}"`
+          : `**${workspaceName}** is modernizing manual spreadsheet recruitment into an automated, compliant ATS pipeline.`;
+      }
+      // Intent 12: Team & Roles
+      else if (q.includes("team") || q.includes("recruiter") || q.includes("staff") || q.includes("who is working")) {
+        badge = "Team & Roles";
+        responseText = `**${workspaceName}** models 8 recruitment consultants supported by an Enterprise Admin and Lead Architect.`;
+      }
+      // Intent 13: Export & Deliverables
+      else if (q.includes("export") || q.includes("download") || q.includes("pdf") || q.includes("report")) {
+        badge = "Export Options";
+        responseText = `You can export blueprint deliverables anytime from the **Export Center** in the sidebar, or export candidate lists to CSV from the HR CRM.`;
+      }
+      // Intent 14: To-the-point contextual fallback for ANY other question
       else {
-        badge = "Blueprint Advisory";
-        responseText = `Regarding **"${textToSend}"**: Based on the active **${workspaceName}** enterprise blueprint, here are the key contextual details:`;
-        bullets = [
-          `Current Modernization Scope: ${roadmap.scenarioName} (${roadmap.targetTimelineWeeks} Weeks critical path)`,
-          `Active Architecture: Cloud-native ATS with PostgreSQL 16 and BullMQ async workers`,
-          `Confidence & Health: ${scoreResult.score}% (${scoreResult.grade}) with ${topRisks.length} open risk mitigations monitored`,
-          "Tip: You can ask me about scaling, ROI, timeline, tech stack, or immediate action items!",
-        ];
+        badge = "Blueprint Copilot";
+        responseText = `For **${workspaceName}**, this relates to your active ${roadmap.scenarioName} (${roadmap.targetTimelineWeeks}-week delivery path). Feel free to ask specifically about timeline, budget, risks, or architecture.`;
       }
 
       // 3. Deduct credits based on exact token count (prompt tokens + completion tokens) & active model multiplier
@@ -335,11 +399,7 @@ export function AiCopilotPanel() {
         sender: "assistant",
         text: responseText,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        badge: badge ? `${badge} • ${activeModel.name}` : activeModel.name,
         bullets,
-        actionLabel: deduction.success
-          ? `⚡ ${deduction.totalTokens} tokens processed (-${deduction.creditsDeducted} cr • ${activeModel.name})`
-          : undefined,
       };
 
       setMessages((prev) => [...prev, botMsg]);
@@ -598,12 +658,6 @@ export function AiCopilotPanel() {
                         : "rounded-tl-xs border border-border/80 bg-background/90 text-foreground"
                     }`}
                   >
-                    {m.badge && (
-                      <div className="mb-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">
-                        <Sparkles className="size-3" />
-                        {m.badge}
-                      </div>
-                    )}
                     <p className="whitespace-pre-wrap text-xs leading-relaxed text-foreground font-normal">
                       {m.text.split(/(\*\*.*?\*\*)/g).map((part, i) =>
                         part.startsWith("**") && part.endsWith("**") ? (
@@ -638,17 +692,10 @@ export function AiCopilotPanel() {
                     )}
 
                     <div
-                      className={`mt-2.5 flex items-center justify-between text-[9px] ${
-                        m.sender === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
+                      className={`mt-2 flex items-center justify-end text-[9px] ${
+                        m.sender === "user" ? "text-primary-foreground/70" : "text-muted-foreground/80"
                       }`}
                     >
-                      {m.actionLabel ? (
-                        <span className="font-mono text-[9px] font-semibold text-primary/80">
-                          {m.actionLabel}
-                        </span>
-                      ) : (
-                        <span />
-                      )}
                       <span>{m.timestamp}</span>
                     </div>
                   </div>
