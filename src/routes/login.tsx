@@ -43,14 +43,14 @@ function LoginPage() {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Super Admin authentication handler
+    // 1. Super Admin authentication handler (Designated Testing Account)
     if (
       cleanEmail === "admin@bizzmitra.ai" &&
       (password === "Admin@BizzMitra2026!" || password === "password123" || password === "admin123")
     ) {
       setBusy(false);
       signInAsDemoAdmin();
-      toast.success("Welcome back, Super Administrator!");
+      toast.success("Welcome back, Super Administrator! Testing workspace loaded.");
       navigate({ to: "/dashboard" });
       return;
     }
@@ -61,8 +61,11 @@ function LoginPage() {
     if (error) {
       if (error.message.toLowerCase().includes("email not confirmed")) {
         signInWithCustomUser(email, email.split("@")[0]);
-        toast.success(`Welcome back, ${email}`);
-        navigate({ to: "/dashboard" });
+        // Clean any stale workspace data
+        localStorage.removeItem("bizzmitra.workspaceContext");
+        localStorage.removeItem("bizzmitra.activeWorkspaceId");
+        toast.success(`Welcome, ${email}! Please set up your first workspace.`);
+        navigate({ to: "/workspace/new" });
         return;
       }
       toast.error(error.message);
@@ -70,7 +73,36 @@ function LoginPage() {
       if (data?.session?.user?.email) {
         syncUserRoleAndWallet(data.session.user.email, false);
       }
-      navigate({ to: "/dashboard" });
+
+      // Check if user has existing workspaces in Supabase
+      const userId = data?.session?.user?.id;
+      if (userId) {
+        const { data: wsList } = await supabase
+          .from("workspaces")
+          .select("id, name, problem_statement")
+          .eq("owner_id", userId)
+          .order("updated_at", { ascending: false });
+
+        if (wsList && wsList.length > 0 && wsList[0]) {
+          localStorage.setItem("bizzmitra.activeWorkspaceId", wsList[0].id);
+          localStorage.setItem(
+            "bizzmitra.workspaceContext",
+            JSON.stringify({
+              businessName: wsList[0].name,
+              problemStatement: wsList[0].problem_statement || "",
+            }),
+          );
+          navigate({ to: "/dashboard" });
+        } else {
+          // Fresh user account with no workspaces -> Must create one
+          localStorage.removeItem("bizzmitra.workspaceContext");
+          localStorage.removeItem("bizzmitra.activeWorkspaceId");
+          toast.info("Welcome! Let's set up your first business workspace.");
+          navigate({ to: "/workspace/new" });
+        }
+      } else {
+        navigate({ to: "/dashboard" });
+      }
     }
   }
 

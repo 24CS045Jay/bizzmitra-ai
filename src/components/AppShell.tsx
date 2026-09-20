@@ -26,7 +26,8 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, isTestingAccount } from "@/hooks/useAuth";
+import { toast } from "sonner";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageSelector } from "./LanguageSelector";
 import { useTranslation } from "@/lib/i18n";
@@ -92,9 +93,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     return t(key, item.label);
   };
 
+  const isTestAccount = isTestingAccount(user?.email);
+
   const [activeWs, setActiveWs] = useState({
-    name: "TalentCraft HR Consultancy",
-    industry: "HR & Recruitment Services",
+    name: isTestAccount ? "TalentCraft HR Consultancy" : "No Active Workspace",
+    industry: isTestAccount ? "HR & Recruitment Services" : "Create new workspace",
     mode: "consult",
     lang: "en",
   });
@@ -113,38 +116,77 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const wsId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
     const storedLang = window.localStorage.getItem("bizzmitra.language") || "en";
+    const isTest = isTestingAccount(user?.email);
 
-    try {
+    // 1. Testing Admin account: allow fallback to TalentCraft demo workspace
+    if (isTest) {
       const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
       if (raw) {
-        const parsed = JSON.parse(raw);
-        setActiveWs({
-          name: parsed.businessName || "TalentCraft HR Consultancy",
-          industry: parsed.industry || "HR & Recruitment Services",
-          mode: parsed.intakeMode || "consult",
-          lang: storedLang,
-        });
-        return;
+        try {
+          const parsed = JSON.parse(raw);
+          setActiveWs({
+            name: parsed.businessName || "TalentCraft HR Consultancy",
+            industry: parsed.industry || "HR & Recruitment Services",
+            mode: parsed.intakeMode || "consult",
+            lang: storedLang,
+          });
+          return;
+        } catch {}
       }
-    } catch { }
+      setActiveWs({
+        name: "TalentCraft HR Consultancy",
+        industry: "HR & Recruitment Services",
+        mode: "consult",
+        lang: storedLang,
+      });
+      return;
+    }
 
-    if (user && wsId && !wsId.startsWith("ws-")) {
+    // 2. Standard user: Load their own workspace from Supabase
+    if (user?.id) {
       supabase
         .from("workspaces")
-        .select("name, problem_statement")
-        .eq("id", wsId)
-        .maybeSingle()
-        .then((res: { data: { name?: string } | null }) => {
-          const fetchedName = res.data?.name;
-          if (fetchedName) {
-            setActiveWs((prev) => ({
-              ...prev,
-              name: fetchedName,
-            }));
+        .select("id, name, problem_statement")
+        .eq("owner_id", user.id)
+        .order("updated_at", { ascending: false })
+        .then(({ data: wsList }) => {
+          if (wsList && wsList.length > 0 && wsList[0]) {
+            const wsId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
+            const currentWs = wsList.find((w) => w.id === wsId) || wsList[0];
+            setActiveWs({
+              name: currentWs.name,
+              industry: "Custom Workspace",
+              mode: "consult",
+              lang: storedLang,
+            });
+            window.localStorage.setItem("bizzmitra.activeWorkspaceId", currentWs.id);
+            window.localStorage.setItem(
+              "bizzmitra.workspaceContext",
+              JSON.stringify({
+                businessName: currentWs.name,
+                problemStatement: currentWs.problem_statement || "",
+                industry: "Custom Workspace",
+              }),
+            );
+          } else {
+            setActiveWs({
+              name: "No Active Workspace",
+              industry: "Create intake to begin",
+              mode: "consult",
+              lang: storedLang,
+            });
+            window.localStorage.removeItem("bizzmitra.activeWorkspaceId");
+            window.localStorage.removeItem("bizzmitra.workspaceContext");
           }
         });
+    } else {
+      setActiveWs({
+        name: "No Active Workspace",
+        industry: "Create intake to begin",
+        mode: "consult",
+        lang: storedLang,
+      });
     }
   }, [user]);
 
@@ -298,6 +340,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const isSuperAdmin = isSuperAdminEmail(session?.user?.email);
 
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isTestAccount = isTestingAccount(session?.user?.email);
+
   useEffect(() => {
     if (!loading && !session) {
       supabase.auth.getSession().then(({ data }) => {
@@ -307,6 +352,25 @@ export function AppShell({ children }: { children: ReactNode }) {
       });
     }
   }, [loading, session, navigate]);
+
+  // Route protection: If standard user attempts to view a workspace artifact page without any workspace created,
+  // redirect them to /workspace/new
+  useEffect(() => {
+    if (!loading && session?.user && !isTestAccount) {
+      if (pathname.startsWith("/workspace/") && pathname !== "/workspace/new") {
+        supabase
+          .from("workspaces")
+          .select("id", { count: "exact", head: true })
+          .eq("owner_id", session.user.id)
+          .then(({ count }) => {
+            if ((count ?? 0) === 0) {
+              toast.info("Please create your first workspace to generate your digital blueprint.");
+              navigate({ to: "/workspace/new" });
+            }
+          });
+      }
+    }
+  }, [pathname, loading, session, isTestAccount, navigate]);
 
   useEffect(() => {
     setCurrentRole(loadCurrentRole());

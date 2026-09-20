@@ -470,9 +470,18 @@ body {
 }
 
 #google_translate_element {
-  display: none !important;
+  position: fixed !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  z-index: -100 !important;
 }
 
-.skiptranslate:not(#google_translate_element .skiptranslate) {
-  display: none !important;
+.goog-te-gadget {
+  font-size: 0px !important;
+  color: transparent !important;
 }
