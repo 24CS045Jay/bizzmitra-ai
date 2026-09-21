@@ -39,3 +39,9 @@ keys/
 *.mobileprovision
 .env*
 !public/manifest.json
+
+# Mobile build artifacts
+android/**/build/
+android/.gradle/
+ios/**/build/
+ios/**/DerivedData/

@@ -124,58 +124,22 @@ export async function initNative(): Promise<void> {
   nativeInitialized = true;
 
   try {
-    const { SplashScreen } = await import("@capacitor/splash-screen");
-    const { StatusBar, Style } = await import("@capacitor/status-bar");
     const { App } = await import("@capacitor/app");
 
-    // 1. Hide Splash Screen smoothly
-    setTimeout(() => {
-      void SplashScreen.hide();
-    }, 450);
-
-    // 2. Synchronize Status Bar
-    const syncStatusBar = async () => {
-      try {
-        const isDark = document.documentElement.classList.contains("dark");
-        await StatusBar.setStyle({
-          style: isDark ? Style.Dark : Style.Light,
-        });
-        if (Capacitor.getPlatform() === "android") {
-          await StatusBar.setBackgroundColor({
-            color: isDark ? "#181614" : "#F5F3EE",
-          });
-        }
-      } catch (e) {
-        console.warn("[NativeBridge] StatusBar sync warning:", e);
-      }
-    };
-
-    await syncStatusBar();
-
-    // Observe theme class changes on <html>
-    const observer = new MutationObserver(() => {
-      void syncStatusBar();
-    });
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    // 3. Android Hardware Back Button Handling
+    // 1. Android Hardware Back Button Handling
     if (Capacitor.getPlatform() === "android") {
-      App.addListener("backButton", ({ canGoBack }) => {
-        const path = window.location.pathname;
-        const isRoot = path === "/" || path === "/dashboard";
-        if (!isRoot && canGoBack) {
+      await App.addListener("backButton", ({ canGoBack }) => {
+        if (window.location.pathname === "/" || window.location.pathname === "/workspace/dashboard") {
+          void App.exitApp();
+        } else if (canGoBack) {
           window.history.back();
         } else {
           void App.exitApp();
         }
       });
     }
-
     console.log(`[NativeBridge] Initialized for platform: ${Capacitor.getPlatform()}`);
   } catch (err) {
-    console.error("[NativeBridge] initNative failed:", err);
+    console.warn("[NativeBridge] initNative note:", err);
   }
 }
