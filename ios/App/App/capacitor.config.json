@@ -39,8 +39,6 @@
 		"AppPlugin",
 		"FilesystemPlugin",
 		"HapticsPlugin",
-		"KeyboardPlugin",
-		"CAPNetworkPlugin",
 		"SharePlugin"
 	]
 }
