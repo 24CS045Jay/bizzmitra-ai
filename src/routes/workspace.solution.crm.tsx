@@ -288,8 +288,8 @@ function CRMPage() {
 
           {/* ═══ Stage Tabs + Search + Filters + Actions ═══ */}
           <StaggerItem className="neu p-4">
-            {/* Stage tabs */}
-            <div className="flex flex-wrap gap-1.5 mb-4">
+            {/* Stage tabs (horizontally scrollable chips on mobile) */}
+            <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1.5 scrollbar-none sm:flex-wrap">
               {STAGES.map((s) => (
                 <button
                   key={s}
@@ -448,9 +448,86 @@ function CRMPage() {
             </AnimatePresence>
           </StaggerItem>
 
-          {/* ═══ Candidate Data Table ═══ */}
+          {/* ═══ Candidate Data Table (Desktop/Tablet) & Cards (Phone) ═══ */}
           <StaggerItem className="neu overflow-hidden">
-            <div className="overflow-x-auto">
+            {/* Phone View: Card List (< 640px) */}
+            <div className="block sm:hidden divide-y divide-border/60">
+              {filtered.length === 0 ? (
+                <div className="p-8 text-center text-xs text-muted-foreground">
+                  No candidates match your current filters.
+                </div>
+              ) : (
+                filtered.map((c) => (
+                  <div key={`card-${c.id}`} className="p-3.5 space-y-2 bg-card/40">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground">{c.name}</h4>
+                        <p className="text-[11px] text-muted-foreground">{c.email}</p>
+                      </div>
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-[10px] font-bold shrink-0",
+                          STAGE_COLORS[c.stage],
+                        )}
+                      >
+                        {c.stage}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                      <span className="font-semibold text-foreground">{c.role}</span>
+                      <span>•</span>
+                      <span>{c.experience} yrs exp</span>
+                      <span>•</span>
+                      <span className={cn("font-medium", STATUS_COLORS[c.status] || "text-foreground")}>
+                        {c.status}
+                      </span>
+                      <span>•</span>
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Star
+                            key={i}
+                            className={cn(
+                              "size-2.5",
+                              i <= c.rating ? "fill-amber-400 text-amber-400" : "text-border",
+                            )}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {c.notes && (
+                      <p className="text-[11px] text-muted-foreground/90 line-clamp-2 bg-surface/50 p-2 rounded-lg">
+                        {c.notes}
+                      </p>
+                    )}
+
+                    {/* Custom fields on mobile card */}
+                    {studioSettings.customFields.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {studioSettings.customFields.map((field) => {
+                          const rawVal = c.customValues?.[field.key] ?? field.defaultValue ?? "—";
+                          const val = String(rawVal);
+                          return (
+                            <span
+                              key={field.id}
+                              className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
+                            >
+                              <Tag className="size-2 opacity-60" />
+                              <span className="opacity-75">{field.label}:</span>
+                              <span className="font-semibold">{val}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Tablet & Desktop View: Table (>= 640px) */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground border-b border-border bg-surface/60">
@@ -549,7 +626,7 @@ function CRMPage() {
                                       "size-3",
                                       i <= c.rating
                                         ? "fill-amber-400 text-amber-400"
-                                        : "text-border fill-transparent",
+                                        : "text-border",
                                     )}
                                   />
                                 ))}
@@ -558,13 +635,18 @@ function CRMPage() {
                           )}
                           {studioSettings.visibleStandardColumns.status && (
                             <td className={cellDensityClass}>
-                              <span className={cn("text-[10px] font-bold", STATUS_COLORS[c.status])}>
+                              <span
+                                className={cn(
+                                  "text-xs font-medium",
+                                  STATUS_COLORS[c.status] || "text-foreground",
+                                )}
+                              >
                                 {c.status}
                               </span>
                             </td>
                           )}
                           {studioSettings.visibleStandardColumns.applied && (
-                            <td className={cn(cellDensityClass, "text-[10px] text-muted-foreground tabular-nums")}>
+                            <td className={cn(cellDensityClass, "text-muted-foreground tabular-nums")}>
                               {c.appliedDate}
                             </td>
                           )}
