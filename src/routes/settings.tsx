@@ -53,7 +53,8 @@ export const Route = createFileRoute("/settings")({
 const TIERS = [
   {
     name: "Free Starter",
-    price: "₹0",
+    monthlyPrice: "₹0",
+    annualPrice: "₹0",
     cadence: "forever free",
     credits: "100 credits/mo",
     features: ["Single workspace", "Standard LLM intake", "Basic HLD export", "Community support"],
@@ -61,7 +62,8 @@ const TIERS = [
   },
   {
     name: "Growth Pro",
-    price: "₹3,999",
+    monthlyPrice: "₹3,999",
+    annualPrice: "₹3,199",
     cadence: "per seat / month",
     credits: "1,000 credits/mo",
     features: ["Unlimited workspaces", "Solution Studio customizer", "PostgreSQL DDL & REST APIs", "Executive pitch deck export", "Role-based access preview"],
@@ -69,7 +71,8 @@ const TIERS = [
   },
   {
     name: "Enterprise Scale",
-    price: "₹15,999",
+    monthlyPrice: "₹15,999",
+    annualPrice: "₹12,799",
     cadence: "per org / month",
     credits: "5,000 credits/mo",
     features: ["Dedicated compute cluster", "Custom BPMN 2.0 pipelines", "Full Git multi-tier versioning", "99.99% SLA guarantee", "SOC2 compliance attestation"],
@@ -96,6 +99,7 @@ function SettingsPage() {
   const [selectedModelForPayment, setSelectedModelForPayment] = useState<AiModel | null>(null);
   const [razorpayKey, setRazorpayKey] = useState<string>(getRazorpayKeyId());
   const [isEditingKey, setIsEditingKey] = useState<boolean>(false);
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
 
   useEffect(() => {
     setWallet(loadCreditWallet());
@@ -436,14 +440,46 @@ function SettingsPage() {
         <StaggerItem className="neu p-6 lg:col-span-2">
           <div className="text-center max-w-xl mx-auto mb-6">
             <h2 className="font-display text-2xl font-extrabold">{t("settings.plans", "Subscription Plans & SaaS Tiers")}</h2>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1 mb-4">
               Select the plan that fits your consultancy or enterprise transformation needs.
             </p>
+
+            {/* Monthly / Annual Toggle matching Landing Page */}
+            <div className="neu-sm inline-flex items-center gap-1.5 p-1 rounded-full">
+              <button
+                type="button"
+                onClick={() => setBillingCycle("monthly")}
+                className={`rounded-full px-3.5 py-1 text-xs font-bold transition-all ${
+                  billingCycle === "monthly"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Monthly Billing
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingCycle("annual")}
+                className={`rounded-full px-3.5 py-1 text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  billingCycle === "annual"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span>Annual Billing</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+                  billingCycle === "annual" ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/15 text-primary"
+                }`}>
+                  Save 20%
+                </span>
+              </button>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             {TIERS.map((t) => {
               const isCurrent = wallet.tier === t.name;
+              const price = billingCycle === "annual" ? t.annualPrice : t.monthlyPrice;
               return (
                 <div
                   key={t.name}
@@ -463,7 +499,7 @@ function SettingsPage() {
                       ) : null}
                     </div>
                     <div className="mt-3 flex items-baseline gap-1">
-                      <span className="font-display text-3xl font-extrabold">{t.price}</span>
+                      <span className="font-display text-3xl font-extrabold">{price}</span>
                       <span className="text-xs text-muted-foreground">{t.cadence}</span>
                     </div>
                     <p className="mt-1 text-xs font-semibold text-primary">{t.credits}</p>

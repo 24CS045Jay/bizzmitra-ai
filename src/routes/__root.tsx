@@ -17,6 +17,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { PageTransition } from "@/components/motion/primitives";
 import { Toaster } from "@/components/ui/sonner";
 import { getCurrentLanguage, triggerGoogleTranslate } from "@/lib/i18n";
+import { initUniversalDomObserver, runUniversalDomTranslation } from "@/lib/auto-translator";
 
 
 function NotFoundComponent() {
@@ -220,12 +221,19 @@ function RootComponent() {
   const location = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
+    initUniversalDomObserver();
+  }, []);
+
+  useEffect(() => {
     const cur = getCurrentLanguage();
-    if (cur === "en") return;
-    const timer = setTimeout(() => {
-      triggerGoogleTranslate(cur);
-    }, 150);
-    return () => clearTimeout(timer);
+    if (cur !== "en") {
+      runUniversalDomTranslation(cur);
+      const timer = setTimeout(() => {
+        runUniversalDomTranslation(cur);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
   }, [location]);
 
   return (

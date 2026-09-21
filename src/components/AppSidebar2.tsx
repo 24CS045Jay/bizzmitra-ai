@@ -389,20 +389,45 @@ export function AppSidebar2({
               }),
             );
           } else {
+            // Check if user has local workspace context
+            const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw);
+                setActiveWs({
+                  name: parsed.businessName || "New Workspace",
+                  industry: parsed.industry || "Custom Workspace",
+                  mode: parsed.intakeMode || "consult",
+                  lang: storedLang,
+                });
+                return;
+              } catch {}
+            }
             setActiveWs({
-              name: "No Active Workspace",
-              industry: "Click to create one",
+              name: "New Workspace",
+              industry: "Create intake to begin",
               mode: "consult",
               lang: storedLang,
             });
-            window.localStorage.removeItem("bizzmitra.activeWorkspaceId");
-            window.localStorage.removeItem("bizzmitra.workspaceContext");
           }
         });
     } else {
+      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          setActiveWs({
+            name: parsed.businessName || "New Workspace",
+            industry: parsed.industry || "Custom Workspace",
+            mode: parsed.intakeMode || "consult",
+            lang: storedLang,
+          });
+          return;
+        } catch {}
+      }
       setActiveWs({
-        name: "No Active Workspace",
-        industry: "Click to create one",
+        name: "New Workspace",
+        industry: "Create intake to begin",
         mode: "consult",
         lang: storedLang,
       });
