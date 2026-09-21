@@ -6,33 +6,11 @@
  * the same shape — no UI component needs to change.
  */
 
-import {
-  AI_SUMMARY,
-  API_ENDPOINTS,
-  BPMN_AFTER,
-  BPMN_BEFORE,
-  ER_DIAGRAM,
-  HLD_DIAGRAM,
-  LLD_DIAGRAM,
-  NAV_FLOW_DIAGRAM,
-  PROBLEM_FRAMING,
-  ROADMAP,
-  SOLUTION,
-  SWIMLANE_DIAGRAM,
-  WIREFRAMES,
-} from "@/lib/demo-data";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
+import { PAYLOADS, type ArtifactKind } from "./generate-artifact-payloads";
 
-export type ArtifactKind =
-  | "framing"
-  | "solution"
-  | "architecture"
-  | "process"
-  | "ux"
-  | "data"
-  | "roadmap"
-  | "summary";
+export type { ArtifactKind };
 
 export type GenerationContext = {
   problem?: string;
@@ -50,16 +28,7 @@ export const GENERATION_STEPS: Record<ArtifactKind, string[]> = {
   roadmap: ["Sizing workstreams", "Sequencing dependencies", "Estimating effort", "Building roadmap"],
 };
 
-const PAYLOADS: Record<ArtifactKind, unknown> = {
-  summary: { text: AI_SUMMARY },
-  framing: PROBLEM_FRAMING,
-  solution: SOLUTION,
-  architecture: { hld: HLD_DIAGRAM, lld: LLD_DIAGRAM },
-  process: { before: BPMN_BEFORE, after: BPMN_AFTER, swimlane: SWIMLANE_DIAGRAM },
-  ux: { screens: WIREFRAMES, flow: NAV_FLOW_DIAGRAM },
-  data: { er: ER_DIAGRAM, endpoints: API_ENDPOINTS },
-  roadmap: { phases: ROADMAP },
-};
+export { PAYLOADS };
 
 export function delay(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));

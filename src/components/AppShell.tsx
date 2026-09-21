@@ -391,8 +391,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* React Bits Pro App Sidebar 2 (Icon rail with left-to-right hover slide expansion & pin) */}
       <AppSidebar2 isPinned={isPinned} onTogglePin={handleTogglePin} />
 
-      {/* Mobile & Tablet Top Navigation Header */}
-      <div className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden">
+      {/* Mobile-only Top Navigation Header (< 640px) */}
+      <div className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:hidden">
         <Link
           to="/"
           className="group flex items-center gap-2 rounded-lg p-1 transition-all active:scale-95"
@@ -427,11 +427,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      {/* Mobile Sidebar Drawer */}
+      {/* Mobile Sidebar Drawer (< 640px) */}
       <AnimatePresence>
         {open ? (
           <motion.div
-            className="fixed inset-0 z-50 bg-foreground/30 lg:hidden"
+            className="fixed inset-0 z-50 bg-foreground/30 sm:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -463,7 +463,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div
         className={cn(
           "flex min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out",
-          isPinned ? "lg:pl-[304px]" : "lg:pl-[86px]",
+          isPinned ? "lg:pl-[304px] sm:pl-[80px]" : "sm:pl-[80px] lg:pl-[86px]",
         )}
       >
         {isSuperAdmin && currentRole !== "admin" ? (
@@ -496,7 +496,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Main Workspace Portal View with safe area bottom clearance for mobile nav */}
         <main
           className={cn(
-            "min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] md:pb-10 transition-all duration-300 ease-in-out",
+            "min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:pb-8 lg:pb-10 transition-all duration-300 ease-in-out",
             isPinned && "scale-[0.985] origin-top-left",
           )}
         >

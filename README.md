@@ -1,6 +1,7 @@
-# Blueprint Buddy
+# BizzMitra AI — Enterprise Cross-Platform Transformation Portal
 
-# MASTER PROMPT — Paste this entire document into your AI coding tool (Claude Code / Cursor / bolt.new / lovable / v0 / Windsurf)
+> **Unified AI Platform**: Web Desktop · Web Tablet · Responsive Mobile Web · PWA · Android (`.apk` / `.aab`) · iOS (TestFlight)  
+> **Documentation**: [MOBILE_SETUP.md](file:///d:/sem_5/chaos2commit/bizzmitra-ai/MOBILE_SETUP.md) · [DEPLOYMENT.md](file:///d:/sem_5/chaos2commit/bizzmitra-ai/DEPLOYMENT.md)
 
 ---
 

@@ -56,8 +56,8 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      aria-label="Mobile and Tablet Navigation"
-      className="fixed bottom-0 left-0 right-0 z-50 block md:hidden pointer-events-none"
+      aria-label="Mobile Navigation"
+      className="fixed bottom-0 left-0 right-0 z-50 block sm:hidden pointer-events-none"
     >
       <div className="mx-auto max-w-md px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="pointer-events-auto flex items-center justify-between rounded-2xl border border-border/70 bg-background/90 p-1.5 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-zinc-950/90 dark:shadow-[0_12px_36px_rgba(0,0,0,0.8)]">

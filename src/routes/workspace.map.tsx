@@ -233,8 +233,9 @@ export function ArtifactMapPage() {
             </div>
           </div>
 
-          {/* Interactive Graph Canvas */}
-          <div className="relative h-[560px] min-w-[940px] overflow-x-auto rounded-2xl bg-card/60 p-4 border border-border/40">
+          {/* Interactive Graph Canvas (Scrollable on Mobile) */}
+          <div className="w-full overflow-x-auto touch-pan-x rounded-2xl">
+            <div className="relative h-[560px] min-w-[940px] rounded-2xl bg-card/60 p-4 border border-border/40">
             {/* SVG Edges Layer */}
             <svg className="absolute inset-0 size-full pointer-events-none" aria-hidden>
               <defs>
@@ -372,6 +373,7 @@ export function ArtifactMapPage() {
                 </motion.div>
               );
             })}
+            </div>
           </div>
 
           {/* Canvas Legend */}
