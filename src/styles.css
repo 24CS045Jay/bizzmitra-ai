@@ -380,6 +380,68 @@ select:-webkit-autofill {
   caret-color: var(--foreground);
 }
 
+/* ==============================================================================
+   Cross-Platform Mobile (iOS/Android) & Tablet System Adaptations
+   ============================================================================== */
+
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+html, body {
+  /* Prevent horizontal pull-to-scroll bounce outside container */
+  overscroll-behavior-y: none;
+  /* Disable 300ms double-tap delay on mobile Safari & Chrome */
+  touch-action: manipulation;
+  /* Disable tap grey flash on Android and iOS webviews */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Safe Area Inset Helpers for Notched Screens, Dynamic Islands, & Gesture Bars */
+.pt-safe {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+.pl-safe {
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+}
+
+.pr-safe {
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+}
+
+.bottom-safe {
+  bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Native iOS Smooth Momentum Scrolling */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Tablet & Mobile Canvas Adaptations */
+@media (max-width: 1024px) {
+  /* Optimize font rendering and tap targets on tablet & mobile */
+  button, [role="button"], a {
+    min-height: 38px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Padding for floating bottom mobile navigation */
+  .mobile-nav-offset {
+    padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Headless Google Translate Global Integration */
 .goog-te-banner-frame.skiptranslate,
 .goog-te-banner-frame,
