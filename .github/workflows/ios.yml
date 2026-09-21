@@ -26,7 +26,11 @@ jobs:
         run: npm ci --legacy-peer-deps || npm install
 
       - name: Sync Capacitor iOS Project
-        run: npx cap sync ios
+        run: |
+          npx cap sync ios
+          # Ensure manual signing and disabled profiles in pbxproj after capacitor sync
+          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' ios/App/App.xcodeproj/project.pbxproj 2>/dev/null || true
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' ios/App/App.xcodeproj/project.pbxproj 2>/dev/null || true
 
       - name: Install Apple Certificate and Provisioning Profile
         if: env.APPLE_CERTIFICATE_BASE64 != ''
@@ -66,22 +70,54 @@ jobs:
           
           echo "Target: $BUILD_TARGET"
           
+          # Build iOS App: Try ad-hoc signing (ARM64 device for Sideloadly / real iPhones), fallback to unsigned, fallback to simulator
           xcodebuild $BUILD_TARGET \
             -scheme App \
             -configuration Release \
             -destination "generic/platform=iOS" \
             -derivedDataPath build/DerivedData \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            clean build || \
+          xcodebuild $BUILD_TARGET \
+            -scheme App \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            clean build || \
+          xcodebuild $BUILD_TARGET \
+            -scheme App \
+            -configuration Release \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             clean build
 
       - name: Package iOS IPA
         run: |
           mkdir -p release build/Payload
-          APP_PATH=$(find build/DerivedData -name "App.app" -type d | head -n 1)
+          APP_PATH=$(find build/DerivedData -name "*.app" -type d | head -n 1)
           if [ -z "$APP_PATH" ]; then
-            echo "Error: App.app not found in build/DerivedData"
+            echo "Error: App bundle not found in build/DerivedData"
             exit 1
           fi
           echo "Found compiled app at: $APP_PATH"
