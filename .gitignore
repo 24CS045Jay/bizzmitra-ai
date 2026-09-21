@@ -30,3 +30,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Mobile Signing & Credentials (MUST NOT commit)
+keys/
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+.env*
+!public/manifest.json

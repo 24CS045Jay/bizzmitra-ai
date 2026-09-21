@@ -413,13 +413,13 @@ export function AiCopilotPanel() {
 
   return (
     <>
-      {/* Bottom-right Persistent Floating Launcher */}
-      <div className="fixed bottom-6 right-6 z-40">
+      {/* Bottom-right Persistent Floating Launcher (elevated on mobile to clear MobileBottomNav) */}
+      <div className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] right-4 sm:bottom-6 sm:right-6 z-40">
         <motion.button
           whileHover={{ scale: 1.06, y: -2 }}
           whileTap={{ scale: 0.94 }}
           onClick={() => setIsOpen(!isOpen)}
-          className="neu-press group flex items-center gap-2.5 rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-primary-foreground shadow-2xl glow-primary"
+          className="neu-press group flex items-center gap-2.5 rounded-2xl bg-primary px-3.5 py-3 sm:px-4 sm:py-3.5 text-sm font-bold text-primary-foreground shadow-2xl glow-primary"
           title="Open AI Copilot"
         >
           <div className="relative">
@@ -434,11 +434,11 @@ export function AiCopilotPanel() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, x: 380 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 380 }}
+            initial={{ opacity: 0, y: 40, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 40, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 360, damping: 32 }}
-            className="fixed bottom-4 right-4 top-4 z-50 flex w-full max-w-[420px] flex-col overflow-hidden rounded-3xl border border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl"
+            className="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] top-14 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-4 z-50 flex w-auto sm:w-full sm:max-w-[420px] flex-col overflow-hidden rounded-3xl border border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border/70 p-4">

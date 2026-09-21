@@ -331,9 +331,23 @@ button.neu-sm,
 /* Soft shadows get muddy on small screens — flatten them there. */
 @media (max-width: 640px) {
   .neu,
-  .neu-sm {
+  .neu-sm,
+  .neu-inset {
     box-shadow: 0 1px 0 var(--color-border);
     border: 1px solid var(--color-border);
+  }
+
+  /* Prevent automatic zooming on iOS Safari when focusing inputs */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Ensure minimum tap target size of 44x44px for primary interactive elements */
+  button:not(.inline-icon),
+  [role="button"]:not(.inline-icon) {
+    min-height: 44px;
   }
 }
 
@@ -392,8 +406,9 @@ select:-webkit-autofill {
 }
 
 html, body {
-  /* Prevent horizontal pull-to-scroll bounce outside container */
-  overscroll-behavior-y: none;
+  /* Prevent bounce outside container and horizontal scroll leakage */
+  overscroll-behavior: none;
+  min-height: 100dvh;
   /* Disable 300ms double-tap delay on mobile Safari & Chrome */
   touch-action: manipulation;
   /* Disable tap grey flash on Android and iOS webviews */

@@ -33,9 +33,11 @@ import {
 } from "@/lib/export-engine";
 import {
   exportToWordDoc,
+  exportToWordDocHtml,
   exportToExcelWorkbook,
   exportToPowerPointDeck,
 } from "@/lib/document-exporters";
+import { isNative, saveAndShareFile } from "@/lib/native-bridge";
 
 export const Route = createFileRoute("/workspace/export")({
   head: () => ({
@@ -107,7 +109,13 @@ export function ExportCenterPage() {
   };
 
   const handlePrintPdf = () => {
-    window.print();
+    if (isNative()) {
+      const docHtml = exportToWordDocHtml(scenarioName);
+      void saveAndShareFile(`${scenarioName.replace(/\s+/g, "_")}_Executive_Blueprint.html`, docHtml, "text/html");
+      toast.success("Opened Executive Blueprint in Share Sheet");
+    } else {
+      window.print();
+    }
   };
 
   const handleDownloadWord = () => {

@@ -1,5 +1,7 @@
+
 import { motion } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
+import { Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
@@ -12,6 +14,8 @@ export function Mermaid({ chart, className }: { chart: string; className?: strin
   const ref = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>("");
   const [failed, setFailed] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,17 +60,71 @@ export function Mermaid({ chart, className }: { chart: string; className?: strin
     );
   }
 
+  const handleZoomIn = () => setZoom((z) => Math.min(z + 0.25, 2.5));
+  const handleZoomOut = () => setZoom((z) => Math.max(z - 0.25, 0.5));
+  const handleResetZoom = () => setZoom(1);
+
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.985 }}
-      animate={{ opacity: svg ? 1 : 0, scale: svg ? 1 : 0.985 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+    <div
       className={cn(
-        "[&_svg]:h-auto [&_svg]:w-full [&_svg]:max-w-full overflow-x-auto rounded-xl p-2",
+        "relative group flex flex-col rounded-xl border border-border/60 bg-card/40 backdrop-blur-sm",
+        isFullscreen && "fixed inset-2 sm:inset-6 z-50 bg-background/95 border-border shadow-2xl p-4 overflow-hidden",
         className,
       )}
-      ref={ref}
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
+    >
+      {/* Floating Diagram Controls */}
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-lg bg-background/80 p-1 backdrop-blur-md border border-border/70 shadow-sm opacity-90 hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={handleZoomIn}
+          title="Zoom in"
+          aria-label="Zoom in"
+          className="grid size-7 place-items-center rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+        >
+          <ZoomIn className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={handleZoomOut}
+          title="Zoom out"
+          aria-label="Zoom out"
+          className="grid size-7 place-items-center rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+        >
+          <ZoomOut className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={handleResetZoom}
+          title="Fit to width"
+          aria-label="Fit to width"
+          className="grid size-7 place-items-center rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+        >
+          <RotateCcw className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsFullscreen(!isFullscreen)}
+          title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          aria-label={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          className="grid size-7 place-items-center rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+        >
+          {isFullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+        </button>
+      </div>
+
+      {/* Diagram Scrollable Viewport */}
+      <div className="flex-1 w-full overflow-auto p-4 touch-pan-x touch-pan-y">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.985 }}
+          animate={{ opacity: svg ? 1 : 0, scale: svg ? zoom : 0.985 }}
+          transition={{ duration: 0.3 }}
+          style={{ transformOrigin: "top left" }}
+          className="min-w-fit [&_svg]:h-auto [&_svg]:max-w-none"
+          ref={ref}
+          dangerouslySetInnerHTML={{ __html: svg }}
+        />
+      </div>
+    </div>
   );
 }
+
