@@ -40,6 +40,7 @@ import {
   type StudioSettings,
 } from "@/lib/solution-studio";
 import { cn } from "@/lib/utils";
+import { saveAndShareFile } from "@/lib/native-bridge";
 
 export const Route = createFileRoute("/workspace/solution/crm")({
   head: () => ({
@@ -204,12 +205,8 @@ function CRMPage() {
     });
 
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `bizzmitra_candidates_${studioSettings.version}_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    const filename = `bizzmitra_candidates_${studioSettings.version}_${new Date().toISOString().slice(0, 10)}.csv`;
+    void saveAndShareFile(filename, csv, "text/csv;charset=utf-8;");
   }, [filtered, studioSettings]);
 
   // Add candidate handler

@@ -3,22 +3,38 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "com.bizzmitra.ai",
   appName: "BizzMitra AI",
-  webDir: ".output/public",
+  webDir: "mobile-shell",
   server: {
-    androidScheme: "https",
-    iosScheme: "https",
-    cleartext: true,
+    url: "https://bizzmitra-ai.vercel.app",
+    cleartext: false,
+    allowNavigation: [
+      "bizzmitra-ai.vercel.app",
+      "*.supabase.co",
+      "checkout.razorpay.com",
+      "*.razorpay.com",
+      "challenges.cloudflare.com",
+      "fonts.googleapis.com",
+      "fonts.gstatic.com",
+    ],
   },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
-      backgroundColor: "#09090b",
+      launchAutoHide: false,
+      backgroundColor: "#F5F3EE",
       showSpinner: true,
-      spinnerColor: "#4f46e5",
+      androidSpinnerStyle: "small",
+      iosSpinnerStyle: "small",
+      spinnerColor: "#FF5A3C",
     },
     StatusBar: {
       style: "DARK",
-      backgroundColor: "#09090b",
+      backgroundColor: "#181614",
+    },
+    Keyboard: {
+      resize: "body",
+      style: "DARK",
+      resizeOnFullScreen: true,
     },
   },
 };

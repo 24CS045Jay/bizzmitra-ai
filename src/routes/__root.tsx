@@ -17,6 +17,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { PageTransition } from "@/components/motion/primitives";
 import { Toaster } from "@/components/ui/sonner";
 import { getCurrentLanguage, triggerGoogleTranslate } from "@/lib/i18n";
+import { initNative } from "@/lib/native-bridge";
 
 
 function NotFoundComponent() {
@@ -232,12 +233,32 @@ function RootComponent() {
 
   useEffect(() => {
     const cur = getCurrentLanguage();
-    if (cur === "en") return;
-    const timer = setTimeout(() => {
-      triggerGoogleTranslate(cur);
-    }, 150);
-    return () => clearTimeout(timer);
+    if (cur !== "en") {
+      const timer = setTimeout(() => {
+        triggerGoogleTranslate(cur);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
   }, [location]);
+
+  // Initialize Native Shell (Splash screen, Status bar theme, Android back button)
+  useEffect(() => {
+    void initNative();
+  }, []);
+
+  // Register PWA Service Worker
+  useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          console.log("[PWA] Service worker registered successfully:", reg.scope);
+        })
+        .catch((err) => {
+          console.warn("[PWA] Service worker registration failed:", err);
+        });
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
