@@ -9,11 +9,41 @@ export interface TableDef {
   id: string;
   name: string;
   description: string;
-  category: "core" | "recruitment" | "operations" | "security";
+  category: "core" | "recruitment" | "operations" | "security" | "telemetry" | "clinical";
   columns: ColumnDef[];
 }
 
-export const DATABASE_TABLES: TableDef[] = [
+export interface ApiEndpointItem {
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+  path: string;
+  summary: string;
+  auth: string;
+  category: string;
+  requestBody?: string;
+  responseBody: string;
+  curlExample: string;
+}
+
+export interface DatabaseBlueprint {
+  domainId: string;
+  domainTitle: string;
+  tables: TableDef[];
+  erdDiagram: string;
+  ddlSchema: string;
+  apiCategories: string[];
+  apiSpecifications: ApiEndpointItem[];
+  metrics: {
+    tableCount: string;
+    apiCount: string;
+    multiTenancy: string;
+    compliance: string;
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. HR & RECRUITMENT SERVICES (TalentCraft Default)
+// ─────────────────────────────────────────────────────────────────────────────
+export const HR_DATABASE_TABLES: TableDef[] = [
   {
     id: "organizations",
     name: "organizations",
@@ -119,10 +149,9 @@ export const DATABASE_TABLES: TableDef[] = [
   },
 ];
 
-export const POSTGRES_DDL_SCHEMA = `-- ==========================================================
+export const HR_DDL_SCHEMA = `-- ==========================================================
 -- BizzMitra-AI Multi-Tenant Enterprise PostgreSQL Schema
--- Generated: 2026-09-12 | Target: PostgreSQL 16+
--- Extensions: pgcrypto, btree_gist
+-- Target: PostgreSQL 16+ with Row-Level Security (RLS)
 -- ==========================================================
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -215,7 +244,6 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 CREATE INDEX IF NOT EXISTS idx_candidates_org_stage ON candidates(org_id, pipeline_stage);
 CREATE INDEX IF NOT EXISTS idx_candidates_ai_score ON candidates(ai_score DESC);
 CREATE INDEX IF NOT EXISTS idx_attendance_candidate ON attendance_punches(candidate_id, punch_in DESC);
-CREATE INDEX IF NOT EXISTS idx_attendance_org_dates ON attendance_punches(org_id, punch_in);
 CREATE INDEX IF NOT EXISTS idx_audit_org_created ON audit_logs(org_id, created_at DESC);
 
 -- Multi-Tenant Row Level Security (RLS)
@@ -225,17 +253,14 @@ ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attendance_punches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
--- Tenant Isolation Policies
 CREATE POLICY tenant_isolation_candidates ON candidates
-    FOR ALL
-    USING (org_id = current_setting('app.current_org_id')::UUID);
+    FOR ALL USING (org_id = current_setting('app.current_org_id')::UUID);
 
 CREATE POLICY tenant_isolation_attendance ON attendance_punches
-    FOR ALL
-    USING (org_id = current_setting('app.current_org_id')::UUID);
+    FOR ALL USING (org_id = current_setting('app.current_org_id')::UUID);
 `;
 
-export const BIZMITRA_ERD_DIAGRAM = `erDiagram
+export const HR_ERD_DIAGRAM = `erDiagram
     ORGANIZATIONS ||--o{ CANDIDATES : "has many"
     ORGANIZATIONS ||--o{ CLIENTS : "onboards"
     ORGANIZATIONS ||--o{ ATTENDANCE_PUNCHES : "tracks"
@@ -262,10 +287,6 @@ export const BIZMITRA_ERD_DIAGRAM = `erDiagram
         string email
         string role
         numeric experience_years
-        text_array skills
-        string current_ctc
-        string expected_ctc
-        string notice_period
         numeric ai_score
         string pipeline_stage
         string status
@@ -308,45 +329,19 @@ export const BIZMITRA_ERD_DIAGRAM = `erDiagram
         string action
         string entity_type
         uuid entity_id
-        jsonb payload_diff
         timestamptz created_at
     }
 `;
 
-export interface ApiEndpointItem {
-  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-  path: string;
-  summary: string;
-  auth: string;
-  category: "Recruitment" | "Solution Studio" | "Operations" | "Client Portal";
-  requestBody?: string;
-  responseBody: string;
-  curlExample: string;
-}
-
-export const API_SPECIFICATIONS: ApiEndpointItem[] = [
+export const HR_API_SPECIFICATIONS: ApiEndpointItem[] = [
   {
     method: "GET",
     path: "/api/v1/candidates",
     summary: "Retrieve filtered list of candidate profiles with AI scores and stages",
     auth: "Bearer JWT",
     category: "Recruitment",
-    responseBody: `{
-  "data": [
-    {
-      "id": "cnd_01j78ab",
-      "fullName": "Priya Sharma",
-      "role": "Senior React Engineer",
-      "aiScore": 4.8,
-      "pipelineStage": "Interview",
-      "skills": ["React", "TypeScript", "Node.js"]
-    }
-  ],
-  "total": 48,
-  "page": 1
-}`,
-    curlExample: `curl -X GET "https://api.bizzmitra.ai/v1/candidates?stage=Interview" \\
-  -H "Authorization: Bearer YOUR_API_KEY"`,
+    responseBody: `{\n  "data": [\n    {\n      "id": "cnd_01j78ab",\n      "fullName": "Priya Sharma",\n      "role": "Senior React Engineer",\n      "aiScore": 4.8,\n      "pipelineStage": "Interview",\n      "skills": ["React", "TypeScript", "Node.js"]\n    }\n  ],\n  "total": 48,\n  "page": 1\n}`,
+    curlExample: `curl -X GET "https://api.bizzmitra.ai/v1/candidates?stage=Interview" \\\n  -H "Authorization: Bearer YOUR_API_KEY"`,
   },
   {
     method: "POST",
@@ -354,28 +349,9 @@ export const API_SPECIFICATIONS: ApiEndpointItem[] = [
     summary: "Create and score candidate profile with automatic resume parsing",
     auth: "Bearer JWT",
     category: "Recruitment",
-    requestBody: `{
-  "fullName": "Amit Verma",
-  "email": "amit.v@example.com",
-  "phone": "+91 98765 43210",
-  "role": "Full Stack Developer",
-  "skills": ["React", "Go", "PostgreSQL"],
-  "expectedCtc": "22 LPA",
-  "noticePeriod": "30 Days"
-}`,
-    responseBody: `{
-  "success": true,
-  "candidate": {
-    "id": "cnd_02k91zx",
-    "aiScore": 4.6,
-    "pipelineStage": "Screening",
-    "status": "Active"
-  }
-}`,
-    curlExample: `curl -X POST "https://api.bizzmitra.ai/v1/candidates" \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"fullName":"Amit Verma","email":"amit@example.com","role":"Full Stack Developer"}'`,
+    requestBody: `{\n  "fullName": "Amit Verma",\n  "email": "amit.v@example.com",\n  "role": "Full Stack Developer",\n  "skills": ["React", "Go", "PostgreSQL"],\n  "expectedCtc": "22 LPA",\n  "noticePeriod": "30 Days"\n}`,
+    responseBody: `{\n  "success": true,\n  "candidate": {\n    "id": "cnd_02k91zx",\n    "aiScore": 4.6,\n    "pipelineStage": "Screening",\n    "status": "Active"\n  }\n}`,
+    curlExample: `curl -X POST "https://api.bizzmitra.ai/v1/candidates" \\\n  -H "Authorization: Bearer YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"fullName":"Amit Verma","email":"amit@example.com","role":"Full Stack Developer"}'`,
   },
   {
     method: "PUT",
@@ -383,20 +359,9 @@ export const API_SPECIFICATIONS: ApiEndpointItem[] = [
     summary: "Transition candidate between Kanban pipeline stages with automated triggers",
     auth: "Bearer JWT",
     category: "Recruitment",
-    requestBody: `{
-  "pipelineStage": "Client Review",
-  "note": "AI match score 4.8 exceeds client threshold"
-}`,
-    responseBody: `{
-  "success": true,
-  "candidateId": "cnd_01j78ab",
-  "newStage": "Client Review",
-  "notificationSent": true
-}`,
-    curlExample: `curl -X PUT "https://api.bizzmitra.ai/v1/candidates/cnd_01j78ab/stage" \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"pipelineStage":"Client Review"}'`,
+    requestBody: `{\n  "pipelineStage": "Client Review",\n  "note": "AI match score 4.8 exceeds client threshold"\n}`,
+    responseBody: `{\n  "success": true,\n  "candidateId": "cnd_01j78ab",\n  "newStage": "Client Review",\n  "notificationSent": true\n}`,
+    curlExample: `curl -X PUT "https://api.bizzmitra.ai/v1/candidates/cnd_01j78ab/stage" \\\n  -H "Authorization: Bearer YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"pipelineStage":"Client Review"}'`,
   },
   {
     method: "POST",
@@ -404,21 +369,9 @@ export const API_SPECIFICATIONS: ApiEndpointItem[] = [
     summary: "Log real-time consultant punch in/out with geolocation and timestamp verification",
     auth: "Bearer JWT",
     category: "Operations",
-    requestBody: `{
-  "candidateId": "cnd_01j78ab",
-  "action": "punch_in",
-  "latitude": 28.6139,
-  "longitude": 77.2090
-}`,
-    responseBody: `{
-  "status": "active",
-  "punchInTime": "2026-09-12T09:00:00Z",
-  "verified": true
-}`,
-    curlExample: `curl -X POST "https://api.bizzmitra.ai/v1/attendance/punch" \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"candidateId":"cnd_01j78ab","action":"punch_in"}'`,
+    requestBody: `{\n  "candidateId": "cnd_01j78ab",\n  "action": "punch_in",\n  "latitude": 28.6139,\n  "longitude": 77.2090\n}`,
+    responseBody: `{\n  "status": "active",\n  "punchInTime": "2026-09-12T09:00:00Z",\n  "verified": true\n}`,
+    curlExample: `curl -X POST "https://api.bizzmitra.ai/v1/attendance/punch" \\\n  -H "Authorization: Bearer YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"candidateId":"cnd_01j78ab","action":"punch_in"}'`,
   },
   {
     method: "GET",
@@ -427,9 +380,7 @@ export const API_SPECIFICATIONS: ApiEndpointItem[] = [
     auth: "Bearer JWT",
     category: "Operations",
     responseBody: `[CSV attachment streamed with headers candidate_id, hours, date, client]`,
-    curlExample: `curl -X GET "https://api.bizzmitra.ai/v1/attendance/timesheets/export?month=2026-09" \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
-  --output timesheets-sept-2026.csv`,
+    curlExample: `curl -X GET "https://api.bizzmitra.ai/v1/attendance/timesheets/export?month=2026-09" \\\n  -H "Authorization: Bearer YOUR_API_KEY" \\\n  --output timesheets-sept-2026.csv`,
   },
   {
     method: "GET",
@@ -437,19 +388,811 @@ export const API_SPECIFICATIONS: ApiEndpointItem[] = [
     summary: "External client API to view shortlisted candidates ready for interview approval",
     auth: "Client Token",
     category: "Client Portal",
-    responseBody: `{
-  "client": "Nexus Enterprises",
-  "shortlists": [
-    {
-      "candidateId": "cnd_01j78ab",
-      "fullName": "Priya Sharma",
-      "role": "Senior React Engineer",
-      "aiScore": 4.8,
-      "interviewStatus": "Awaiting Approval"
-    }
-  ]
-}`,
-    curlExample: `curl -X GET "https://api.bizzmitra.ai/v1/client-portal/shortlists" \\
-  -H "X-Client-Token: client_live_8912739"`,
+    responseBody: `{\n  "client": "Nexus Enterprises",\n  "shortlists": [\n    {\n      "candidateId": "cnd_01j78ab",\n      "fullName": "Priya Sharma",\n      "role": "Senior React Engineer",\n      "aiScore": 4.8,\n      "interviewStatus": "Awaiting Approval"\n    }\n  ]\n}`,
+    curlExample: `curl -X GET "https://api.bizzmitra.ai/v1/client-portal/shortlists" \\\n  -H "X-Client-Token: client_live_8912739"`,
   },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. CLEAN TECH & SOLAR ENERGY
+// ─────────────────────────────────────────────────────────────────────────────
+export const SOLAR_DATABASE_TABLES: TableDef[] = [
+  {
+    id: "solar_plants",
+    name: "solar_plants",
+    description: "Utility and commercial solar installations with grid interconnect metadata.",
+    category: "core",
+    columns: [
+      { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Plant unique identifier" },
+      { name: "name", type: "VARCHAR(255)", constraints: "NOT NULL", description: "Facility legal name (e.g. Thar Desert Solar 1)" },
+      { name: "capacity_mw", type: "NUMERIC(8,2)", constraints: "NOT NULL", description: "Rated peak generation capacity in Megawatts" },
+      { name: "grid_operator", type: "VARCHAR(64)", constraints: "NOT NULL", description: "Regional grid interconnect entity (PJM, ISO-NE, etc.)" },
+      { name: "geo_latitude", type: "NUMERIC(9,6)", constraints: "NOT NULL", description: "Plant centroid latitude" },
+      { name: "geo_longitude", type: "NUMERIC(9,6)", constraints: "NOT NULL", description: "Plant centroid longitude" },
+      { name: "created_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Commissioning date" },
+    ],
+  },
+  {
+    id: "solar_inverters",
+    name: "solar_inverters",
+    description: "Inverter hardware assets tracking string voltage, rated KW, and firmware status.",
+    category: "telemetry",
+    columns: [
+      { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Inverter unique hardware ID" },
+      { name: "plant_id", type: "UUID", constraints: "REFERENCES solar_plants(id) ON DELETE CASCADE", description: "Associated solar facility" },
+      { name: "serial_number", type: "VARCHAR(64)", constraints: "UNIQUE NOT NULL", description: "Hardware manufacturer serial number" },
+      { name: "rated_kw", type: "NUMERIC(6,2)", constraints: "NOT NULL", description: "Rated inverter capacity in KW" },
+      { name: "status", type: "VARCHAR(32)", constraints: "DEFAULT 'Online'", description: "Status: Online, Warning, Tripped, Maintenance" },
+      { name: "firmware_version", type: "VARCHAR(32)", constraints: "NOT NULL", description: "Active firmware build with IEEE 1547 profile" },
+      { name: "last_ping_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Latest MQTT telemetry timestamp" },
+    ],
+  },
+  {
+    id: "inverter_telemetry",
+    name: "inverter_telemetry",
+    description: "High-frequency sub-second time-series hypertable tracking voltage, amps, and temp.",
+    category: "telemetry",
+    columns: [
+      { name: "time", type: "TIMESTAMPTZ", constraints: "NOT NULL", description: "Timestamp of reading (TimescaleDB partition key)" },
+      { name: "inverter_id", type: "UUID", constraints: "REFERENCES solar_inverters(id) ON DELETE CASCADE", description: "Source inverter" },
+      { name: "dc_voltage", type: "NUMERIC(6,2)", constraints: "NOT NULL", description: "Input direct current voltage" },
+      { name: "dc_amperage", type: "NUMERIC(6,2)", constraints: "NOT NULL", description: "Input direct current amperage" },
+      { name: "ac_power_kw", type: "NUMERIC(6,2)", constraints: "NOT NULL", description: "Output active grid power in KW" },
+      { name: "temp_celsius", type: "NUMERIC(5,2)", constraints: "NOT NULL", description: "Internal heatsink temperature" },
+      { name: "efficiency_pct", type: "NUMERIC(4,2)", constraints: "NOT NULL", description: "DC to AC conversion efficiency ratio" },
+    ],
+  },
+  {
+    id: "arc_fault_incidents",
+    name: "arc_fault_incidents",
+    description: "AI-tripped thermal and micro-arc safety incidents requiring field intervention.",
+    category: "operations",
+    columns: [
+      { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Incident tracking ID" },
+      { name: "inverter_id", type: "UUID", constraints: "REFERENCES solar_inverters(id) ON DELETE CASCADE", description: "Affected inverter" },
+      { name: "severity", type: "VARCHAR(32)", constraints: "NOT NULL", description: "Critical, High, Medium, Low" },
+      { name: "peak_temp_celsius", type: "NUMERIC(5,2)", constraints: "NOT NULL", description: "Maximum temperature reached during runaway" },
+      { name: "auto_isolated", type: "BOOLEAN", constraints: "DEFAULT TRUE", description: "Whether breaker tripped automatically" },
+      { name: "detected_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Detection timestamp" },
+      { name: "resolved_at", type: "TIMESTAMPTZ", constraints: "NULL", description: "Field resolution timestamp" },
+    ],
+  },
+  {
+    id: "field_work_orders",
+    name: "field_work_orders",
+    description: "PWA work orders dispatched to technicians with geofenced mobile navigation.",
+    category: "operations",
+    columns: [
+      { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Work order ID" },
+      { name: "incident_id", type: "UUID", constraints: "REFERENCES arc_fault_incidents(id) ON DELETE CASCADE", description: "Triggering incident" },
+      { name: "technician_name", type: "VARCHAR(128)", constraints: "NOT NULL", description: "Assigned field engineer" },
+      { name: "replacement_part_sku", type: "VARCHAR(64)", constraints: "NULL", description: "Replaced diode / PCB module SKU" },
+      { name: "bluetooth_verified", type: "BOOLEAN", constraints: "DEFAULT FALSE", description: "On-site Bluetooth diagnostic pass handshake" },
+      { name: "dispatched_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Dispatch timestamp" },
+      { name: "completed_at", type: "TIMESTAMPTZ", constraints: "NULL", description: "Completion timestamp" },
+    ],
+  },
+];
+
+export const SOLAR_DDL_SCHEMA = `-- ==========================================================
+-- SolarPulse Clean Tech PostgreSQL 16+ TimescaleDB Schema
+-- ==========================================================
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- 1. Solar Plants
+CREATE TABLE IF NOT EXISTS solar_plants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    capacity_mw NUMERIC(8, 2) NOT NULL,
+    grid_operator VARCHAR(64) NOT NULL,
+    geo_latitude NUMERIC(9, 6) NOT NULL,
+    geo_longitude NUMERIC(9, 6) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2. Inverters
+CREATE TABLE IF NOT EXISTS solar_inverters (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plant_id UUID NOT NULL REFERENCES solar_plants(id) ON DELETE CASCADE,
+    serial_number VARCHAR(64) UNIQUE NOT NULL,
+    rated_kw NUMERIC(6, 2) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'Online',
+    firmware_version VARCHAR(32) NOT NULL,
+    last_ping_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 3. Telemetry Time-Series Hypertable
+CREATE TABLE IF NOT EXISTS inverter_telemetry (
+    time TIMESTAMPTZ NOT NULL,
+    inverter_id UUID NOT NULL REFERENCES solar_inverters(id) ON DELETE CASCADE,
+    dc_voltage NUMERIC(6, 2) NOT NULL,
+    dc_amperage NUMERIC(6, 2) NOT NULL,
+    ac_power_kw NUMERIC(6, 2) NOT NULL,
+    temp_celsius NUMERIC(5, 2) NOT NULL,
+    efficiency_pct NUMERIC(4, 2) NOT NULL
+);
+
+-- 4. Arc Fault Incidents
+CREATE TABLE IF NOT EXISTS arc_fault_incidents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    inverter_id UUID NOT NULL REFERENCES solar_inverters(id) ON DELETE CASCADE,
+    severity VARCHAR(32) NOT NULL,
+    peak_temp_celsius NUMERIC(5, 2) NOT NULL,
+    auto_isolated BOOLEAN NOT NULL DEFAULT TRUE,
+    detected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
+);
+
+-- 5. Field Work Orders
+CREATE TABLE IF NOT EXISTS field_work_orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    incident_id UUID NOT NULL REFERENCES arc_fault_incidents(id) ON DELETE CASCADE,
+    technician_name VARCHAR(128) NOT NULL,
+    replacement_part_sku VARCHAR(64),
+    bluetooth_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    dispatched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_telemetry_inverter_time ON inverter_telemetry(inverter_id, time DESC);
+CREATE INDEX IF NOT EXISTS idx_incidents_active ON arc_fault_incidents(resolved_at) WHERE resolved_at IS NULL;
+`;
+
+export const SOLAR_ERD_DIAGRAM = `erDiagram
+    SOLAR_PLANTS ||--o{ SOLAR_INVERTERS : "monitors"
+    SOLAR_INVERTERS ||--o{ INVERTER_TELEMETRY : "streams"
+    SOLAR_INVERTERS ||--o{ ARC_FAULT_INCIDENTS : "triggers"
+    ARC_FAULT_INCIDENTS ||--o{ FIELD_WORK_ORDERS : "dispatches"
+
+    SOLAR_PLANTS {
+        uuid id PK
+        string name
+        numeric capacity_mw
+        string grid_operator
+        numeric geo_latitude
+        numeric geo_longitude
+    }
+
+    SOLAR_INVERTERS {
+        uuid id PK
+        uuid plant_id FK
+        string serial_number UK
+        numeric rated_kw
+        string status
+        string firmware_version
+    }
+
+    INVERTER_TELEMETRY {
+        timestamptz time
+        uuid inverter_id FK
+        numeric dc_voltage
+        numeric dc_amperage
+        numeric ac_power_kw
+        numeric temp_celsius
+        numeric efficiency_pct
+    }
+
+    ARC_FAULT_INCIDENTS {
+        uuid id PK
+        uuid inverter_id FK
+        string severity
+        numeric peak_temp_celsius
+        boolean auto_isolated
+        timestamptz detected_at
+    }
+
+    FIELD_WORK_ORDERS {
+        uuid id PK
+        uuid incident_id FK
+        string technician_name
+        string replacement_part_sku
+        boolean bluetooth_verified
+        timestamptz dispatched_at
+    }
+`;
+
+export const SOLAR_API_SPECIFICATIONS: ApiEndpointItem[] = [
+  {
+    method: "GET",
+    path: "/api/v1/inverters/telemetry/live",
+    summary: "High-frequency telemetry stream of live voltage, temperature & harmonic yield",
+    auth: "X-Device-Cert mTLS",
+    category: "Telemetry",
+    responseBody: `{\n  "inverterId": "inv_04_north",\n  "voltage": 542.4,\n  "amperage": 18.2,\n  "tempCelsius": 52.4,\n  "efficiency": 98.6,\n  "status": "Nominal"\n}`,
+    curlExample: `curl -X GET "https://api.bizzmitra.ai/v1/inverters/telemetry/live" \\\n  -H "X-Device-Token: inv_live_491823"`,
+  },
+  {
+    method: "POST",
+    path: "/api/v1/inverters/{id}/trip-breaker",
+    summary: "Safety emergency breaker trip to isolate overheating inverter array in < 50ms",
+    auth: "Operator JWT",
+    category: "Safety Control",
+    requestBody: `{\n  "reason": "Thermal spike above 75C detected by AI"\n}`,
+    responseBody: `{\n  "success": true,\n  "isolated": true,\n  "breakerTrippedAt": "2026-09-22T14:22:04Z"\n}`,
+    curlExample: `curl -X POST "https://api.bizzmitra.ai/v1/inverters/inv_04/trip-breaker" \\\n  -H "Authorization: Bearer OPERATOR_KEY"`,
+  },
+  {
+    method: "POST",
+    path: "/api/v1/work-orders/dispatch",
+    summary: "Dispatch geofenced technician PWA with turn-by-turn navigation & replacement SKU",
+    auth: "Operator JWT",
+    category: "Operations",
+    requestBody: `{\n  "incidentId": "inc_9012",\n  "technicianId": "tech_vikram_p",\n  "priority": "Critical"\n}`,
+    responseBody: `{\n  "workOrderId": "wo_48129",\n  "status": "Dispatched",\n  "technicianEtaMins": 8\n}`,
+    curlExample: `curl -X POST "https://api.bizzmitra.ai/v1/work-orders/dispatch" \\\n  -H "Authorization: Bearer OPERATOR_KEY" \\\n  -d '{"incidentId":"inc_9012"}'`,
+  },
+  {
+    method: "GET",
+    path: "/api/v1/grid/generation-yield",
+    summary: "Hourly MWh export generation records for ISO-NE / PJM settlement",
+    auth: "Grid Token",
+    category: "Compliance",
+    responseBody: `{\n  "dailyYieldMwh": 38.4,\n  "curtailmentLoss": 0.8,\n  "settlementInr": 428000\n}`,
+    curlExample: `curl -X GET "https://api.bizzmitra.ai/v1/grid/generation-yield" \\\n  -H "X-Grid-Token: pjm_audit_token"`,
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. HEALTHCARE & CLINICAL DIAGNOSTICS
+// ─────────────────────────────────────────────────────────────────────────────
+export const HEALTHCARE_DATABASE_TABLES: TableDef[] = [
+  {
+    id: "medical_organizations",
+    name: "medical_organizations",
+    description: "Multi-facility diagnostic hospital and clinical pathology network nodes.",
+    category: "core",
+    columns: [
+      { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Facility identifier" },
+      { name: "name", type: "VARCHAR(255)", constraints: "NOT NULL", description: "Clinical organization name" },
+      { name: "nabl_license_code", type: "VARCHAR(64)", constraints: "UNIQUE NOT NULL", description: "National accreditation laboratory ID" },
+      { name: "hipaa_tier", type: "VARCHAR(32)", constraints: "DEFAULT 'Strict'", description: "PHI compliance level" },
+      { name: "created_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Record creation timestamp" },
+    ],
+  },
+  {
+    id: "patients",
+    name: "patients",
+    description: "Encrypted patient identity records with Medical Record Numbers (MRN).",
+    category: "clinical",
+    columns: [
+      { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Unique patient ID" },
+      { name: "mrn", type: "VARCHAR(64)", constraints: "UNIQUE NOT NULL", description: "Hospital Medical Record Number" },
+      { name: "full_name_encrypted", type: "BYTEA", constraints: "NOT NULL", description: "KMS encrypted patient legal name" },
+      { name: "dob", type: "DATE", constraints: "NOT NULL", description: "Date of birth for demographic baseline" },
+      { name: "blood_group", type: "VARCHAR(8)", constraints: "NULL", description: "Blood type ABO / Rh" },
+      { name: "created_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Registration timestamp" },
+    ],
+  },
+  {
+    id: "lab_specimens",
+    name: "lab_specimens",
+    description: "Blood and tissue vials with 2D barcode chain-of-custody tracking.",
+    category: "clinical",
+    columns: [
+      { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Specimen tube ID" },
+      { name: "patient_id", type: "UUID", constraints: "REFERENCES patients(id) ON DELETE CASCADE", description: "Patient foreign key" },
+      { name: "barcode_hash", type: "VARCHAR(64)", constraints: "UNIQUE NOT NULL", description: "2D Barcode thermal scan hash" },
+      { name: "tube_type", type: "VARCHAR(64)", constraints: "NOT NULL", description: "EDTA Lavender, SST Gold, Heparin Green" },
+      { name: "draw_time", type: "TIMESTAMPTZ", constraints: "NOT NULL", description: "Bedside phlebotomy draw timestamp" },
+      { name: "status", type: "VARCHAR(32)", constraints: "DEFAULT 'Drawn'", description: "Drawn, Centrifuged, Analyzing, Completed" },
+    ],
+  },
+  {
+    id: "critical_panic_results",
+    name: "critical_panic_results",
+    description: "Life-threatening lab values requiring mandatory sub-2-minute doctor callback.",
+    category: "clinical",
+    columns: [
+      { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Panic alert ID" },
+      { name: "specimen_id", type: "UUID", constraints: "REFERENCES lab_specimens(id) ON DELETE CASCADE", description: "Source blood vial" },
+      { name: "analyte_name", type: "VARCHAR(64)", constraints: "NOT NULL", description: "Hemoglobin, Potassium, Platelet Count" },
+      { name: "observed_value", type: "NUMERIC(8,2)", constraints: "NOT NULL", description: "Critical laboratory reading" },
+      { name: "panic_threshold", type: "VARCHAR(64)", constraints: "NOT NULL", description: "Panic lower/upper limit threshold" },
+      { name: "physician_paged_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "SMS / App page timestamp" },
+      { name: "acknowledged_at", type: "TIMESTAMPTZ", constraints: "NULL", description: "Doctor PIN read-receipt timestamp" },
+    ],
+  },
+  {
+    id: "clinical_audit_trails",
+    name: "clinical_audit_trails",
+    description: "Immutable 7-year audit ledger for HIPAA, CAP, and medical malpractice defense.",
+    category: "security",
+    columns: [
+      { name: "id", type: "BIGSERIAL", constraints: "PRIMARY KEY", description: "Monotonically increasing sequence ID" },
+      { name: "clinician_id", type: "UUID", constraints: "NOT NULL", description: "Viewing or signing doctor ID" },
+      { name: "patient_id", type: "UUID", constraints: "NOT NULL", description: "Accessed patient record" },
+      { name: "action", type: "VARCHAR(64)", constraints: "NOT NULL", description: "VIEW_CHART, PANIC_ACK, FINAL_SIGN" },
+      { name: "ip_address", type: "INET", constraints: "NULL", description: "Hospital network endpoint IP" },
+      { name: "created_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Immutable audit timestamp" },
+    ],
+  },
+];
+
+export const HEALTHCARE_DDL_SCHEMA = `-- ==========================================================
+-- MedPulse HIPAA Compliant PostgreSQL 16+ Clinical Schema
+-- ==========================================================
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TABLE IF NOT EXISTS medical_organizations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    nabl_license_code VARCHAR(64) UNIQUE NOT NULL,
+    hipaa_tier VARCHAR(32) NOT NULL DEFAULT 'Strict',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS patients (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mrn VARCHAR(64) UNIQUE NOT NULL,
+    full_name_encrypted BYTEA NOT NULL,
+    dob DATE NOT NULL,
+    blood_group VARCHAR(8),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS lab_specimens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    barcode_hash VARCHAR(64) UNIQUE NOT NULL,
+    tube_type VARCHAR(64) NOT NULL,
+    draw_time TIMESTAMPTZ NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'Drawn'
+);
+
+CREATE TABLE IF NOT EXISTS critical_panic_results (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    specimen_id UUID NOT NULL REFERENCES lab_specimens(id) ON DELETE CASCADE,
+    analyte_name VARCHAR(64) NOT NULL,
+    observed_value NUMERIC(8, 2) NOT NULL,
+    panic_threshold VARCHAR(64) NOT NULL,
+    physician_paged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    acknowledged_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS clinical_audit_trails (
+    id BIGSERIAL PRIMARY KEY,
+    clinician_id UUID NOT NULL,
+    patient_id UUID NOT NULL,
+    action VARCHAR(64) NOT NULL,
+    ip_address INET,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_specimens_barcode ON lab_specimens(barcode_hash);
+CREATE INDEX IF NOT EXISTS idx_panic_unack ON critical_panic_results(acknowledged_at) WHERE acknowledged_at IS NULL;
+`;
+
+export const HEALTHCARE_ERD_DIAGRAM = `erDiagram
+    PATIENTS ||--o{ LAB_SPECIMENS : "yields"
+    LAB_SPECIMENS ||--o{ CRITICAL_PANIC_RESULTS : "triggers"
+    PATIENTS ||--o{ CLINICAL_AUDIT_TRAILS : "protects"
+
+    PATIENTS {
+        uuid id PK
+        string mrn UK
+        date dob
+        string blood_group
+    }
+
+    LAB_SPECIMENS {
+        uuid id PK
+        uuid patient_id FK
+        string barcode_hash UK
+        string tube_type
+        timestamptz draw_time
+        string status
+    }
+
+    CRITICAL_PANIC_RESULTS {
+        uuid id PK
+        uuid specimen_id FK
+        string analyte_name
+        numeric observed_value
+        string panic_threshold
+        timestamptz physician_paged_at
+        timestamptz acknowledged_at
+    }
+
+    CLINICAL_AUDIT_TRAILS {
+        bigserial id PK
+        uuid clinician_id
+        uuid patient_id FK
+        string action
+        timestamptz created_at
+    }
+`;
+
+export const HEALTHCARE_API_SPECIFICATIONS: ApiEndpointItem[] = [
+  {
+    method: "POST",
+    path: "/api/v1/specimens/scan",
+    summary: "Bedside 2D barcode thermal optical scan chain-of-custody verification",
+    auth: "Bearer Clinician JWT",
+    category: "Specimen Ingestion",
+    requestBody: `{\n  "barcodeHash": "BC-9021-SPEC",\n  "tubeType": "EDTA Lavender",\n  "patientMrn": "MRN-8812"\n}`,
+    responseBody: `{\n  "specimenId": "spc_8812",\n  "verified": true,\n  "status": "Centrifuge Queued"\n}`,
+    curlExample: `curl -X POST "https://api.bizzmitra.ai/v1/specimens/scan" \\\n  -H "Authorization: Bearer NURSE_TOKEN"`,
+  },
+  {
+    method: "GET",
+    path: "/api/v1/panic-alerts/active",
+    summary: "Active unacknowledged life-threatening laboratory panic alerts",
+    auth: "Bearer Doctor JWT",
+    category: "Panic Dispatch",
+    responseBody: `{\n  "alerts": [\n    {\n      "alertId": "pnc_102",\n      "analyte": "Hemoglobin",\n      "value": 5.4,\n      "unit": "g/dL",\n      "patient": "Jane Doe (Bed 402)",\n      "elapsedSeconds": 34\n    }\n  ]\n}`,
+    curlExample: `curl -X GET "https://api.bizzmitra.ai/v1/panic-alerts/active" \\\n  -H "Authorization: Bearer DOCTOR_TOKEN"`,
+  },
+  {
+    method: "POST",
+    path: "/api/v1/panic-alerts/{id}/ack",
+    summary: "Physician 1-tap PIN acknowledgment locking regulatory HIPAA audit trail",
+    auth: "Bearer Doctor JWT",
+    category: "Panic Dispatch",
+    requestBody: `{\n  "pinHash": "e3b0c44298fc1c149afb",\n  "actionTaken": "Blood transfusion ordered stat"\n}`,
+    responseBody: `{\n  "success": true,\n  "acknowledgedAt": "2026-09-22T14:28:10Z"\n}`,
+    curlExample: `curl -X POST "https://api.bizzmitra.ai/v1/panic-alerts/pnc_102/ack" \\\n  -H "Authorization: Bearer DOCTOR_TOKEN"`,
+  },
+  {
+    method: "GET",
+    path: "/api/v1/fhir/v4/Observation",
+    summary: "Bidirectional HL7 / FHIR v4 Observation endpoint for hospital EMR integration",
+    auth: "Mutual TLS",
+    category: "EMR Integration",
+    responseBody: `{\n  "resourceType": "Observation",\n  "id": "obs-9021",\n  "status": "final",\n  "code": {\n    "text": "Platelet Count"\n  },\n  "valueQuantity": {\n    "value": 142000,\n    "unit": "/uL"\n  }\n}`,
+    curlExample: `curl -X GET "https://api.bizzmitra.ai/v1/fhir/v4/Observation?patient=MRN-8812" \\\n  --cert client-cert.pem --key client-key.pem`,
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. LOGISTICS, FLEET & SUPPLY CHAIN
+// ─────────────────────────────────────────────────────────────────────────────
+export const LOGISTICS_DATABASE_TABLES: TableDef[] = [
+  {
+    id: "carrier_fleets",
+    name: "carrier_fleets",
+    description: "Commercial logistics carrier accounts with DOT license compliance.",
+    category: "core",
+    columns: [
+      { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Fleet account ID" },
+      { name: "company_name", type: "VARCHAR(255)", constraints: "NOT NULL", description: "Commercial fleet operator name" },
+      { name: "dot_license_number", type: "VARCHAR(64)", constraints: "UNIQUE NOT NULL", description: "Department of Transportation registration" },
+      { name: "active_trucks", type: "INTEGER", constraints: "DEFAULT 0", description: "Count of actively assigned commercial vehicles" },
+      { name: "created_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Fleet creation timestamp" },
+    ],
+  },
+  {
+    id: "fleet_vehicles",
+    name: "fleet_vehicles",
+    description: "Heavy trucks, medium freighters, and reefer vehicles with telemetry status.",
+    category: "telemetry",
+    columns: [
+      { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Vehicle unique ID" },
+      { name: "fleet_id", type: "UUID", constraints: "REFERENCES carrier_fleets(id) ON DELETE CASCADE", description: "Parent carrier fleet" },
+      { name: "license_plate", type: "VARCHAR(32)", constraints: "UNIQUE NOT NULL", description: "Vehicle registration plate" },
+      { name: "vin", type: "VARCHAR(64)", constraints: "UNIQUE NOT NULL", description: "Vehicle Identification Number" },
+      { name: "vehicle_class", type: "VARCHAR(32)", constraints: "NOT NULL", description: "32T Multi-Axle, 16T Freight, Reefer Cold-Chain" },
+      { name: "is_cold_chain", type: "BOOLEAN", constraints: "DEFAULT FALSE", description: "Whether vehicle possesses refrigerated cargo sensors" },
+      { name: "status", type: "VARCHAR(32)", constraints: "DEFAULT 'En-Route'", description: "Staged, En-Route, At-Dock, Maintenance" },
+    ],
+  },
+  {
+    id: "telematics_pings",
+    name: "telematics_pings",
+    description: "Sub-second GPS coordinates streaming into Redis Geo and PostGIS R-tree stores.",
+    category: "telemetry",
+    columns: [
+      { name: "time", type: "TIMESTAMPTZ", constraints: "NOT NULL", description: "Ping timestamp" },
+      { name: "vehicle_id", type: "UUID", constraints: "REFERENCES fleet_vehicles(id) ON DELETE CASCADE", description: "Source vehicle" },
+      { name: "latitude", type: "NUMERIC(9,6)", constraints: "NOT NULL", description: "GPS latitude coordinate" },
+      { name: "longitude", type: "NUMERIC(9,6)", constraints: "NOT NULL", description: "GPS longitude coordinate" },
+      { name: "speed_kmh", type: "NUMERIC(5,2)", constraints: "NOT NULL", description: "Vehicle speed in km/h" },
+      { name: "engine_temp", type: "NUMERIC(5,2)", constraints: "NULL", description: "Engine coolant temperature" },
+    ],
+  },
+  {
+    id: "delivery_manifests",
+    name: "delivery_manifests",
+    description: "Multi-stop delivery routes optimized via Travelling Salesperson AI solvers.",
+    category: "operations",
+    columns: [
+      { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Manifest unique ID" },
+      { name: "vehicle_id", type: "UUID", constraints: "REFERENCES fleet_vehicles(id) ON DELETE CASCADE", description: "Assigned vehicle" },
+      { name: "driver_name", type: "VARCHAR(128)", constraints: "NOT NULL", description: "Assigned commercial driver" },
+      { name: "origin_depot", type: "VARCHAR(128)", constraints: "NOT NULL", description: "Origin loading warehouse" },
+      { name: "destination_dock", type: "VARCHAR(128)", constraints: "NOT NULL", description: "Target receiving facility" },
+      { name: "total_stops", type: "INTEGER", constraints: "DEFAULT 1", description: "Optimized stop count" },
+      { name: "status", type: "VARCHAR(32)", constraints: "DEFAULT 'In-Transit'", description: "Staged, In-Transit, Geofenced, Delivered" },
+      { name: "created_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Manifest dispatch timestamp" },
+    ],
+  },
+  {
+    id: "proof_of_delivery",
+    name: "proof_of_delivery",
+    description: "Glass digital signatures, photo proof, and geotagged drop-off verification.",
+    category: "operations",
+    columns: [
+      { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "POD ID" },
+      { name: "manifest_id", type: "UUID", constraints: "REFERENCES delivery_manifests(id) ON DELETE CASCADE", description: "Associated manifest" },
+      { name: "signee_name", type: "VARCHAR(128)", constraints: "NOT NULL", description: "Receiving dock manager name" },
+      { name: "signature_s3_url", type: "TEXT", constraints: "NOT NULL", description: "S3 URL of digital signature" },
+      { name: "geo_latitude", type: "NUMERIC(9,6)", constraints: "NOT NULL", description: "Geotag latitude at drop-off" },
+      { name: "geo_longitude", type: "NUMERIC(9,6)", constraints: "NOT NULL", description: "Geotag longitude at drop-off" },
+      { name: "verified_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Sign-off timestamp" },
+    ],
+  },
+];
+
+export const LOGISTICS_DDL_SCHEMA = `-- ==========================================================
+-- LogiTrack Fleet Telematics PostGIS PostgreSQL 16+ Schema
+-- ==========================================================
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "postgis";
+
+CREATE TABLE IF NOT EXISTS carrier_fleets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_name VARCHAR(255) NOT NULL,
+    dot_license_number VARCHAR(64) UNIQUE NOT NULL,
+    active_trucks INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS fleet_vehicles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    fleet_id UUID NOT NULL REFERENCES carrier_fleets(id) ON DELETE CASCADE,
+    license_plate VARCHAR(32) UNIQUE NOT NULL,
+    vin VARCHAR(64) UNIQUE NOT NULL,
+    vehicle_class VARCHAR(32) NOT NULL,
+    is_cold_chain BOOLEAN NOT NULL DEFAULT FALSE,
+    status VARCHAR(32) NOT NULL DEFAULT 'En-Route'
+);
+
+CREATE TABLE IF NOT EXISTS telematics_pings (
+    time TIMESTAMPTZ NOT NULL,
+    vehicle_id UUID NOT NULL REFERENCES fleet_vehicles(id) ON DELETE CASCADE,
+    latitude NUMERIC(9, 6) NOT NULL,
+    longitude NUMERIC(9, 6) NOT NULL,
+    speed_kmh NUMERIC(5, 2) NOT NULL,
+    engine_temp NUMERIC(5, 2)
+);
+
+CREATE TABLE IF NOT EXISTS delivery_manifests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    vehicle_id UUID NOT NULL REFERENCES fleet_vehicles(id) ON DELETE CASCADE,
+    driver_name VARCHAR(128) NOT NULL,
+    origin_depot VARCHAR(128) NOT NULL,
+    destination_dock VARCHAR(128) NOT NULL,
+    total_stops INTEGER NOT NULL DEFAULT 1,
+    status VARCHAR(32) NOT NULL DEFAULT 'In-Transit',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS proof_of_delivery (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    manifest_id UUID NOT NULL REFERENCES delivery_manifests(id) ON DELETE CASCADE,
+    signee_name VARCHAR(128) NOT NULL,
+    signature_s3_url TEXT NOT NULL,
+    geo_latitude NUMERIC(9, 6) NOT NULL,
+    geo_longitude NUMERIC(9, 6) NOT NULL,
+    verified_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_telematics_pings ON telematics_pings(vehicle_id, time DESC);
+CREATE INDEX IF NOT EXISTS idx_manifests_active ON delivery_manifests(status) WHERE status != 'Delivered';
+`;
+
+export const LOGISTICS_ERD_DIAGRAM = `erDiagram
+    CARRIER_FLEETS ||--o{ FLEET_VEHICLES : "operates"
+    FLEET_VEHICLES ||--o{ TELEMATICS_PINGS : "emits"
+    FLEET_VEHICLES ||--o{ DELIVERY_MANIFESTS : "carries"
+    DELIVERY_MANIFESTS ||--o{ PROOF_OF_DELIVERY : "finalized by"
+
+    CARRIER_FLEETS {
+        uuid id PK
+        string company_name
+        string dot_license_number UK
+        integer active_trucks
+    }
+
+    FLEET_VEHICLES {
+        uuid id PK
+        uuid fleet_id FK
+        string license_plate UK
+        string vin UK
+        string vehicle_class
+        boolean is_cold_chain
+        string status
+    }
+
+    TELEMATICS_PINGS {
+        timestamptz time
+        uuid vehicle_id FK
+        numeric latitude
+        numeric longitude
+        numeric speed_kmh
+    }
+
+    DELIVERY_MANIFESTS {
+        uuid id PK
+        uuid vehicle_id FK
+        string driver_name
+        string origin_depot
+        string destination_dock
+        string status
+    }
+
+    PROOF_OF_DELIVERY {
+        uuid id PK
+        uuid manifest_id FK
+        string signee_name
+        string signature_s3_url
+        numeric geo_latitude
+        numeric geo_longitude
+        timestamptz verified_at
+    }
+`;
+
+export const LOGISTICS_API_SPECIFICATIONS: ApiEndpointItem[] = [
+  {
+    method: "POST",
+    path: "/api/v1/telematics/ping",
+    summary: "High-throughput GPS telemetry ingestion (100k packets/min buffered via Kafka)",
+    auth: "Device HMAC",
+    category: "Telemetry",
+    requestBody: `{\n  "vehicleId": "veh_trk_402",\n  "latitude": 18.5204,\n  "longitude": 73.8567,\n  "speedKmh": 58.4,\n  "engineTemp": 88.2\n}`,
+    responseBody: `{\n  "acknowledged": true,\n  "geofenceEvaluated": true,\n  "proximityEtaMins": 4\n}`,
+    curlExample: `curl -X POST "https://api.bizzmitra.ai/v1/telematics/ping" \\\n  -H "X-Device-Signature: hmac_sha256_hash" \\\n  -d '{"vehicleId":"veh_trk_402","latitude":18.52,"longitude":73.85}'`,
+  },
+  {
+    method: "GET",
+    path: "/api/v1/fleet/live-positions",
+    summary: "Sub-millisecond Redis GeoSpatial query of active truck coordinates for Mapbox",
+    auth: "Dispatcher JWT",
+    category: "Fleet Dispatch",
+    responseBody: `{\n  "activeCount": 148,\n  "vehicles": [\n    {\n      "id": "veh_trk_402",\n      "driver": "Rajesh Kumar",\n      "lat": 18.5204,\n      "lng": 73.8567,\n      "status": "Geofenced Dock 4"\n    }\n  ]\n}`,
+    curlExample: `curl -X GET "https://api.bizzmitra.ai/v1/fleet/live-positions" \\\n  -H "Authorization: Bearer DISPATCHER_KEY"`,
+  },
+  {
+    method: "POST",
+    path: "/api/v1/routes/optimize-stops",
+    summary: "Multi-stop Travelling Salesperson route optimization solver with real-time traffic",
+    auth: "Dispatcher JWT",
+    category: "Route Solvers",
+    requestBody: `{\n  "stops": 18,\n  "vehicleCapacityKg": 16000,\n  "avoidExpresswayTolls": false\n}`,
+    responseBody: `{\n  "optimizedRouteKm": 384.2,\n  "estimatedHours": 6.4,\n  "fuelSavedLiters": 42.8\n}`,
+    curlExample: `curl -X POST "https://api.bizzmitra.ai/v1/routes/optimize-stops" \\\n  -H "Authorization: Bearer DISPATCHER_KEY"`,
+  },
+  {
+    method: "POST",
+    path: "/api/v1/manifests/{id}/pod",
+    summary: "Upload glass-signature proof of delivery with GPS geotag and automated invoice generation",
+    auth: "Driver PWA JWT",
+    category: "Proof of Delivery",
+    requestBody: `{\n  "signeeName": "Vikram Patel",\n  "signatureBase64": "data:image/png;base64,...",\n  "latitude": 18.5204,\n  "longitude": 73.8567\n}`,
+    responseBody: `{\n  "podId": "pod_88129",\n  "verified": true,\n  "invoiceDispatched": true\n}`,
+    curlExample: `curl -X POST "https://api.bizzmitra.ai/v1/manifests/man_8821/pod" \\\n  -H "Authorization: Bearer DRIVER_KEY"`,
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLUEPRINT FACTORY FOR ANY PROBLEM INTAKE
+// ─────────────────────────────────────────────────────────────────────────────
+export function getDatabaseBlueprint(context?: {
+  businessName?: string;
+  industry?: string;
+  problemStatement?: string;
+}): DatabaseBlueprint {
+  const combined = `${context?.industry || ""} ${context?.problemStatement || ""} ${context?.businessName || ""}`.toLowerCase();
+  const name = context?.businessName?.trim() || "Enterprise";
+
+  // 1. Clean Tech & Solar
+  if (
+    combined.includes("solar") ||
+    combined.includes("clean tech") ||
+    combined.includes("renewable") ||
+    combined.includes("energy") ||
+    combined.includes("inverter") ||
+    combined.includes("photovoltaic") ||
+    combined.includes("grid")
+  ) {
+    return {
+      domainId: "solar",
+      domainTitle: `${name} — Clean Tech & Solar Database Architecture`,
+      tables: SOLAR_DATABASE_TABLES,
+      erdDiagram: SOLAR_ERD_DIAGRAM,
+      ddlSchema: SOLAR_DDL_SCHEMA,
+      apiCategories: ["All", "Telemetry", "Safety Control", "Operations", "Compliance"],
+      apiSpecifications: SOLAR_API_SPECIFICATIONS,
+      metrics: {
+        tableCount: `${SOLAR_DATABASE_TABLES.length} Entities`,
+        apiCount: `${SOLAR_API_SPECIFICATIONS.length} Routes`,
+        multiTenancy: "Plant Isolated",
+        compliance: "IEEE 1547 / ISO-NE",
+      },
+    };
+  }
+
+  // 2. Healthcare & Diagnostic Lab
+  if (
+    combined.includes("health") ||
+    combined.includes("clinic") ||
+    combined.includes("hospital") ||
+    combined.includes("medical") ||
+    combined.includes("lab") ||
+    combined.includes("doctor") ||
+    combined.includes("patient") ||
+    combined.includes("diagnostic") ||
+    combined.includes("pathology")
+  ) {
+    return {
+      domainId: "healthcare",
+      domainTitle: `${name} — Clinical Diagnostics & LIS Data Architecture`,
+      tables: HEALTHCARE_DATABASE_TABLES,
+      erdDiagram: HEALTHCARE_ERD_DIAGRAM,
+      ddlSchema: HEALTHCARE_DDL_SCHEMA,
+      apiCategories: ["All", "Specimen Ingestion", "Panic Dispatch", "EMR Integration"],
+      apiSpecifications: HEALTHCARE_API_SPECIFICATIONS,
+      metrics: {
+        tableCount: `${HEALTHCARE_DATABASE_TABLES.length} Entities`,
+        apiCount: `${HEALTHCARE_API_SPECIFICATIONS.length} Routes`,
+        multiTenancy: "HIPAA Zero-Trust",
+        compliance: "HL7 v4 / CAP NABL",
+      },
+    };
+  }
+
+  // 3. Logistics, Fleet & Supply Chain
+  if (
+    combined.includes("logistics") ||
+    combined.includes("fleet") ||
+    combined.includes("delivery") ||
+    combined.includes("truck") ||
+    combined.includes("dispatch") ||
+    combined.includes("transport") ||
+    combined.includes("freight") ||
+    combined.includes("cargo") ||
+    combined.includes("warehouse") ||
+    combined.includes("supply chain")
+  ) {
+    return {
+      domainId: "logistics",
+      domainTitle: `${name} — Fleet Dispatch & Telematics Data Architecture`,
+      tables: LOGISTICS_DATABASE_TABLES,
+      erdDiagram: LOGISTICS_ERD_DIAGRAM,
+      ddlSchema: LOGISTICS_DDL_SCHEMA,
+      apiCategories: ["All", "Telemetry", "Fleet Dispatch", "Route Solvers", "Proof of Delivery"],
+      apiSpecifications: LOGISTICS_API_SPECIFICATIONS,
+      metrics: {
+        tableCount: `${LOGISTICS_DATABASE_TABLES.length} Entities`,
+        apiCount: `${LOGISTICS_API_SPECIFICATIONS.length} Routes`,
+        multiTenancy: "Carrier Isolated",
+        compliance: "DOT / PostGIS Spatial",
+      },
+    };
+  }
+
+  // 4. Default: HR & Recruitment
+  return {
+    domainId: "hr",
+    domainTitle: `${name} — Multi-Tenant Recruitment Data Architecture`,
+    tables: HR_DATABASE_TABLES,
+    erdDiagram: HR_ERD_DIAGRAM,
+    ddlSchema: HR_DDL_SCHEMA,
+    apiCategories: ["All", "Recruitment", "Operations", "Client Portal"],
+    apiSpecifications: HR_API_SPECIFICATIONS,
+    metrics: {
+      tableCount: `${HR_DATABASE_TABLES.length} Entities`,
+      apiCount: `${HR_API_SPECIFICATIONS.length} Routes`,
+      multiTenancy: "org_id RLS",
+      compliance: "SOC 2 / GDPR",
+    },
+  };
+}
+
+// Backward-compatible exports
+export const DATABASE_TABLES = HR_DATABASE_TABLES;
+export const POSTGRES_DDL_SCHEMA = HR_DDL_SCHEMA;
+export const BIZMITRA_ERD_DIAGRAM = HR_ERD_DIAGRAM;
+export const API_SPECIFICATIONS = HR_API_SPECIFICATIONS;

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { motion } from "motion/react";
 import {
   Check,
   Code2,
@@ -20,14 +21,10 @@ import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { GenerationSequence } from "@/components/GenerationSequence";
 import { Mermaid } from "@/components/Mermaid";
-import { Stagger, StaggerItem } from "@/components/motion/primitives";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import {
-  API_SPECIFICATIONS,
-  ApiEndpointItem,
-  BIZMITRA_ERD_DIAGRAM,
-  DATABASE_TABLES,
-  POSTGRES_DDL_SCHEMA,
+  DatabaseBlueprint,
+  getDatabaseBlueprint,
   TableDef,
 } from "@/lib/database-data";
 
@@ -61,7 +58,6 @@ const METHOD_BADGES: Record<string, string> = {
 
 function DataPage() {
   const [activeTab, setActiveTab] = useState<MainTab>("erd");
-  const [selectedTable, setSelectedTable] = useState<TableDef>(DATABASE_TABLES[1] ?? DATABASE_TABLES[0]!);
   const [copiedSql, setCopiedSql] = useState(false);
   const [copiedCurlIndex, setCopiedCurlIndex] = useState<number | null>(null);
   const [activeApiCategory, setActiveApiCategory] = useState<string>("All");
@@ -86,18 +82,35 @@ function DataPage() {
     } catch {}
   }, []);
 
+  const blueprint: DatabaseBlueprint = useMemo(
+    () => getDatabaseBlueprint(workspaceContext),
+    [workspaceContext]
+  );
+
+  const [selectedTable, setSelectedTable] = useState<TableDef>(
+    blueprint.tables[1] ?? blueprint.tables[0]!
+  );
+
+  // Synchronize selected table and active category when domain blueprint switches
+  useEffect(() => {
+    if (blueprint.tables.length > 0) {
+      setSelectedTable(blueprint.tables[0]!);
+    }
+    setActiveApiCategory("All");
+  }, [blueprint.domainId]);
+
   const handleCopySql = () => {
-    navigator.clipboard.writeText(POSTGRES_DDL_SCHEMA);
+    navigator.clipboard.writeText(blueprint.ddlSchema);
     setCopiedSql(true);
     setTimeout(() => setCopiedSql(false), 2000);
   };
 
   const handleDownloadSql = () => {
-    const blob = new Blob([POSTGRES_DDL_SCHEMA], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([blueprint.ddlSchema], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "bizzmitra_schema_v1.sql";
+    link.download = `${blueprint.domainId}_schema_v1.sql`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -110,10 +123,8 @@ function DataPage() {
 
   const filteredApis =
     activeApiCategory === "All"
-      ? API_SPECIFICATIONS
-      : API_SPECIFICATIONS.filter((api) => api.category === activeApiCategory);
-
-  const categories = ["All", "Recruitment", "Solution Studio", "Operations", "Client Portal"];
+      ? blueprint.apiSpecifications
+      : blueprint.apiSpecifications.filter((api) => api.category === activeApiCategory);
 
   return (
     <AppShell>
@@ -135,16 +146,16 @@ function DataPage() {
       </div>
 
       <GenerationSequence steps={GENERATION_STEPS.data} run={() => generateArtifact("data")}>
-        <Stagger className="space-y-6">
+        <div className="space-y-6">
           {/* Quick Metrics Bar */}
-          <StaggerItem>
+          <div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="neu p-3.5">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Database Tables
                 </span>
                 <div className="mt-1 font-display text-2xl font-bold text-foreground">
-                  {DATABASE_TABLES.length} Entities
+                  {blueprint.metrics.tableCount}
                 </div>
                 <span className="text-[10px] text-emerald-600 font-medium">PostgreSQL 16+ RLS</span>
               </div>
@@ -153,7 +164,7 @@ function DataPage() {
                   REST Endpoints
                 </span>
                 <div className="mt-1 font-display text-2xl font-bold text-foreground">
-                  {API_SPECIFICATIONS.length} Routes
+                  {blueprint.metrics.apiCount}
                 </div>
                 <span className="text-[10px] text-sky-600 font-medium">OpenAPI 3.1 Ready</span>
               </div>
@@ -162,24 +173,24 @@ function DataPage() {
                   Multi-Tenancy
                 </span>
                 <div className="mt-1 font-display text-2xl font-bold text-emerald-600">
-                  Isolated
+                  {blueprint.metrics.multiTenancy}
                 </div>
-                <span className="text-[10px] text-muted-foreground">org_id Row Policies</span>
+                <span className="text-[10px] text-muted-foreground">Row Policies Active</span>
               </div>
               <div className="neu p-3.5">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Compliance
                 </span>
                 <div className="mt-1 font-display text-2xl font-bold text-indigo-600">
-                  SOC 2 / GDPR
+                  {blueprint.metrics.compliance}
                 </div>
                 <span className="text-[10px] text-muted-foreground">Immutable Audit Trail</span>
               </div>
             </div>
-          </StaggerItem>
+          </div>
 
           {/* Navigation Controls */}
-          <StaggerItem>
+          <div>
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-4">
               <div className="flex flex-wrap gap-2">
                 <button
@@ -262,20 +273,26 @@ function DataPage() {
                 </div>
               )}
             </div>
-          </StaggerItem>
+          </div>
 
           {/* TAB 1: ERD */}
           {activeTab === "erd" && (
-            <StaggerItem className="space-y-4">
+            <motion.div
+              key="erd"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-4"
+            >
               <div className="neu p-6">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/30 pb-3">
                   <div>
                     <h2 className="font-display text-base font-bold flex items-center gap-2">
                       <Database className="h-4 w-4 text-primary" />
-                      Relational Data Architecture (ERD)
+                      Relational Data Architecture (ERD) — {blueprint.domainTitle}
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Multi-tenant recruitment CRM with dynamic custom fields, smart punch records, and audit ledgers.
+                      Production-grade entity-relationship model with primary keys, foreign constraints, and cardinality.
                     </p>
                   </div>
                   <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
@@ -283,22 +300,28 @@ function DataPage() {
                   </span>
                 </div>
                 <div className="mt-5 overflow-x-auto rounded-xl bg-background/60 p-4 shadow-inner">
-                  <Mermaid chart={BIZMITRA_ERD_DIAGRAM} />
+                  <Mermaid key={`${blueprint.domainId}-erd`} chart={blueprint.erdDiagram} />
                 </div>
               </div>
-            </StaggerItem>
+            </motion.div>
           )}
 
           {/* TAB 2: Table Dictionary */}
           {activeTab === "tables" && (
-            <StaggerItem className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+            <motion.div
+              key="tables"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="grid grid-cols-1 gap-6 lg:grid-cols-4"
+            >
               {/* Sidebar Tables List */}
               <div className="neu space-y-2 p-4 lg:col-span-1">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Database Tables ({DATABASE_TABLES.length})
+                  Database Tables ({blueprint.tables.length})
                 </h3>
                 <div className="space-y-1.5 pt-2">
-                  {DATABASE_TABLES.map((t) => (
+                  {blueprint.tables.map((t) => (
                     <button
                       key={t.id}
                       type="button"
@@ -372,12 +395,18 @@ function DataPage() {
                   </table>
                 </div>
               </div>
-            </StaggerItem>
+            </motion.div>
           )}
 
           {/* TAB 3: PostgreSQL DDL Script */}
           {activeTab === "ddl" && (
-            <StaggerItem className="space-y-4">
+            <motion.div
+              key="ddl"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-4"
+            >
               <div className="neu p-6">
                 <div className="flex items-center justify-between border-b border-border/30 pb-3">
                   <div>
@@ -398,18 +427,24 @@ function DataPage() {
                 </div>
 
                 <div className="mt-4 rounded-xl border border-border/40 bg-zinc-950 p-4 font-mono text-xs text-emerald-400 shadow-inner overflow-x-auto max-h-[500px] overflow-y-auto">
-                  <pre>{POSTGRES_DDL_SCHEMA}</pre>
+                  <pre>{blueprint.ddlSchema}</pre>
                 </div>
               </div>
-            </StaggerItem>
+            </motion.div>
           )}
 
           {/* TAB 4: API Specifications */}
           {activeTab === "api" && (
-            <StaggerItem className="space-y-4">
+            <motion.div
+              key="api"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-4"
+            >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-1.5">
-                  {categories.map((cat) => (
+                  {blueprint.apiCategories.map((cat) => (
                     <button
                       key={cat}
                       type="button"
@@ -500,9 +535,9 @@ function DataPage() {
                   </div>
                 ))}
               </div>
-            </StaggerItem>
+            </motion.div>
           )}
-        </Stagger>
+        </div>
       </GenerationSequence>
     </AppShell>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { motion } from "motion/react";
 import {
   Activity,
   AlertTriangle,
@@ -16,22 +17,14 @@ import {
   Workflow,
   ShieldCheck,
   Split,
-  CornerDownRight,
 } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { GenerationSequence } from "@/components/GenerationSequence";
 import { Mermaid } from "@/components/Mermaid";
-import { Stagger, StaggerItem } from "@/components/motion/primitives";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
-import {
-  BOTTLENECK_ANALYSIS,
-  HR_BPMN_AFTER,
-  HR_BPMN_BEFORE,
-  HR_SWIMLANE_BPMN,
-  PROCESS_METRICS,
-} from "@/lib/process-data";
+import { getProcessBlueprint } from "@/lib/process-data";
 
 export const Route = createFileRoute("/workspace/process")({
   head: () => ({
@@ -44,7 +37,7 @@ export const Route = createFileRoute("/workspace/process")({
       { property: "og:title", content: "Process Intelligence — BizzMitra-AI" },
       {
         property: "og:description",
-        content: "As-is manual recruitment versus to-be automated intelligence, modeled side-by-side.",
+        content: "As-is manual process versus to-be automated intelligence, modeled side-by-side.",
       },
     ],
   }),
@@ -60,9 +53,11 @@ function ProcessPage() {
   const [workspaceContext, setWorkspaceContext] = useState<{
     businessName: string;
     industry: string;
+    problemStatement?: string;
   }>({
     businessName: "TalentCraft HR Consultancy",
     industry: "HR & Recruitment Services",
+    problemStatement: "",
   });
 
   useEffect(() => {
@@ -73,10 +68,13 @@ function ProcessPage() {
         setWorkspaceContext({
           businessName: parsed.businessName || "TalentCraft HR Consultancy",
           industry: parsed.industry || "HR & Recruitment Services",
+          problemStatement: parsed.problemStatement || "",
         });
       }
     } catch {}
   }, []);
+
+  const blueprint = getProcessBlueprint(workspaceContext);
 
   const getMetricIcon = (icon: string) => {
     switch (icon) {
@@ -113,11 +111,11 @@ function ProcessPage() {
       </div>
 
       <GenerationSequence steps={GENERATION_STEPS.process} run={() => generateArtifact("process")}>
-        <Stagger className="space-y-6">
+        <div className="space-y-6">
           {/* Top Performance Metrics Banner */}
-          <StaggerItem>
+          <div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {PROCESS_METRICS.map((metric) => (
+              {blueprint.metrics.map((metric) => (
                 <div key={metric.label} className="neu p-4 transition-all hover:scale-[1.01]">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -143,10 +141,10 @@ function ProcessPage() {
                 </div>
               ))}
             </div>
-          </StaggerItem>
+          </div>
 
           {/* Navigation Controls */}
-          <StaggerItem>
+          <div>
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-4">
               <div className="flex flex-wrap gap-2">
                 <button
@@ -183,7 +181,7 @@ function ProcessPage() {
                   }`}
                 >
                   <AlertTriangle className="h-3.5 w-3.5" />
-                  Bottleneck Analysis ({BOTTLENECK_ANALYSIS.length})
+                  Bottleneck Analysis ({blueprint.bottlenecks.length})
                 </button>
                 <button
                   type="button"
@@ -231,11 +229,16 @@ function ProcessPage() {
                 </div>
               )}
             </div>
-          </StaggerItem>
+          </div>
 
           {/* TAB 1: Before vs After Comparison */}
           {activeTab === "comparison" && (
-            <StaggerItem>
+            <motion.div
+              key="comparison"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+            >
               <div
                 className={`grid gap-6 ${
                   diffMode === "split" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
@@ -252,7 +255,7 @@ function ProcessPage() {
                           </h3>
                         </div>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          Spreadsheets, phone tag, manual email submission · ~14.2 Days Cycle Time
+                          Fragmented manual handoffs, phone tag, spreadsheets · High Latency Cycle
                         </p>
                       </div>
                       <span className="rounded-full bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
@@ -260,7 +263,7 @@ function ProcessPage() {
                       </span>
                     </div>
                     <div className="mt-4 flex-1 overflow-x-auto rounded-lg bg-background/50 p-2">
-                      <Mermaid chart={HR_BPMN_BEFORE} />
+                      <Mermaid key="before" chart={blueprint.asIsDiagram} />
                     </div>
                   </div>
                 )}
@@ -276,26 +279,32 @@ function ProcessPage() {
                           </h3>
                         </div>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          AI Parsing, Semantic Scoring & Client Portal · ~2.4 Days Cycle Time
+                          AI Parsing, Real-time Validation & Automated Pipeline · Streamlined Cycle
                         </p>
                       </div>
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                         <Sparkles className="h-3 w-3" />
-                        83% Faster
+                        80%+ Faster
                       </span>
                     </div>
                     <div className="mt-4 flex-1 overflow-x-auto rounded-lg bg-background/50 p-2">
-                      <Mermaid chart={HR_BPMN_AFTER} />
+                      <Mermaid key="after" chart={blueprint.toBeDiagram} />
                     </div>
                   </div>
                 )}
               </div>
-            </StaggerItem>
+            </motion.div>
           )}
 
           {/* TAB 2: Swimlanes */}
           {activeTab === "swimlane" && (
-            <StaggerItem className="space-y-4">
+            <motion.div
+              key="swimlane"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-4"
+            >
               <div className="neu p-6">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/30 pb-3">
                   <div>
@@ -304,7 +313,7 @@ function ProcessPage() {
                       4-Tier BPMN 2.0 Swimlane Orchestration
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Real-time interactive sequence modeling handoffs between Candidates, Agency Recruiters, BizzMitra AI Engine, and Corporate Clients.
+                      Real-time interactive sequence modeling handoffs across operational roles, AI automation engines, and stakeholders.
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -312,29 +321,35 @@ function ProcessPage() {
                       Phase 1: Ingestion
                     </span>
                     <span className="inline-flex items-center rounded-md bg-indigo-500/10 px-2 py-1 text-[10px] font-medium text-indigo-600">
-                      Phase 2: Screening
+                      Phase 2: Screening & AI
                     </span>
                     <span className="inline-flex items-center rounded-md bg-sky-500/10 px-2 py-1 text-[10px] font-medium text-sky-600">
-                      Phase 3: Client Review
+                      Phase 3: Decision Gate
                     </span>
                     <span className="inline-flex items-center rounded-md bg-amber-500/10 px-2 py-1 text-[10px] font-medium text-amber-600">
-                      Phase 4: Billing
+                      Phase 4: Execution / Billing
                     </span>
                   </div>
                 </div>
 
                 <div className="mt-5 overflow-x-auto rounded-xl bg-background/60 p-4 shadow-inner">
-                  <Mermaid chart={HR_SWIMLANE_BPMN} />
+                  <Mermaid key="swimlane" chart={blueprint.swimlaneDiagram} />
                 </div>
               </div>
-            </StaggerItem>
+            </motion.div>
           )}
 
           {/* TAB 3: Bottleneck Analysis */}
           {activeTab === "bottlenecks" && (
-            <StaggerItem className="space-y-4">
+            <motion.div
+              key="bottlenecks"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-4"
+            >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {BOTTLENECK_ANALYSIS.map((item) => (
+                {blueprint.bottlenecks.map((item) => (
                   <div key={item.stage} className="neu flex flex-col justify-between p-5">
                     <div>
                       <div className="flex items-center justify-between border-b border-border/30 pb-2.5">
@@ -386,12 +401,18 @@ function ProcessPage() {
                   </div>
                 ))}
               </div>
-            </StaggerItem>
+            </motion.div>
           )}
 
           {/* Tab 4: Approval Workflows & Decision Trees */}
           {activeTab === "decisionTree" && (
-            <StaggerItem className="space-y-6">
+            <motion.div
+              key="decisionTree"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
               {/* Overview Card */}
               <div className="rounded-2xl border border-border/80 bg-card/60 p-6 backdrop-blur-md space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -410,29 +431,7 @@ function ProcessPage() {
 
                 {/* 3-Tier Approval Workflow Strip */}
                 <div className="grid gap-3 sm:grid-cols-3 pt-2">
-                  {[
-                    {
-                      tier: "Tier 1: Recruiter Screening",
-                      actor: "Talent Consultant",
-                      criteria: "Skill match >= 70%, Experience valid, Notice <= 30d",
-                      action: "Instant Auto-Invite to Tech Evaluation",
-                      status: "Fully Automated (AI Agent)",
-                    },
-                    {
-                      tier: "Tier 2: Commercial Budget Check",
-                      actor: "Client Account Lead",
-                      criteria: "CTC <= Budget + 10%, Gross Margin >= 22%",
-                      action: "Proceed to Client Final Interview",
-                      status: "Automated Gateway",
-                    },
-                    {
-                      tier: "Tier 3: Executive Offer Sign-off",
-                      actor: "VP / Managing Partner",
-                      criteria: "Exceptions only: Custom sign-on bonus or > 15% budget variance",
-                      action: "Digital e-Signature via DocuSign / AdobeSign",
-                      status: "Escalation Queue (< 4 hours)",
-                    },
-                  ].map((step, idx) => (
+                  {blueprint.decisionTiers.map((step, idx) => (
                     <div key={idx} className="rounded-xl border border-border/70 bg-surface/60 p-4 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-foreground">{step.tier}</span>
@@ -455,7 +454,7 @@ function ProcessPage() {
                   <Split className="size-4 text-primary" />
                   <div>
                     <h4 className="font-display text-sm font-bold text-foreground">
-                      Candidate Intake & Auto-Routing Decision Tree
+                      Process Intake & Auto-Routing Decision Tree
                     </h4>
                     <p className="text-[11px] text-muted-foreground">
                       Visual flow diagram representing exclusive BPMN XOR and Inclusive OR decision gates.
@@ -465,22 +464,8 @@ function ProcessPage() {
 
                 <div className="overflow-x-auto pt-2">
                   <Mermaid
-                    chart={`graph TD
-  Start([📥 Resume Submitted]) --> Parse[⚡ AI Resume Extraction]
-  Parse --> Q1{Confidence > 85%?}
-  Q1 -- No --> ManualReview[👀 Recruiter Manual Review Queue]
-  Q1 -- Yes --> Q2{Skill Match Score}
-  Q2 -- Score >= 75% --> FastTrack[🚀 Fast-Track Auto Invite to Tech Screen]
-  Q2 -- 50% to 74% --> RecruiterScreen[📞 15-Min Phone Screen Scheduled]
-  Q2 -- Score < 50% --> AutoReject[✉️ Polite Automated Feedback Email]
-  FastTrack --> Interview[🎯 Technical Evaluation Passed]
-  RecruiterScreen --> Interview
-  Interview --> Q3{Expected CTC <= Budget?}
-  Q3 -- Yes --> DraftOffer[📝 Auto-Draft Offer Letter]
-  Q3 -- Exceeds Budget --> ApprovalGate[🛡️ VP Escalation Approval Gate]
-  ApprovalGate -- Approved --> DraftOffer
-  ApprovalGate -- Rejected --> Renegotiate[🤝 Client Rate Adjustment]
-  DraftOffer --> ClientSign([✅ Offer Dispatched via e-Signature])`}
+                    key="decision-tree"
+                    chart={blueprint.decisionTreeDiagram}
                   />
                 </div>
               </div>
@@ -492,23 +477,19 @@ function ProcessPage() {
                   AI Process Optimization Recommendations
                 </h4>
                 <div className="grid gap-3 sm:grid-cols-2 text-xs">
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-1">
-                    <p className="font-bold text-emerald-600 dark:text-emerald-400">1. Eliminate Manual Scheduling Handoffs</p>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Replace recruiter back-and-forth emails with automated Calendly / Google Calendar webhooks. Saves 2.4 days per placement cycle.
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-1">
-                    <p className="font-bold text-emerald-600 dark:text-emerald-400">2. Async Candidate Video Screening</p>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Use automated 3-question async video screens for Tier 1 applicants. Frees up 14 hours per week per recruiter.
-                    </p>
-                  </div>
+                  {blueprint.recommendations.map((rec) => (
+                    <div key={rec.title} className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-1">
+                      <p className="font-bold text-emerald-600 dark:text-emerald-400">{rec.title}</p>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        {rec.detail}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </StaggerItem>
+            </motion.div>
           )}
-        </Stagger>
+        </div>
       </GenerationSequence>
     </AppShell>
   );
