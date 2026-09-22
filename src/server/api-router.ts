@@ -331,6 +331,285 @@ export async function handleApiRoute(
     }
   }
 
+  // 5b. Dynamic AI Discovery Interview: POST /api/ai/discovery-interview
+  if (pathname === "/api/ai/discovery-interview" && request.method === "POST") {
+    try {
+      const body = (await request.json()) as {
+        problemStatement?: string;
+        businessName?: string;
+        industry?: string;
+      };
+      const { problemStatement = "", businessName = "Enterprise Business", industry = "General" } = body;
+      const groqKey =
+        (env as any)?.GROQ_API_KEY ||
+        process.env["GROQ_API_KEY"] ||
+        process.env["VITE_GROQ_API_KEY"];
+
+      if (!groqKey) {
+        return jsonResponse({ error: "No GROQ_API_KEY configured" }, 503);
+      }
+
+      const prompt = `You are an elite Enterprise Systems Architect and McKinsey/BCG Business Analyst for BizzMitra AI.
+A client submitted this business problem statement:
+---
+Business Name: ${businessName}
+Industry: ${industry}
+Problem Statement: ${problemStatement}
+---
+
+Your task:
+1. Generate exactly 3 progressive, deeply contextual diagnostic discovery interview questions for this specific business.
+   - Question 1: Operational Scale, Volume & existing technical interface bottlenecks.
+   - Question 2: Operational drop-off, manual errors, and friction points in their daily workflow.
+   - Question 3: Governance, regulatory compliance, integrations (e.g. WhatsApp, APIs, ERP, Government portals), and self-serve access.
+2. For each question, provide:
+   - "question": string
+   - "hint": string (brief 1-sentence technical design consequence)
+   - "whyWeAsk": string (1-sentence justification for system sizing/architecture)
+   - "missingEntity": string (short tag, e.g. "Daily test volume & analyzer protocol")
+   - "options": 3 realistic, specific, mutually exclusive choices.
+   - "answer": the first recommended option string.
+3. Provide a concise 2-sentence "summary" synthesizing what was captured.
+4. Provide a structured "businessAnalysis" report:
+   - "currentState": { "summary": string, "tools": string[], "bottlenecks": string[], "efficiencyScore": number between 25 and 45 }
+   - "stakeholders": array of 4 items { "role": string, "count": string, "needs": string, "impact": "Critical" or "High" or "Medium" }
+   - "gapAnalysis": array of 4 items { "area": string, "current": string, "future": string, "severity": "Critical" or "High" or "Medium" }
+   - "futureState": { "summary": string, "recommendedModules": string[], "automationOpportunities": string[] }
+   - "businessImpact": array of 4 items { "metric": string, "current": string, "projected": string, "improvement": string }
+
+Return strictly valid JSON in this exact structure:
+{
+  "questions": [ ... ],
+  "summary": "...",
+  "businessAnalysis": { ... }
+}`;
+
+      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${groqKey}`,
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-oss-120b",
+          messages: [
+            { role: "system", content: "You are an enterprise business analysis AI. Output strictly valid JSON." },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+        }),
+      });
+
+      if (!groqRes.ok) {
+        const errText = await groqRes.text();
+        console.warn("[Groq API error]:", errText);
+        return jsonResponse({ error: "Groq LLM call failed", details: errText }, 502);
+      }
+
+      const groqData = await groqRes.json();
+      const contentStr = groqData.choices?.[0]?.message?.content;
+      if (!contentStr) {
+        return jsonResponse({ error: "Empty response from Groq" }, 502);
+      }
+
+      const parsed = JSON.parse(contentStr);
+      return jsonResponse({
+        success: true,
+        modelUsed: "Groq 120B AI (openai/gpt-oss-120b)",
+        questions: parsed.questions,
+        summary: parsed.summary,
+        businessAnalysis: parsed.businessAnalysis,
+      });
+    } catch (err: any) {
+      console.error("[api/ai/discovery-interview error]:", err);
+      return jsonResponse({ error: err?.message || "Internal error" }, 500);
+    }
+  }
+
+  // 5c. Dynamic Framing & Solution Generation: POST /api/ai/solution-framing
+  if (pathname === "/api/ai/solution-framing" && request.method === "POST") {
+    try {
+      const body = (await request.json()) as {
+        problemStatement?: string;
+        businessName?: string;
+        industry?: string;
+      };
+      const { problemStatement = "", businessName = "Enterprise Business", industry = "General" } = body;
+      const groqKey =
+        (env as any)?.GROQ_API_KEY ||
+        process.env["GROQ_API_KEY"] ||
+        process.env["VITE_GROQ_API_KEY"];
+
+      if (!groqKey) {
+        return jsonResponse({ error: "No GROQ_API_KEY configured" }, 503);
+      }
+
+      const prompt = `You are a World-Class Principal Enterprise Systems Architect and McKinsey/BCG Strategy Partner at BizzMitra AI.
+A client submitted this business problem statement:
+---
+Business Name: ${businessName}
+Industry: ${industry}
+Problem Statement: ${problemStatement}
+---
+
+Your task:
+Synthesize an enterprise-grade Problem Framing and Recommended Architectural Solution for this specific business. Do NOT output generic HR templates unless the problem is strictly HR. Customize every pillar, metric, constraint, root cause, software module, and build-vs-buy option to their exact domain.
+
+Return strictly valid JSON with this exact structure:
+{
+  "framing": {
+    "statement": "2-3 sentences synthesizing root causes, daily operational friction, and business drag",
+    "impact": [
+      { "metric": "string (e.g. Automatable Volume, TAT, Error Rate, Cost)", "value": "string (e.g. 70% / day, 18 hrs, -35%)" },
+      { "metric": "string", "value": "string" },
+      { "metric": "string", "value": "string" },
+      { "metric": "string", "value": "string" }
+    ],
+    "rootCauses": [
+      { "title": "string", "detail": "string" },
+      { "title": "string", "detail": "string" },
+      { "title": "string", "detail": "string" }
+    ],
+    "constraints": [ "string", "string", "string" ]
+  },
+  "solution": {
+    "headline": "Compelling, specific architectural solution title (e.g. AI-Assisted Clinical Specimen Hub + HL7 Automation)",
+    "summary": "2-3 sentences detailing the target architecture, resolution layer, and automation workflow",
+    "pillars": [
+      { "title": "string", "detail": "string" },
+      { "title": "string", "detail": "string" },
+      { "title": "string", "detail": "string" },
+      { "title": "string", "detail": "string" }
+    ],
+    "tradeoffs": [
+      { "option": "string", "verdict": "Rejected" or "Recommended" or "Deferred", "why": "string" },
+      { "option": "string", "verdict": "Rejected" or "Recommended" or "Deferred", "why": "string" },
+      { "option": "string", "verdict": "Rejected" or "Recommended" or "Deferred", "why": "string" }
+    ]
+  },
+  "modules": [
+    {
+      "key": "mod-1",
+      "name": "string",
+      "description": "string",
+      "icon": "Users" or "Building2" or "Clock" or "BarChart3",
+      "status": "Core" or "Recommended" or "Optional" or "Planned",
+      "timeTag": "Invest" or "Migrate" or "Tolerate" or "Eliminate",
+      "features": ["string", "string", "string"]
+    },
+    {
+      "key": "mod-2",
+      "name": "string",
+      "description": "string",
+      "icon": "Building2",
+      "status": "Core",
+      "timeTag": "Invest",
+      "features": ["string", "string", "string"]
+    },
+    {
+      "key": "mod-3",
+      "name": "string",
+      "description": "string",
+      "icon": "Clock",
+      "status": "Recommended",
+      "timeTag": "Migrate",
+      "features": ["string", "string", "string"]
+    },
+    {
+      "key": "mod-4",
+      "name": "string",
+      "description": "string",
+      "icon": "BarChart3",
+      "status": "Recommended",
+      "timeTag": "Invest",
+      "features": ["string", "string", "string"]
+    },
+    {
+      "key": "mod-legacy",
+      "name": "Legacy Manual Spreadsheets & Ad-hoc Workflows",
+      "description": "Disparate, untracked manual coordination with zero auditability.",
+      "icon": "Clock",
+      "status": "Optional",
+      "timeTag": "Eliminate",
+      "features": ["High error rate", "Decommission planned in Phase 2", "Data fragmentation"]
+    }
+  ],
+  "buildBuyMatrix": [
+    {
+      "option": "Custom Cloud-Native Build (Tailored Microservices)",
+      "verdict": "Recommended" or "Viable" or "Not Feasible",
+      "cost": 4,
+      "speed": 3,
+      "control": 5,
+      "fit": 5,
+      "rationale": "High long-term differentiation and complete workflow ownership."
+    },
+    {
+      "option": "Generic Off-the-Shelf SaaS Tool",
+      "verdict": "Viable" or "Rejected",
+      "cost": 2,
+      "speed": 5,
+      "control": 2,
+      "fit": 2,
+      "rationale": "Fast initial setup but limited custom field extensibility and high subscription lock-in."
+    },
+    {
+      "option": "BizzMitra AI Hybrid Platform (Custom Micro-Apps + AI Copilots)",
+      "verdict": "Recommended",
+      "cost": 5,
+      "speed": 4,
+      "control": 5,
+      "fit": 5,
+      "rationale": "Optimal blend of rapid time-to-value, automated workflows, and enterprise compliance."
+    }
+  ]
+}`;
+
+      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${groqKey}`,
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-oss-120b",
+          messages: [
+            { role: "system", content: "You are an enterprise systems architect and strategy consultant. Output strictly valid JSON." },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+        }),
+      });
+
+      if (!groqRes.ok) {
+        const errText = await groqRes.text();
+        console.warn("[Groq solution API error]:", errText);
+        return jsonResponse({ error: "Groq LLM call failed", details: errText }, 502);
+      }
+
+      const groqData = await groqRes.json();
+      const contentStr = groqData.choices?.[0]?.message?.content;
+      if (!contentStr) {
+        return jsonResponse({ error: "Empty response from Groq" }, 502);
+      }
+
+      const parsed = JSON.parse(contentStr);
+      return jsonResponse({
+        success: true,
+        modelUsed: "Groq 120B AI (openai/gpt-oss-120b)",
+        framing: parsed.framing,
+        solution: parsed.solution,
+        modules: parsed.modules,
+        buildBuyMatrix: parsed.buildBuyMatrix,
+      });
+    } catch (err: any) {
+      console.error("[api/ai/solution-framing error]:", err);
+      return jsonResponse({ error: err?.message || "Internal error" }, 500);
+    }
+  }
+
   // 6. Documents: GET /api/documents and POST /api/documents/upload
   if (pathname === "/api/documents") {
     const user = await getAuthenticatedUser(request, supabaseAdmin);

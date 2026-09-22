@@ -46,7 +46,7 @@ function SignupPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (session) navigate({ to: "/workspace/new" });
+    if (session) navigate({ to: "/dashboard" });
   }, [session, navigate]);
 
   // Cooldown countdown timer for OTP resend
@@ -136,7 +136,7 @@ function SignupPage() {
                 }
                 syncUserRoleAndWallet(email, true);
                 toast.success("Account created and saved to database! Welcome to your workspace.");
-                navigate({ to: "/workspace/new" });
+                navigate({ to: "/dashboard" });
                 return;
               }
             }
@@ -168,7 +168,7 @@ function SignupPage() {
         }
         syncUserRoleAndWallet(email, true);
         toast.success("Account created! Welcome to your workspace.");
-        navigate({ to: "/workspace/new" });
+        navigate({ to: "/dashboard" });
         return;
       }
 
@@ -184,7 +184,7 @@ function SignupPage() {
         }
         syncUserRoleAndWallet(email, true);
         toast.success("Account created and signed in!");
-        navigate({ to: "/workspace/new" });
+        navigate({ to: "/dashboard" });
         return;
       }
 
@@ -375,7 +375,7 @@ function SignupPage() {
                         }
                         setBusy(false);
                         toast.success("Account confirmed! Welcome to BizzMitra.");
-                        navigate({ to: "/workspace/new" });
+                        navigate({ to: "/dashboard" });
                         return true;
                       }
 
@@ -407,7 +407,7 @@ function SignupPage() {
                         }
                         setBusy(false);
                         toast.success("Account confirmed! Welcome to BizzMitra.");
-                        navigate({ to: "/workspace/new" });
+                        navigate({ to: "/dashboard" });
                         return true;
                       }
 
@@ -416,7 +416,7 @@ function SignupPage() {
                         signInWithCustomUser(email, fullName || email.split("@")[0]);
                         setBusy(false);
                         toast.success(`Development code accepted for ${email}! Welcome.`);
-                        navigate({ to: "/workspace/new" });
+                        navigate({ to: "/dashboard" });
                         return true;
                       }
 
@@ -450,7 +450,7 @@ function SignupPage() {
                                 void syncUserProfile(signInData.session.user.id, fullName || email.split("@")[0]);
                               }
                               toast.success("Account confirmed and saved to database! Welcome.");
-                              navigate({ to: "/workspace/new" });
+                              navigate({ to: "/dashboard" });
                               return;
                             }
                           }
@@ -458,7 +458,7 @@ function SignupPage() {
                         setBusy(false);
                         signInWithCustomUser(email, fullName || email.split("@")[0]);
                         toast.success(`Account confirmed for ${email}! Welcome to your workspace.`);
-                        navigate({ to: "/workspace/new" });
+                        navigate({ to: "/dashboard" });
                       }}
                       className="neu-press flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-500 transition-colors"
                     >
