@@ -14,9 +14,11 @@ public class MainActivity extends BridgeActivity {
     public void onStart() {
         super.onStart();
         if (bridge != null && bridge.getWebView() != null) {
-            // Disable native WebView overscroll dragging and horizontal scroll bar
-            bridge.getWebView().setOverScrollMode(View.OVER_SCROLL_NEVER);
-            bridge.getWebView().setHorizontalScrollBarEnabled(false);
+            View webView = bridge.getWebView();
+            webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+            webView.setVerticalScrollBarEnabled(true);
+            webView.setHorizontalScrollBarEnabled(false);
+            webView.setNestedScrollingEnabled(true);
         }
     }
 }
