@@ -14,6 +14,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
 import { syncUserRoleAndWallet } from "@/lib/admin-rbac-data";
 import { gridMotionItems } from "@/lib/login-background";
+import { useTranslation } from "@/lib/i18n";
 
 
 export const Route = createFileRoute("/signup")({
@@ -32,6 +33,7 @@ export const Route = createFileRoute("/signup")({
 });
 
 function SignupPage() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -44,7 +46,7 @@ function SignupPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (session) navigate({ to: "/dashboard" });
+    if (session) navigate({ to: "/workspace/new" });
   }, [session, navigate]);
 
   // Cooldown countdown timer for OTP resend
@@ -117,6 +119,31 @@ function SignupPage() {
           error.message.toLowerCase().includes("rate limit") ||
           error.message.toLowerCase().includes("over_email_send_rate_limit")
         ) {
+          toast.info("Supabase mail limit reached. Creating direct authenticated account...");
+          try {
+            const regRes = await fetch("/api/auth/register", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, password, fullName }),
+            });
+            const regData = await regRes.json();
+            if (regData.success) {
+              const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
+              if (signInData?.session) {
+                setSession(signInData.session);
+                if (signInData.session.user) {
+                  void syncUserProfile(signInData.session.user.id, fullName || email.split("@")[0]);
+                }
+                syncUserRoleAndWallet(email, true);
+                toast.success("Account created and saved to database! Welcome to your workspace.");
+                navigate({ to: "/workspace/new" });
+                return;
+              }
+            }
+          } catch (serverErr) {
+            console.warn("Direct server registration notice:", serverErr);
+          }
+
           toast.error(
             "Supabase email service could not deliver the confirmation email (hourly rate limit reached). Turn off 'Confirm email' in Supabase Dashboard -> Authentication -> Providers -> Email, or click below to enter directly.",
             { duration: 8000 }
@@ -141,7 +168,7 @@ function SignupPage() {
         }
         syncUserRoleAndWallet(email, true);
         toast.success("Account created! Welcome to your workspace.");
-        navigate({ to: "/dashboard" });
+        navigate({ to: "/workspace/new" });
         return;
       }
 
@@ -157,7 +184,7 @@ function SignupPage() {
         }
         syncUserRoleAndWallet(email, true);
         toast.success("Account created and signed in!");
-        navigate({ to: "/dashboard" });
+        navigate({ to: "/workspace/new" });
         return;
       }
 
@@ -235,9 +262,9 @@ function SignupPage() {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <h1 className="font-display text-3xl font-extrabold">Start your first blueprint</h1>
+                  <h1 className="font-display text-3xl font-extrabold">{t("auth.startFirstBlueprint", "Start your first blueprint")}</h1>
                   <p className="mt-1.5 text-sm text-muted-foreground">
-                    One workspace, free forever. No card needed.
+                    {t("auth.startSub", "One workspace, free forever. No card needed.")}
                   </p>
 
                   <button
@@ -245,17 +272,17 @@ function SignupPage() {
                     onClick={google}
                     className="neu-sm neu-press mt-5 flex w-full items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium"
                   >
-                    Continue with Google
+                    {t("auth.google", "Continue with Google")}
                   </button>
 
                   <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
+                    <span className="h-px flex-1 bg-border" /> {t("auth.or", "or")} <span className="h-px flex-1 bg-border" />
                   </div>
 
                   <form onSubmit={handleSignUp} className="space-y-3">
                     <div className="rounded-xl border border-border/80 bg-surface/70 px-3.5 py-2.5 transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 hover:border-border">
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        Full name
+                        {t("auth.fullName", "Full name")}
                       </label>
                       <input
                         required
@@ -267,7 +294,7 @@ function SignupPage() {
                     </div>
                     <div className="rounded-xl border border-border/80 bg-surface/70 px-3.5 py-2.5 transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 hover:border-border">
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        Email
+                        {t("auth.email", "Email")}
                       </label>
                       <input
                         type="email"
@@ -280,7 +307,7 @@ function SignupPage() {
                     </div>
                     <div className="rounded-xl border border-border/80 bg-surface/70 px-3.5 py-2.5 transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 hover:border-border">
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        Password
+                        {t("auth.password", "Password")}
                       </label>
                       <input
                         type="password"
@@ -298,14 +325,14 @@ function SignupPage() {
                       disabled={busy}
                       className="neu-press w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground glow-primary disabled:opacity-50"
                     >
-                      {busy ? "Creating account…" : "Create account"}
+                      {busy ? t("auth.signingIn", "Creating account…") : t("auth.createAccount", "Create account")}
                     </button>
                   </form>
 
                   <p className="mt-5 text-center text-sm text-muted-foreground">
-                    Already have an account?{" "}
+                    {t("auth.alreadyHaveAccount", "Already have an account?")}{" "}
                     <Link to="/login" className="font-semibold text-primary">
-                      Sign in
+                      {t("auth.signIn", "Sign in")}
                     </Link>
                   </p>
                 </motion.div>
@@ -348,7 +375,7 @@ function SignupPage() {
                         }
                         setBusy(false);
                         toast.success("Account confirmed! Welcome to BizzMitra.");
-                        navigate({ to: "/dashboard" });
+                        navigate({ to: "/workspace/new" });
                         return true;
                       }
 
@@ -380,7 +407,7 @@ function SignupPage() {
                         }
                         setBusy(false);
                         toast.success("Account confirmed! Welcome to BizzMitra.");
-                        navigate({ to: "/dashboard" });
+                        navigate({ to: "/workspace/new" });
                         return true;
                       }
 
@@ -389,7 +416,7 @@ function SignupPage() {
                         signInWithCustomUser(email, fullName || email.split("@")[0]);
                         setBusy(false);
                         toast.success(`Development code accepted for ${email}! Welcome.`);
-                        navigate({ to: "/dashboard" });
+                        navigate({ to: "/workspace/new" });
                         return true;
                       }
 
@@ -423,7 +450,7 @@ function SignupPage() {
                                 void syncUserProfile(signInData.session.user.id, fullName || email.split("@")[0]);
                               }
                               toast.success("Account confirmed and saved to database! Welcome.");
-                              navigate({ to: "/dashboard" });
+                              navigate({ to: "/workspace/new" });
                               return;
                             }
                           }
@@ -431,7 +458,7 @@ function SignupPage() {
                         setBusy(false);
                         signInWithCustomUser(email, fullName || email.split("@")[0]);
                         toast.success(`Account confirmed for ${email}! Welcome to your workspace.`);
-                        navigate({ to: "/dashboard" });
+                        navigate({ to: "/workspace/new" });
                       }}
                       className="neu-press flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-500 transition-colors"
                     >

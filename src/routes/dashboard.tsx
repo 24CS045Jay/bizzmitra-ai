@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import {
   AlertTriangle,
@@ -63,13 +63,25 @@ function ProgressRing({ value, size = 56, stroke = 5 }: { value: number; size?: 
 
 function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isTest = isTestingAccount(user?.email);
   const [workspaces, setWorkspaces] = useState<Tables<"workspaces">[]>([]);
   const [artifactCount, setArtifactCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Active workspace name
-  const [activeWsName, setActiveWsName] = useState(() => (isTest ? "TalentCraft HR Consultancy" : ""));
+  // Active workspace name with seamless fallback
+  const [activeWsName, setActiveWsName] = useState(() => {
+    if (typeof window !== "undefined") {
+      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed?.businessName) return parsed.businessName;
+        } catch {}
+      }
+    }
+    return isTest ? "TalentCraft HR Consultancy" : "";
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -93,7 +105,15 @@ function DashboardPage() {
         } else if (isTest) {
           setActiveWsName("TalentCraft HR Consultancy");
         } else {
-          setActiveWsName("");
+          const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed?.businessName) {
+                setActiveWsName(parsed.businessName);
+              }
+            } catch {}
+          }
         }
       }
 
@@ -105,6 +125,17 @@ function DashboardPage() {
     }
     void loadWorkspaces();
   }, [user, isTest]);
+
+  // First-time user protection: If non-test user has no workspace, route immediately to new intake
+  useEffect(() => {
+    if (!loading && !isTest && workspaces.length === 0) {
+      const raw = typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.workspaceContext") : null;
+      const wsId = typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.activeWorkspaceId") : null;
+      if (!wsId || wsId === "ws-talentcraft-default" || !raw) {
+        navigate({ to: "/workspace/new" });
+      }
+    }
+  }, [loading, isTest, workspaces, navigate]);
 
   // Evaluate risks and action items for the active workspace
   const blueprint = useMemo(
@@ -124,52 +155,26 @@ function DashboardPage() {
     window.dispatchEvent(new CustomEvent("bizzmitra:open-copilot", { detail: { prompt: promptText } }));
   }
 
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3">
+          <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-xs font-semibold text-muted-foreground">Loading workspace...</p>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const rawCtx = typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.workspaceContext") : null;
+  const localWsId = typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.activeWorkspaceId") : null;
+  if (!isTest && workspaces.length === 0 && (!localWsId || localWsId === "ws-talentcraft-default" || !rawCtx)) {
+    return null;
+  }
+
   return (
     <AppShell>
-      {!loading && workspaces.length === 0 && !isTest ? (
-        <Reveal>
-          <div className="neu mt-4 p-8 sm:p-12 text-center rounded-3xl border border-dashed border-border/80 bg-gradient-to-b from-card/60 via-card to-background shadow-xl">
-            <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-primary/10 text-primary shadow-inner">
-              <Sparkles className="size-8" />
-            </div>
-            <h1 className="mt-5 font-display text-2xl font-extrabold text-foreground sm:text-3xl">
-              Welcome to BizzMitra AI
-            </h1>
-            <p className="mx-auto mt-2 max-w-lg text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              You haven't set up any business workspaces yet. Frame your operational challenge, upload your documents, or enter a prompt to generate your custom digital blueprint.
-            </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                to="/workspace/new"
-                className="neu-press inline-flex items-center gap-2 rounded-2xl bg-primary px-6 py-3.5 text-xs sm:text-sm font-bold text-primary-foreground shadow-xl glow-primary hover:brightness-105"
-              >
-                <Plus className="size-4" />
-                <span>Create Your First Workspace</span>
-                <ArrowRight className="size-4" />
-              </Link>
-            </div>
-
-            <div className="mt-10 grid gap-4 sm:grid-cols-3 text-left border-t border-border/60 pt-8 max-w-3xl mx-auto">
-              <div className="neu-inset p-4 space-y-1.5">
-                <span className="text-[10px] font-extrabold uppercase text-primary tracking-wider">Step 01</span>
-                <p className="text-xs font-bold text-foreground">Multi-Modal Intake</p>
-                <p className="text-[11px] text-muted-foreground">Enter text, upload PDFs/CSVs, or record voice input.</p>
-              </div>
-              <div className="neu-inset p-4 space-y-1.5">
-                <span className="text-[10px] font-extrabold uppercase text-primary tracking-wider">Step 02</span>
-                <p className="text-xs font-bold text-foreground">AI Diagnostic & Solution</p>
-                <p className="text-[11px] text-muted-foreground">Auto-generate interactive BPMN workflows, wireframes, and working CRM.</p>
-              </div>
-              <div className="neu-inset p-4 space-y-1.5">
-                <span className="text-[10px] font-extrabold uppercase text-primary tracking-wider">Step 03</span>
-                <p className="text-xs font-bold text-foreground">Roadmap & Governance</p>
-                <p className="text-[11px] text-muted-foreground">Track financial ROI models, DPDP compliance risks, and sprint timelines.</p>
-              </div>
-            </div>
-          </div>
-        </Reveal>
-      ) : (
-        <>
+      <>
           {/* Executive Command Center Header */}
           <Reveal>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -473,7 +478,6 @@ function DashboardPage() {
         </Stagger>
       </div>
       </>
-      )}
     </AppShell>
   );
 }

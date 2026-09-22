@@ -17,6 +17,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { PageTransition } from "@/components/motion/primitives";
 import { Toaster } from "@/components/ui/sonner";
 import { getCurrentLanguage, triggerGoogleTranslate } from "@/lib/i18n";
+import { initUniversalDomObserver, runUniversalDomTranslation } from "@/lib/auto-translator";
 import { initNative } from "@/lib/native-bridge";
 
 
@@ -232,13 +233,20 @@ function RootComponent() {
   const location = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
+    initUniversalDomObserver();
+  }, []);
+
+  useEffect(() => {
     const cur = getCurrentLanguage();
     if (cur !== "en") {
+      runUniversalDomTranslation(cur);
       const timer = setTimeout(() => {
+        runUniversalDomTranslation(cur);
         triggerGoogleTranslate(cur);
-      }, 150);
+      }, 100);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [location]);
 
   // Initialize Native Shell (Splash screen, Status bar theme, Android back button)
@@ -248,7 +256,7 @@ function RootComponent() {
 
   // Register PWA Service Worker
   useEffect(() => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator && process.env["NODE_ENV"] === "production") {
       navigator.serviceWorker
         .register("/sw.js")
         .then((reg) => {

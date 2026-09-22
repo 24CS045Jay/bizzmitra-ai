@@ -128,7 +128,7 @@ export async function initNative(): Promise<void> {
 
     // 1. Android Hardware Back Button Handling
     if (Capacitor.getPlatform() === "android") {
-      await App.addListener("backButton", ({ canGoBack }) => {
+      await App.addListener("backButton", ({ canGoBack }: { canGoBack: boolean }) => {
         if (window.location.pathname === "/" || window.location.pathname === "/workspace/dashboard") {
           void App.exitApp();
         } else if (canGoBack) {

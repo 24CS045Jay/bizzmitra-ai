@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { runUniversalDomTranslation } from "./auto-translator";
 
 export type SupportedLanguage = "en" | "hi" | "gu" | "es" | "fr" | "de" | "ja" | "ar";
 
@@ -95,6 +96,24 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "action.close": "Close",
     "action.back": "Back",
     "action.next": "Next",
+
+    // Auth & Account
+    "auth.welcomeBack": "Welcome back",
+    "auth.welcomeBackSub": "Pick up your workspace where you left it.",
+    "auth.google": "Continue with Google",
+    "auth.or": "or",
+    "auth.email": "Email",
+    "auth.password": "Password",
+    "auth.signIn": "Sign in",
+    "auth.signingIn": "Signing in…",
+    "auth.forgotPassword": "Forgot password?",
+    "auth.newHere": "New here?",
+    "auth.createAccount": "Create an account",
+    "auth.startFirstBlueprint": "Start your first blueprint",
+    "auth.startSub": "One workspace, free forever. No card needed.",
+    "auth.fullName": "Full name",
+    "auth.alreadyHaveAccount": "Already have an account?",
+    "auth.signUp": "Sign up",
   },
   hi: {
     // Navigation Groups
@@ -169,6 +188,24 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "action.close": "बंद करें",
     "action.back": "पीछे जाएं",
     "action.next": "आगे बढ़ें",
+
+    // Auth & Account
+    "auth.welcomeBack": "वापसी पर स्वागत है",
+    "auth.welcomeBackSub": "अपने कार्यक्षेत्र को वहीं से शुरू करें जहाँ आपने छोड़ा था।",
+    "auth.google": "Google के साथ जारी रखें",
+    "auth.or": "या",
+    "auth.email": "ईमेल",
+    "auth.password": "पासवर्ड",
+    "auth.signIn": "साइन इन करें",
+    "auth.signingIn": "साइन इन हो रहा है…",
+    "auth.forgotPassword": "पासवर्ड भूल गए?",
+    "auth.newHere": "यहाँ नए हैं?",
+    "auth.createAccount": "खाता बनाएं",
+    "auth.startFirstBlueprint": "अपना पहला ब्लूप्रिंट शुरू करें",
+    "auth.startSub": "एक कार्यक्षेत्र, हमेशा के लिए मुफ़्त। किसी कार्ड की आवश्यकता नहीं।",
+    "auth.fullName": "पूरा नाम",
+    "auth.alreadyHaveAccount": "क्या आपके पास पहले से एक खाता है?",
+    "auth.signUp": "साइन अप करें",
   },
   gu: {
     // Navigation Groups
@@ -243,6 +280,24 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "action.close": "બંધ કરો",
     "action.back": "પાછળ",
     "action.next": "આગળ",
+
+    // Auth & Account
+    "auth.welcomeBack": "ફરી સ્વાગત છે",
+    "auth.welcomeBackSub": "તમારું કાર્યસ્થળ જ્યાંથી છોડ્યું હતું ત્યાંથી શરૂ કરો.",
+    "auth.google": "Google સાથે ચાલુ રાખો",
+    "auth.or": "અથવા",
+    "auth.email": "ઇમેઇલ",
+    "auth.password": "પાસવર્ડ",
+    "auth.signIn": "સાઇન ઇન કરો",
+    "auth.signingIn": "સાઇન ઇન થઈ રહ્યું છે…",
+    "auth.forgotPassword": "પાસવર્ડ ભૂલી ગયા છો?",
+    "auth.newHere": "અહીં નવા છો?",
+    "auth.createAccount": "ખાતું બનાવો",
+    "auth.startFirstBlueprint": "તમારું પ્રથમ બ્લૂપ્રિન્ટ શરૂ કરો",
+    "auth.startSub": "એક કાર્યસ્થળ, હંમેશા માટે મફત. કાર્ડની જરૂર નથી.",
+    "auth.fullName": "પૂરું નામ",
+    "auth.alreadyHaveAccount": "પહેલેથી ખાતું છે?",
+    "auth.signUp": "સાઇન અપ કરો",
   },
   es: {
     "group.workspace": "Espacio y Admisión",
@@ -308,6 +363,24 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "action.close": "Cerrar",
     "action.back": "Atrás",
     "action.next": "Siguiente",
+
+    // Auth & Account
+    "auth.welcomeBack": "Bienvenido de nuevo",
+    "auth.welcomeBackSub": "Retoma tu espacio de trabajo donde lo dejaste.",
+    "auth.google": "Continuar con Google",
+    "auth.or": "o",
+    "auth.email": "Correo electrónico",
+    "auth.password": "Contraseña",
+    "auth.signIn": "Iniciar sesión",
+    "auth.signingIn": "Iniciando sesión…",
+    "auth.forgotPassword": "¿Olvidaste tu contraseña?",
+    "auth.newHere": "¿Eres nuevo aquí?",
+    "auth.createAccount": "Crear una cuenta",
+    "auth.startFirstBlueprint": "Inicia tu primer plano",
+    "auth.startSub": "Un espacio, gratis para siempre. Sin tarjeta.",
+    "auth.fullName": "Nombre completo",
+    "auth.alreadyHaveAccount": "¿Ya tienes una cuenta?",
+    "auth.signUp": "Registrarse",
   },
   fr: {
     "group.workspace": "Espace & Ingestion",
@@ -373,6 +446,24 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "action.close": "Fermer",
     "action.back": "Retour",
     "action.next": "Suivant",
+
+    // Auth & Account
+    "auth.welcomeBack": "Bienvenue",
+    "auth.welcomeBackSub": "Reprenez votre espace de travail là où vous l'avez laissé.",
+    "auth.google": "Continuer avec Google",
+    "auth.or": "ou",
+    "auth.email": "E-mail",
+    "auth.password": "Mot de passe",
+    "auth.signIn": "Se connecter",
+    "auth.signingIn": "Connexion en cours…",
+    "auth.forgotPassword": "Mot de passe oublié ?",
+    "auth.newHere": "Nouveau ici ?",
+    "auth.createAccount": "Créer un compte",
+    "auth.startFirstBlueprint": "Lancez votre premier projet",
+    "auth.startSub": "Un espace, gratuit pour toujours. Aucune carte requise.",
+    "auth.fullName": "Nom complet",
+    "auth.alreadyHaveAccount": "Vous avez déjà un compte ?",
+    "auth.signUp": "S'inscrire",
   },
   de: {
     "group.workspace": "Arbeitsbereich & Aufnahme",
@@ -438,6 +529,24 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "action.close": "Schließen",
     "action.back": "Zurück",
     "action.next": "Weiter",
+
+    // Auth & Account
+    "auth.welcomeBack": "Willkommen zurück",
+    "auth.welcomeBackSub": "Setzen Sie Ihre Arbeit dort fort, wo Sie aufgehört haben.",
+    "auth.google": "Weiter mit Google",
+    "auth.or": "oder",
+    "auth.email": "E-Mail",
+    "auth.password": "Passwort",
+    "auth.signIn": "Anmelden",
+    "auth.signingIn": "Anmeldung läuft…",
+    "auth.forgotPassword": "Passwort vergessen?",
+    "auth.newHere": "Neu hier?",
+    "auth.createAccount": "Konto erstellen",
+    "auth.startFirstBlueprint": "Erstellen Sie Ihren ersten Plan",
+    "auth.startSub": "Ein Arbeitsbereich, für immer kostenlos. Keine Karte nötig.",
+    "auth.fullName": "Vollständiger Name",
+    "auth.alreadyHaveAccount": "Haben Sie bereits ein Konto?",
+    "auth.signUp": "Registrieren",
   },
   ja: {
     "group.workspace": "ワークスペース ＆ 受付",
@@ -503,6 +612,24 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "action.close": "閉じる",
     "action.back": "戻る",
     "action.next": "次へ",
+
+    // Auth & Account
+    "auth.welcomeBack": "お帰りなさい",
+    "auth.welcomeBackSub": "前回の続きからワークスペースを再開します。",
+    "auth.google": "Googleで続行",
+    "auth.or": "または",
+    "auth.email": "メールアドレス",
+    "auth.password": "パスワード",
+    "auth.signIn": "サインイン",
+    "auth.signingIn": "サインイン中…",
+    "auth.forgotPassword": "パスワードをお忘れですか？",
+    "auth.newHere": "初めてのご利用ですか？",
+    "auth.createAccount": "アカウントを作成",
+    "auth.startFirstBlueprint": "最初のブループリントを作成",
+    "auth.startSub": "1つのワークスペース、ずっと無料。カード不要。",
+    "auth.fullName": "氏名",
+    "auth.alreadyHaveAccount": "既にアカウントをお持ちですか？",
+    "auth.signUp": "新規登録",
   },
   ar: {
     "group.workspace": "مساحة العمل والإدخال",
@@ -568,6 +695,24 @@ export const TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
     "action.close": "إغلاق",
     "action.back": "رجوع",
     "action.next": "التالي",
+
+    // Auth & Account
+    "auth.welcomeBack": "مرحبًا بعودتك",
+    "auth.welcomeBackSub": "استأنف مساحة عملك من حيث توقفت.",
+    "auth.google": "المتابعة باستخدام Google",
+    "auth.or": "أو",
+    "auth.email": "البريد الإلكتروني",
+    "auth.password": "كلمة المرور",
+    "auth.signIn": "تسجيل الدخول",
+    "auth.signingIn": "جاري تسجيل الدخول…",
+    "auth.forgotPassword": "هل نسيت كلمة المرور؟",
+    "auth.newHere": "جديد هنا؟",
+    "auth.createAccount": "إنشاء حساب",
+    "auth.startFirstBlueprint": "ابدأ مخططك الأول",
+    "auth.startSub": "مساحة عمل واحدة مجانًا إلى الأبد. لا حاجة لبطاقة ائتمان.",
+    "auth.fullName": "الاسم الكامل",
+    "auth.alreadyHaveAccount": "هل لديك حساب بالفعل؟",
+    "auth.signUp": "إنشاء حساب",
   },
 };
 
@@ -634,7 +779,6 @@ export function triggerGoogleTranslate(lang: SupportedLanguage): void {
 
 export function setLanguage(lang: SupportedLanguage): void {
   if (typeof window !== "undefined") {
-    const previous = window.localStorage.getItem(STORAGE_KEY);
     window.localStorage.setItem(STORAGE_KEY, lang);
     const selected = SUPPORTED_LANGUAGES.find((l) => l.code === lang);
     if (selected?.direction) {
@@ -644,18 +788,16 @@ export function setLanguage(lang: SupportedLanguage): void {
     }
     document.documentElement.setAttribute("lang", lang);
 
-    // Set translation cookies and trigger Google Translate combo
-    triggerGoogleTranslate(lang);
+    // 1. Instantly translate all visible DOM text nodes across the whole website
+    runUniversalDomTranslation(lang);
 
+    // 2. Dispatch event for React reactive components
     window.dispatchEvent(new CustomEvent("bizzmitra:lang-changed", { detail: lang }));
 
-    // Seamlessly reload when language changes so that every single component, header, card,
-    // sidebar, and dynamic view translates with 100% full efficiency from initial HTML
-    if (previous !== lang) {
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
-    }
+    // 3. Re-pass after React renders state changes
+    setTimeout(() => {
+      runUniversalDomTranslation(lang);
+    }, 50);
   }
 }
 
