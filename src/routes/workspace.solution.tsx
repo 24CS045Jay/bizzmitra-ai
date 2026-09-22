@@ -22,12 +22,20 @@ import { SolutionStudioDrawer } from "@/components/SolutionStudioDrawer";
 import { Stagger, StaggerItem } from "@/components/motion/primitives";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import {
+  generateDynamicSolution,
+  type ProblemFramingData,
+  type SolutionData,
+  type DynamicSolutionModule,
+} from "@/lib/ai/solution-ai";
+import {
   getActiveProblemFraming,
   getActiveSolution,
   HR_BUILD_BUY_MATRIX,
   HR_CONSULTANCY_PROBLEM,
   HR_SOLUTION_MODULES,
+  type BuildBuyOption,
 } from "@/lib/demo-data";
+import { supabase } from "@/integrations/supabase/client";
 import { loadStudioSettings } from "@/lib/solution-studio";
 
 export const Route = createFileRoute("/workspace/solution")({
@@ -79,21 +87,90 @@ const MODULE_TIME_TAGS: Record<string, Exclude<TimeTag, "All">> = {
 
 function SolutionPage() {
   const [problemText, setProblemText] = useState(HR_CONSULTANCY_PROBLEM);
+  const [businessName, setBusinessName] = useState("Enterprise Business");
+  const [industry, setIndustry] = useState("Cross-Industry");
   const [isStudioOpen, setIsStudioOpen] = useState(false);
   const [studioSettings, setStudioSettings] = useState(() => loadStudioSettings());
   const [timeFilter, setTimeFilter] = useState<TimeTag>("All");
+  const [aiModelLabel, setAiModelLabel] = useState("Groq 120B AI");
+
+  const [framing, setFraming] = useState<ProblemFramingData>(() => getActiveProblemFraming(problemText));
+  const [solution, setSolution] = useState<SolutionData>(() => getActiveSolution(problemText));
+  const [modules, setModules] = useState<DynamicSolutionModule[]>(() => [
+    ...HR_SOLUTION_MODULES.map((m) => ({
+      ...m,
+      timeTag: MODULE_TIME_TAGS[m.key] ?? ("Invest" as const),
+    })),
+    {
+      key: "legacy-tracker",
+      name: "Legacy Manual Spreadsheets & Tracker",
+      description: "Informal, untracked manual coordination with zero auditability.",
+      icon: "Clock",
+      status: "Optional" as const,
+      timeTag: "Eliminate" as const,
+      features: [
+        "Unmitigated data leakage risk",
+        "Manual re-entry overhead",
+        "Decommission scheduled in Phase 2",
+      ],
+    },
+  ]);
+  const [buildBuyMatrix, setBuildBuyMatrix] = useState<BuildBuyOption[]>(HR_BUILD_BUY_MATRIX);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    let loadedText = "";
+    let bName = "Enterprise Business";
+    let ind = "Cross-Industry";
+
     try {
       const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed.problemStatement) {
-          setProblemText(parsed.problemStatement);
-        }
+        loadedText = parsed.problemStatement || parsed.summary || "";
+        bName = parsed.businessName || bName;
+        ind = parsed.industry || ind;
       }
     } catch { }
+
+    const wsId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
+
+    async function syncAndGenerate() {
+      if (wsId && !wsId.startsWith("ws-")) {
+        const { data: ws } = await supabase
+          .from("workspaces")
+          .select("problem_statement, name")
+          .eq("id", wsId)
+          .maybeSingle();
+
+        if (ws?.problem_statement) {
+          loadedText = ws.problem_statement;
+          if (ws.name) bName = ws.name;
+        }
+      }
+
+      if (!loadedText) loadedText = HR_CONSULTANCY_PROBLEM;
+      setProblemText(loadedText);
+      setBusinessName(bName);
+      setIndustry(ind);
+
+      // Trigger dynamic AI generation via Groq 120B
+      try {
+        const res = await generateDynamicSolution(loadedText, bName, ind);
+        setFraming(res.framing);
+        setSolution(res.solution);
+        setModules(res.modules);
+        if (res.buildBuyMatrix && res.buildBuyMatrix.length > 0) {
+          setBuildBuyMatrix(res.buildBuyMatrix);
+        }
+        setAiModelLabel(res.source === "groq-llm" ? "Groq 120B AI" : "BizzMitra Strategic Engine");
+      } catch (e) {
+        console.warn("[SolutionPage] Dynamic generation error:", e);
+      }
+    }
+
+    void syncAndGenerate();
 
     const handleStudioUpdate = (e: Event) => {
       const custom = e as CustomEvent<ReturnType<typeof loadStudioSettings>>;
@@ -105,12 +182,25 @@ function SolutionPage() {
     return () => window.removeEventListener("bizzmitra:studio-updated", handleStudioUpdate);
   }, []);
 
-  const framing = getActiveProblemFraming(problemText);
-  const solution = getActiveSolution(problemText);
-
   return (
     <AppShell>
       <ArtifactHeader id="solution" kicker="Step 03" title="Framing & solution" />
+
+      {/* Dynamic Model Status Bar */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+            <Sparkles className="size-3 animate-pulse text-primary" />
+            {aiModelLabel}
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            Custom Problem Framing, Target Architecture & TIME Portfolio generated for: <strong>{businessName}</strong>
+          </span>
+        </div>
+        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+          Groq High-Throughput Inference
+        </span>
+      </div>
 
       {/* Solution Studio Trigger Strip */}
       <div className="mb-6 neu p-3 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-primary/5 via-card to-accent/20">
@@ -249,10 +339,8 @@ function SolutionPage() {
                 {(["All", "Invest", "Migrate", "Tolerate", "Eliminate"] as const).map((tag) => {
                   const count =
                     tag === "All"
-                      ? 5
-                      : tag === "Invest"
-                        ? 2
-                        : 1;
+                      ? modules.length
+                      : modules.filter((m) => m.timeTag === tag).length;
                   return (
                     <button
                       key={tag}
@@ -281,26 +369,7 @@ function SolutionPage() {
             </div>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              {[
-                ...HR_SOLUTION_MODULES.map((m) => ({
-                  ...m,
-                  timeTag: MODULE_TIME_TAGS[m.key] ?? ("Invest" as const),
-                })),
-                {
-                  key: "legacy-tracker",
-                  name: "Legacy WhatsApp & Spreadsheet Tracker",
-                  description:
-                    "Informal, un-encrypted candidate routing across disparate chats with no central audit trail.",
-                  icon: "Clock",
-                  status: "Optional" as const,
-                  timeTag: "Eliminate" as const,
-                  features: [
-                    "Unmitigated data leakage risk",
-                    "Manual re-entry overhead (4h/recruiter/wk)",
-                    "Decommission scheduled in Phase 2",
-                  ],
-                },
-              ]
+              {modules
                 .filter((mod) => timeFilter === "All" || mod.timeTag === timeFilter)
                 .map((mod) => {
                   const Icon = MODULE_ICONS[mod.icon] || Users;
@@ -318,14 +387,14 @@ function SolutionPage() {
                             <p className="text-sm font-bold leading-tight">{mod.name}</p>
                             <div className="mt-1 flex items-center gap-1.5">
                               <span
-                                className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold ${STATUS_COLORS[mod.status]}`}
+                                className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold ${STATUS_COLORS[mod.status] || STATUS_COLORS["Core"]}`}
                               >
                                 {mod.status}
                               </span>
                               <span
                                 className={cn(
                                   "inline-block rounded-full px-2 py-0.5 text-[9px] font-bold border",
-                                  TIME_BADGE_STYLES[mod.timeTag],
+                                  TIME_BADGE_STYLES[mod.timeTag] || TIME_BADGE_STYLES.Invest,
                                 )}
                               >
                                 {mod.timeTag}
@@ -350,13 +419,20 @@ function SolutionPage() {
                 })}
             </div>
 
-            {/* CRM CTA */}
-            <div className="mt-6 flex justify-center">
+            {/* Contextual CTA Strip */}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link
                 to="/workspace/solution/crm"
+                className="neu-press inline-flex items-center gap-2 rounded-xl bg-card border border-border px-4 py-2.5 text-xs font-bold text-foreground transition-transform hover:scale-[1.02]"
+              >
+                Inspect Prototype CRM
+                <ArrowRight className="size-3.5" />
+              </Link>
+              <Link
+                to="/workspace/architecture"
                 className="neu-press inline-flex items-center gap-2.5 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02]"
               >
-                Explore Interactive HR CRM
+                Proceed to Architecture (Step 04)
                 <ArrowRight className="size-4" />
               </Link>
             </div>
@@ -365,13 +441,13 @@ function SolutionPage() {
           {/* ═══ Day 3: Build vs. Buy vs. Hybrid Decision Matrix ═══ */}
           <StaggerItem className="neu p-6">
             <h3 className="font-display text-base font-bold">
-              Build vs. Buy vs. Hybrid — Decision Matrix
+              Build vs. Buy vs. Hybrid — Strategic Decision Matrix
             </h3>
             <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-              Each dimension is scored 1–5. Higher is better for your agency context.
+              Each dimension is scored 1–5. Calibrated specifically for {businessName} ({industry}).
             </p>
             <div className="mt-4 space-y-4">
-              {HR_BUILD_BUY_MATRIX.map((row) => {
+              {buildBuyMatrix.map((row) => {
                 const isRec = row.verdict === "Recommended";
                 const isViable = row.verdict === "Viable";
                 return (
@@ -410,7 +486,7 @@ function SolutionPage() {
                           ["Cost Efficiency", row.cost],
                           ["Delivery Speed", row.speed],
                           ["Control", row.control],
-                          ["Agency Fit", row.fit],
+                          ["Domain Fit", row.fit],
                         ] as [string, number][]
                       ).map(([label, score]) => (
                         <div key={label}>
@@ -485,7 +561,7 @@ function SolutionPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {solution.stack.map((s) => (
+                  {(solution.stack || []).map((s: { layer: string; choice: string; why: string }) => (
                     <tr key={s.layer} className="align-top hover:bg-card/40 transition-colors">
                       <td className="py-3 pr-4 text-xs text-muted-foreground font-medium">{s.layer}</td>
                       <td className="py-3 pr-4 text-xs font-bold text-foreground">{s.choice}</td>
