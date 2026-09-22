@@ -25,7 +25,10 @@ import {
   getActiveBusinessAnalysis,
   getActiveDiscoveryScript,
   HR_CONSULTANCY_PROBLEM,
+  DiscoveryQuestionItem,
+  BusinessAnalysisReport,
 } from "@/lib/demo-data";
+import { generateDynamicDiscovery } from "@/lib/ai/discovery-ai";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentIngestionModal } from "@/components/DocumentIngestionModal";
@@ -67,9 +70,14 @@ function DiscoveryPage() {
   const [customInput, setCustomInput] = useState("");
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
-  const script = getActiveDiscoveryScript(problemText);
-  const summaryText = getActiveAiSummary(problemText);
-  const analysis = getActiveBusinessAnalysis(problemText);
+  const [dynamicScript, setDynamicScript] = useState<DiscoveryQuestionItem[]>(() => getActiveDiscoveryScript(problemText));
+  const [dynamicSummary, setDynamicSummary] = useState<string>(() => getActiveAiSummary(problemText));
+  const [dynamicAnalysis, setDynamicAnalysis] = useState<BusinessAnalysisReport>(() => getActiveBusinessAnalysis(problemText));
+  const [aiModelLabel, setAiModelLabel] = useState<string>("Groq 120B AI");
+
+  const script = dynamicScript;
+  const summaryText = dynamicSummary;
+  const analysis = dynamicAnalysis;
 
   useEffect(() => {
     const id = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
@@ -77,16 +85,28 @@ function DiscoveryPage() {
 
     // Read problem text from local context or Supabase
     let loadedText = "";
+    let bName = "Enterprise Workspace";
+    let ind = "Cross-Industry";
     try {
       const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
       if (raw) {
         const parsed = JSON.parse(raw);
         loadedText = parsed.problemStatement || parsed.summary || "";
+        bName = parsed.businessName || bName;
+        ind = parsed.industry || ind;
       }
     } catch {}
 
     if (!loadedText) loadedText = HR_CONSULTANCY_PROBLEM;
     setProblemText(loadedText);
+
+    // Dynamically generate discovery questions & analysis via Groq 120B LLM
+    void generateDynamicDiscovery(loadedText, bName, ind).then((res) => {
+      setDynamicScript(res.questions);
+      setDynamicSummary(res.summary);
+      setDynamicAnalysis(res.businessAnalysis);
+      setAiModelLabel(res.source === "groq-llm" ? "Groq 120B AI" : "BizzMitra NLP Engine");
+    });
 
     const isUuid = id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
@@ -212,6 +232,22 @@ function DiscoveryPage() {
         kicker="Step 02"
         title="AI Discovery & Business Analysis"
       />
+
+      {/* Dynamic Model Status Bar */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+            <Sparkles className="size-3 animate-pulse text-primary" />
+            {aiModelLabel}
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            Adaptive diagnostic interview generated in real-time based on your problem intake
+          </span>
+        </div>
+        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+          Groq High-Throughput Inference
+        </span>
+      </div>
 
       {/* Business Document Upload Fast-Track Banner */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-card/60 p-3.5 shadow-xs backdrop-blur-md">

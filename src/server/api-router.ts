@@ -331,6 +331,102 @@ export async function handleApiRoute(
     }
   }
 
+  // 5b. Dynamic AI Discovery Interview: POST /api/ai/discovery-interview
+  if (pathname === "/api/ai/discovery-interview" && request.method === "POST") {
+    try {
+      const body = (await request.json()) as {
+        problemStatement?: string;
+        businessName?: string;
+        industry?: string;
+      };
+      const { problemStatement = "", businessName = "Enterprise Business", industry = "General" } = body;
+      const groqKey =
+        (env as any)?.GROQ_API_KEY ||
+        process.env["GROQ_API_KEY"] ||
+        process.env["VITE_GROQ_API_KEY"];
+
+      if (!groqKey) {
+        return jsonResponse({ error: "No GROQ_API_KEY configured" }, 503);
+      }
+
+      const prompt = `You are an elite Enterprise Systems Architect and McKinsey/BCG Business Analyst for BizzMitra AI.
+A client submitted this business problem statement:
+---
+Business Name: ${businessName}
+Industry: ${industry}
+Problem Statement: ${problemStatement}
+---
+
+Your task:
+1. Generate exactly 3 progressive, deeply contextual diagnostic discovery interview questions for this specific business.
+   - Question 1: Operational Scale, Volume & existing technical interface bottlenecks.
+   - Question 2: Operational drop-off, manual errors, and friction points in their daily workflow.
+   - Question 3: Governance, regulatory compliance, integrations (e.g. WhatsApp, APIs, ERP, Government portals), and self-serve access.
+2. For each question, provide:
+   - "question": string
+   - "hint": string (brief 1-sentence technical design consequence)
+   - "whyWeAsk": string (1-sentence justification for system sizing/architecture)
+   - "missingEntity": string (short tag, e.g. "Daily test volume & analyzer protocol")
+   - "options": 3 realistic, specific, mutually exclusive choices.
+   - "answer": the first recommended option string.
+3. Provide a concise 2-sentence "summary" synthesizing what was captured.
+4. Provide a structured "businessAnalysis" report:
+   - "currentState": { "summary": string, "tools": string[], "bottlenecks": string[], "efficiencyScore": number between 25 and 45 }
+   - "stakeholders": array of 4 items { "role": string, "count": string, "needs": string, "impact": "Critical" or "High" or "Medium" }
+   - "gapAnalysis": array of 4 items { "area": string, "current": string, "future": string, "severity": "Critical" or "High" or "Medium" }
+   - "futureState": { "summary": string, "recommendedModules": string[], "automationOpportunities": string[] }
+   - "businessImpact": array of 4 items { "metric": string, "current": string, "projected": string, "improvement": string }
+
+Return strictly valid JSON in this exact structure:
+{
+  "questions": [ ... ],
+  "summary": "...",
+  "businessAnalysis": { ... }
+}`;
+
+      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${groqKey}`,
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-oss-120b",
+          messages: [
+            { role: "system", content: "You are an enterprise business analysis AI. Output strictly valid JSON." },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+        }),
+      });
+
+      if (!groqRes.ok) {
+        const errText = await groqRes.text();
+        console.warn("[Groq API error]:", errText);
+        return jsonResponse({ error: "Groq LLM call failed", details: errText }, 502);
+      }
+
+      const groqData = await groqRes.json();
+      const contentStr = groqData.choices?.[0]?.message?.content;
+      if (!contentStr) {
+        return jsonResponse({ error: "Empty response from Groq" }, 502);
+      }
+
+      const parsed = JSON.parse(contentStr);
+      return jsonResponse({
+        success: true,
+        modelUsed: "Groq 120B AI (openai/gpt-oss-120b)",
+        questions: parsed.questions,
+        summary: parsed.summary,
+        businessAnalysis: parsed.businessAnalysis,
+      });
+    } catch (err: any) {
+      console.error("[api/ai/discovery-interview error]:", err);
+      return jsonResponse({ error: err?.message || "Internal error" }, 500);
+    }
+  }
+
   // 6. Documents: GET /api/documents and POST /api/documents/upload
   if (pathname === "/api/documents") {
     const user = await getAuthenticatedUser(request, supabaseAdmin);
