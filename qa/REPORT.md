@@ -100,3 +100,26 @@ Every core route evaluated across all 7 viewports:
 - **Keystores & Credentials:** Verified that `keys/` and `local.properties` remain excluded via `.gitignore`.
 - **Secrets Scanning:** Verified zero occurrences of `SUPABASE_SERVICE_ROLE_KEY` or `sb_secret_*` in client-side code, native projects, or build configs.
 - **Remote Bridge URL:** Remote navigation secured strictly to `bizzmitra-ai.vercel.app` and Supabase endpoints.
+
+---
+
+## 6. Vertical Scrolling Fix Across All App Routes (Fix Pack 2)
+
+### Root Cause
+Previously, `overflow-x: hidden` was applied across `html, body, #root`, which forced Chromium's rendering engine in Android WebView to compute `overflow-y: auto` on both `html` and `body`. In conjunction with `overscroll-behavior: none` and `setOverScrollMode(View.OVER_SCROLL_NEVER)`, this trapped touch pan gestures and prevented the window/document from scrolling vertically on real Android devices.
+
+### Resolution Implemented
+1. **CSS Layer (`src/styles.css`):**
+   - Applied `overflow-x: clip` and `max-width: 100vw` so horizontal overflow is strictly clipped without mutating `overflow-y` or creating competing nested scroll containers.
+   - Set `html { overflow-y: auto; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }` to establish the document root as the primary fluid scroller.
+   - Set `body { overflow-y: visible; touch-action: pan-y; }` to explicitly enable single-finger vertical panning and momentum flings.
+   - Isolated `-webkit-user-select: none` and `touch-action: manipulation` exclusively to buttons/controls rather than the entire `body`.
+2. **Native WebView Layer (`MainActivity.java`):**
+   - Configured `webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS)` to allow natural Android momentum flings.
+   - Enabled `webView.setVerticalScrollBarEnabled(true)` for clear visual scroll indicators.
+   - Enabled `webView.setNestedScrollingEnabled(true)` for seamless touch coordination.
+3. **Binary Rebuild & Signature:**
+   - Recompiled release APK using JDK 21: `release/BizzMitra-android.apk` (4,015,054 bytes).
+   - Signed with `keys/bizzmitra-release.keystore` (Alias: `bizzmitra`).
+   - Verified with Android SDK `apksigner.bat`: `Verified using v2 scheme: true`, `Verified using v3 scheme: true`.
+
