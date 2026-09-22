@@ -2,29 +2,21 @@
  * Universal Multi-Format Document Exporters for Microsoft Word, Microsoft Excel, and Microsoft PowerPoint.
  * Generates standard-compliant Office XML/HTML documents that open natively in MS Office, Google Workspace, and LibreOffice.
  */
+import { saveAndShareFile } from "./native-bridge";
 
 /**
- * Downloads a binary or text blob in the browser.
+ * Downloads a binary or text blob in the browser, or opens system share sheet on native mobile.
  */
 export function triggerFileDownload(filename: string, content: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  void saveAndShareFile(filename, content, mimeType);
 }
 
 /**
- * Generates a full Microsoft Word Document (.doc / .docx compatible).
+ * Generates Word HTML string.
  */
-export function exportToWordDoc(projectName: string): void {
+export function exportToWordDocHtml(projectName: string): string {
   const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-  
-  const wordHtml = `
+  return `
 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
 <head>
   <meta charset="utf-8">
@@ -100,30 +92,24 @@ export function exportToWordDoc(projectName: string): void {
         <td>Triggers automated candidate calendar invitations</td>
         <td>Bearer JWT (Editor+)</td>
       </tr>
-      <tr>
-        <td><code>POST</code></td>
-        <td><code>/api/v1/billing/razorpay/order</code></td>
-        <td>Creates Razorpay INR payment order for AI tokens</td>
-        <td>Bearer JWT (Admin)</td>
-      </tr>
     </tbody>
   </table>
 
-  <h2>3. Delivery Roadmap & Implementation Sprints</h2>
+  <h2>3. Phased Implementation Roadmap</h2>
   <table class="data-table">
     <thead>
       <tr>
         <th>Sprint</th>
-        <th>Phase Focus</th>
-        <th>Key Deliverables</th>
+        <th>Deliverable Name</th>
+        <th>Scope Highlights</th>
         <th>Timeline</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td>Sprint 1-2</td>
-        <td>Foundation & Core Data</td>
-        <td>PostgreSQL schema, RLS policies, Supabase Auth integration</td>
+        <td>Foundation & Data Ingestion</td>
+        <td>PostgreSQL 16 RLS schema, Supabase Auth setup, document parser</td>
         <td>Weeks 1 - 2</td>
       </tr>
       <tr>
@@ -150,9 +136,31 @@ export function exportToWordDoc(projectName: string): void {
   </ul>
 </body>
 </html>`;
+}
 
+/**
+ * Generates CSV string for data exports.
+ */
+export function generateExcelCsvContent(): string {
+  return `Category,Metric Name,Value,Unit,Benchmark
+Operational Efficiency,Average Hiring Cycle Time,9,Days,28 Days
+Cost Optimization,Recruiter Labor Reclaimed,3240,Hours / Year,0
+Financial Return,Net Payback Horizon,2.4,Months,12 Months
+Quality & Accuracy,Candidate Drop-Off Rate,6,%,28%
+Platform Architecture,Database Engine,PostgreSQL 16,Engine,Excel Sheets
+Architecture Scale,Target SLA Uptime,99.9,%,95%
+Security Compliance,Tenant Isolation,RLS Multi-Tenant,Standard,Unsecured
+`;
+}
+
+/**
+ * Generates a full Microsoft Word Document (.doc / .docx compatible).
+ */
+export function exportToWordDoc(projectName: string): void {
+  const wordHtml = exportToWordDocHtml(projectName);
   triggerFileDownload(`${projectName.replace(/\s+/g, "_")}_Blueprint_Report.doc`, wordHtml, "application/msword");
 }
+
 
 /**
  * Generates a full Microsoft Excel Workbook (.xls / multi-sheet XML compatible).

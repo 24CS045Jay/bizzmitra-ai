@@ -467,7 +467,7 @@ export function AppSidebar2({
           damping: 32,
         }}
         className={cn(
-          "fixed left-0 top-0 bottom-0 z-40 hidden lg:flex flex-col border-r border-border/80 bg-sidebar/95 backdrop-blur-2xl shadow-2xl transition-colors select-none dark:border-white/10 dark:bg-sidebar/95",
+          "fixed left-0 top-0 bottom-0 z-40 hidden sm:flex flex-col border-r border-border/80 bg-sidebar/95 backdrop-blur-2xl shadow-2xl transition-colors select-none dark:border-white/10 dark:bg-sidebar/95",
           className,
         )}
       >

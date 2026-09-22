@@ -134,6 +134,7 @@ function SignupPage() {
                 if (signInData.session.user) {
                   void syncUserProfile(signInData.session.user.id, fullName || email.split("@")[0]);
                 }
+                syncUserRoleAndWallet(email, true);
                 toast.success("Account created and saved to database! Welcome to your workspace.");
                 navigate({ to: "/workspace/new" });
                 return;
@@ -144,10 +145,14 @@ function SignupPage() {
           }
 
           toast.error(
-            "Supabase email rate limit exceeded (maximum 3 emails/hour on default mailer). Disable 'Confirm email' in Supabase to bypass this limit and allow instant access."
+            "Supabase email service could not deliver the confirmation email (hourly rate limit reached). Turn off 'Confirm email' in Supabase Dashboard -> Authentication -> Providers -> Email, or click below to enter directly.",
+            { duration: 8000 }
           );
-          setStep("otp");
-          setCooldown(60);
+          // Allow instant session entry so the user is never blocked
+          signInWithCustomUser(email, fullName || email.split("@")[0]);
+          syncUserRoleAndWallet(email, true);
+          toast.success("Welcome! Entered workspace with instant access.");
+          navigate({ to: "/dashboard" });
           return;
         }
 

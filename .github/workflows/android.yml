@@ -1,0 +1,72 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, "feat/*" ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Signed Android Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps || npm install
+
+      - name: Sync Capacitor Android Project
+        run: npx cap sync android
+
+      - name: Build Android Release APK
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/keys/bizzmitra-release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'bizzmitra2026' }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS || 'bizzmitra' }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD || 'bizzmitra2026' }}
+        run: |
+          mkdir -p keys release
+          if [ ! -f "$KEYSTORE_PATH" ]; then
+            echo "Generating release keystore in CI environment..."
+            keytool -genkeypair -v -keystore "$KEYSTORE_PATH" \
+              -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" \
+              -dname "CN=BizzMitra, OU=Engineering, O=BizzMitra AI, L=Surat, ST=Gujarat, C=IN"
+          fi
+          
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease --stacktrace
+          cd ..
+          
+          APK_FILE=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            echo "Error: Release APK not found"
+            exit 1
+          fi
+          echo "Found APK at: $APK_FILE"
+          cp "$APK_FILE" release/BizzMitra-android.apk
+          ls -lh release/BizzMitra-android.apk
+
+      - name: Upload Android APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BizzMitra-android.apk
+          path: release/BizzMitra-android.apk
+          if-no-files-found: error

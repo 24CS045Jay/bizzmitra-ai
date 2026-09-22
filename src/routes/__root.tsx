@@ -18,6 +18,7 @@ import { PageTransition } from "@/components/motion/primitives";
 import { Toaster } from "@/components/ui/sonner";
 import { getCurrentLanguage, triggerGoogleTranslate } from "@/lib/i18n";
 import { initUniversalDomObserver, runUniversalDomTranslation } from "@/lib/auto-translator";
+import { initNative } from "@/lib/native-bridge";
 
 
 function NotFoundComponent() {
@@ -84,7 +85,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no",
+      },
+      { name: "theme-color", content: "#4f46e5" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "BizzMitra" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "format-detection", content: "telephone=no" },
       { title: "BizzMitra-AI — Business problem to blueprint" },
       {
         name: "description",
@@ -110,6 +120,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Inter+Tight:ital,wght@0,300..700;1,400&family=JetBrains+Mono:wght@400;500&display=swap",
       },
+      { rel: "manifest", href: "/manifest.json" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
@@ -230,11 +242,31 @@ function RootComponent() {
       runUniversalDomTranslation(cur);
       const timer = setTimeout(() => {
         runUniversalDomTranslation(cur);
+        triggerGoogleTranslate(cur);
       }, 100);
       return () => clearTimeout(timer);
     }
     return undefined;
   }, [location]);
+
+  // Initialize Native Shell (Splash screen, Status bar theme, Android back button)
+  useEffect(() => {
+    void initNative();
+  }, []);
+
+  // Register PWA Service Worker
+  useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator && process.env["NODE_ENV"] === "production") {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          console.log("[PWA] Service worker registered successfully:", reg.scope);
+        })
+        .catch((err) => {
+          console.warn("[PWA] Service worker registration failed:", err);
+        });
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
