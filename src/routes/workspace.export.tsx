@@ -41,6 +41,7 @@ import {
 import { getDatabaseBlueprint } from "@/lib/database-data";
 import { getRoadmapForWorkspace } from "@/lib/planning-data";
 import { isNative, saveAndShareFile } from "@/lib/native-bridge";
+import { useStageGate } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/export")({
   head: () => ({
@@ -58,6 +59,7 @@ export const Route = createFileRoute("/workspace/export")({
 });
 
 export function ExportCenterPage() {
+  useStageGate("export");
   const [activePreview, setActivePreview] = useState<"spec" | "openapi" | "sql">("spec");
   const [packagingProgress, setPackagingProgress] = useState<number | null>(null);
 
@@ -247,7 +249,7 @@ export function ExportCenterPage() {
               {dbBlueprint.domainId.toUpperCase()} ENGINE
             </span>
             <span className="rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              {dbBlueprint.tables.length} Tables · {dbBlueprint.apiEndpoints.length} APIs
+              {(dbBlueprint.tables || []).length} Tables · {(dbBlueprint.apiSpecifications || dbBlueprint.apiEndpoints || []).length} APIs
             </span>
           </div>
         </div>
@@ -319,8 +321,8 @@ export function ExportCenterPage() {
                 <FileCode2 className="size-3.5 text-blue-500" />
                 Schema & API Engine
               </div>
-              <p className="mt-1 font-display text-xl font-bold">{dbBlueprint.tables.length} Tables · PG 16</p>
-              <p className="text-[11px] text-muted-foreground">{dbBlueprint.apiEndpoints.length} REST endpoints defined</p>
+              <p className="mt-1 font-display text-xl font-bold">{(dbBlueprint.tables || []).length} Tables · PG 16</p>
+              <p className="text-[11px] text-muted-foreground">{(dbBlueprint.apiSpecifications || dbBlueprint.apiEndpoints || []).length} REST endpoints defined</p>
             </div>
 
             <div className="neu-inset p-3.5">
@@ -328,8 +330,8 @@ export function ExportCenterPage() {
                 <Zap className="size-3.5 text-amber-500" />
                 Delivery Velocity
               </div>
-              <p className="mt-1 font-display text-xl font-bold">{roadmap.totalWeeks} Weeks</p>
-              <p className="text-[11px] text-muted-foreground">{roadmap.totalStoryPoints * 2} Person-days planned</p>
+              <p className="mt-1 font-display text-xl font-bold">{roadmap.targetTimelineWeeks || roadmap.totalWeeks || 8} Weeks</p>
+              <p className="text-[11px] text-muted-foreground">{roadmap.totalPersonDays || 70} Person-days planned</p>
             </div>
           </div>
         </Reveal>

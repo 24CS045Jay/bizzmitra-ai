@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { ArrowLeft, ArrowRight, Download, GitBranch, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, GitBranch, Lock, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -9,6 +9,7 @@ import { VersionControlDrawer } from "@/components/VersionControlDrawer";
 import { cn } from "@/lib/utils";
 import { ROLE_DEFINITIONS, UserRole, loadCurrentRole } from "@/lib/admin-rbac-data";
 import { useTranslation } from "@/lib/i18n";
+import { isStageUnlocked, getUnlockedStages } from "@/lib/workspace-stage-gate";
 
 export const CHAIN = [
   { id: "intake", label: "Intake", to: "/workspace/new" },
@@ -20,8 +21,10 @@ export const CHAIN = [
   { id: "wireframes", label: "UX", to: "/workspace/wireframes" },
   { id: "data", label: "Data & APIs", to: "/workspace/data" },
   { id: "roadmap", label: "Roadmap", to: "/workspace/roadmap" },
-  { id: "dashboard", label: "Transformation", to: "/workspace/insights" },
+  { id: "insights", label: "Transformation", to: "/workspace/insights" },
   { id: "map", label: "Artifact Map", to: "/workspace/map" },
+  { id: "collaboration", label: "Governance", to: "/workspace/collaboration" },
+  { id: "export", label: "Export", to: "/workspace/export" },
 ] as const;
 
 export function ArtifactHeader({
@@ -30,7 +33,7 @@ export function ArtifactHeader({
   kicker,
   onRegenerate,
 }: {
-  id: (typeof CHAIN)[number]["id"];
+  id: string;
   title: string;
   kicker: string;
   onRegenerate?: () => void;
@@ -39,6 +42,7 @@ export function ArtifactHeader({
   const [regenerating, setRegenerating] = useState(false);
   const [versionDrawerOpen, setVersionDrawerOpen] = useState(false);
   const [role, setRole] = useState<UserRole>("admin");
+  const [unlockedStages, setUnlockedStages] = useState<string[]>(() => getUnlockedStages());
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -47,8 +51,19 @@ export function ArtifactHeader({
       const ce = e as CustomEvent<UserRole>;
       setRole(ce.detail || loadCurrentRole());
     };
+    const onStagesChange = () => {
+      setUnlockedStages(getUnlockedStages());
+    };
+
     window.addEventListener("bizzmitra:role-changed", onRoleChange);
-    return () => window.removeEventListener("bizzmitra:role-changed", onRoleChange);
+    window.addEventListener("bizzmitra:stages-updated", onStagesChange);
+    window.addEventListener("storage", onStagesChange);
+
+    return () => {
+      window.removeEventListener("bizzmitra:role-changed", onRoleChange);
+      window.removeEventListener("bizzmitra:stages-updated", onStagesChange);
+      window.removeEventListener("storage", onStagesChange);
+    };
   }, []);
 
   const permissions = ROLE_DEFINITIONS[role]?.permissions || ROLE_DEFINITIONS.admin.permissions;
@@ -79,24 +94,42 @@ export function ArtifactHeader({
       {/* Chain breadcrumb — the visible "connected workspace" motif */}
       <nav aria-label="Artifact chain" className="mb-6 overflow-x-auto pb-1">
         <ol className="flex items-center gap-1.5 whitespace-nowrap text-xs">
-          {CHAIN.map((c, i) => (
-            <li key={c.id} className="flex items-center gap-1.5">
-              {i > 0 ? <span className="text-border">—</span> : null}
-              <Link
-                to={c.to}
-                className={cn(
-                  "rounded-full px-2.5 py-1 transition-colors",
-                  c.id === id
-                    ? "bg-primary font-semibold text-primary-foreground"
-                    : i < idx
-                      ? "text-foreground hover:bg-accent"
-                      : "text-muted-foreground hover:bg-accent",
+          {CHAIN.map((c, i) => {
+            const isItemUnlocked = c.id === "intake" || isStageUnlocked(c.id);
+
+            return (
+              <li key={c.id} className="flex items-center gap-1.5">
+                {i > 0 ? <span className="text-border">—</span> : null}
+                {!isItemUnlocked ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toast.warning(`Please complete earlier stages to unlock ${c.label}.`)
+                    }
+                    className="flex items-center gap-1 rounded-full px-2.5 py-1 text-muted-foreground/50 cursor-not-allowed hover:bg-accent/40 transition-colors"
+                    title={`Locked: Complete earlier stages to unlock ${c.label}`}
+                  >
+                    <Lock className="size-2.5 opacity-60" />
+                    <span>{t("chain." + c.id, c.label)}</span>
+                  </button>
+                ) : (
+                  <Link
+                    to={c.to}
+                    className={cn(
+                      "rounded-full px-2.5 py-1 transition-colors",
+                      c.id === id
+                        ? "bg-primary font-semibold text-primary-foreground"
+                        : i < idx
+                          ? "text-foreground hover:bg-accent"
+                          : "text-muted-foreground hover:bg-accent",
+                    )}
+                  >
+                    {t("chain." + c.id, c.label)}
+                  </Link>
                 )}
-              >
-                {t("chain." + c.id, c.label)}
-              </Link>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ol>
       </nav>
 
@@ -159,9 +192,30 @@ export function ArtifactHeader({
           <span />
         )}
         {next ? (
-          <Link to={next.to} className="flex items-center gap-1.5 font-medium text-primary">
-            {t("chain." + next.id, next.label)} <ArrowRight className="size-3.5" />
-          </Link>
+          (() => {
+            const isNextUnlocked = next.id === "intake" || isStageUnlocked(next.id);
+            if (!isNextUnlocked) {
+              return (
+                <button
+                  type="button"
+                  onClick={() =>
+                    toast.warning(`Please complete this stage first to unlock ${next.label}.`)
+                  }
+                  className="flex items-center gap-1.5 font-medium text-muted-foreground/60 cursor-not-allowed"
+                  title={`Complete this stage to unlock ${next.label}`}
+                >
+                  <Lock className="size-3.5" />
+                  <span>{t("chain." + next.id, next.label)}</span>
+                  <span className="text-[10px] text-muted-foreground font-normal">(Locked)</span>
+                </button>
+              );
+            }
+            return (
+              <Link to={next.to} className="flex items-center gap-1.5 font-medium text-primary">
+                {t("chain." + next.id, next.label)} <ArrowRight className="size-3.5" />
+              </Link>
+            );
+          })()
         ) : null}
       </div>
     </header>

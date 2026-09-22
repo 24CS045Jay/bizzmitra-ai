@@ -20,6 +20,13 @@ export function generateOpenApiJson(workspaceContext?: any): string {
     if (!paths[api.path]) {
       paths[api.path] = {};
     }
+    let responseExample: any = {};
+    try {
+      responseExample = JSON.parse(api.responseBody || "{}");
+    } catch {
+      responseExample = { message: api.responseBody || "Success" };
+    }
+
     paths[api.path][methodLower] = {
       summary: api.summary,
       tags: [api.category],
@@ -29,7 +36,7 @@ export function generateOpenApiJson(workspaceContext?: any): string {
           description: "Successful response",
           content: {
             "application/json": {
-              example: JSON.parse(api.responseBody || "{}"),
+              example: responseExample,
             },
           },
         },

@@ -25,6 +25,7 @@ import { GenerationSequence } from "@/components/GenerationSequence";
 import { Mermaid } from "@/components/Mermaid";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import { getProcessBlueprint } from "@/lib/process-data";
+import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/process")({
   head: () => ({
@@ -48,6 +49,7 @@ type TabView = "comparison" | "swimlane" | "bottlenecks" | "decisionTree";
 type DiffViewMode = "split" | "before" | "after";
 
 function ProcessPage() {
+  useStageGate("process");
   const [activeTab, setActiveTab] = useState<TabView>("comparison");
   const [diffMode, setDiffMode] = useState<DiffViewMode>("split");
   const [workspaceContext, setWorkspaceContext] = useState<{
@@ -489,6 +491,8 @@ function ProcessPage() {
               </div>
             </motion.div>
           )}
+
+          <StageNextButton currentStageId="process" label="Proceed to Interactive Wireframes" />
         </div>
       </GenerationSequence>
     </AppShell>

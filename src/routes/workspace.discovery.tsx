@@ -32,6 +32,7 @@ import { generateDynamicDiscovery } from "@/lib/ai/discovery-ai";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentIngestionModal } from "@/components/DocumentIngestionModal";
+import { completeDiscoveryAndUnlockAll, StageNextButton } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/discovery")({
   head: () => ({
@@ -62,7 +63,26 @@ type Turn = {
 function DiscoveryPage() {
   const { user } = useAuth();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
-  const [problemText, setProblemText] = useState<string>(HR_CONSULTANCY_PROBLEM);
+
+  const initialContext = (() => {
+    if (typeof window === "undefined") {
+      return { problem: HR_CONSULTANCY_PROBLEM, businessName: "Enterprise Workspace", industry: "Cross-Industry" };
+    }
+    try {
+      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          problem: parsed.problemStatement || parsed.summary || HR_CONSULTANCY_PROBLEM,
+          businessName: parsed.businessName || parsed.name || "Enterprise Workspace",
+          industry: parsed.industry || "Cross-Industry",
+        };
+      }
+    } catch {}
+    return { problem: HR_CONSULTANCY_PROBLEM, businessName: "Enterprise Workspace", industry: "Cross-Industry" };
+  })();
+
+  const [problemText, setProblemText] = useState<string>(initialContext.problem);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [step, setStep] = useState(0);
   const [thinking, setThinking] = useState(false);
@@ -70,10 +90,16 @@ function DiscoveryPage() {
   const [customInput, setCustomInput] = useState("");
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
-  const [dynamicScript, setDynamicScript] = useState<DiscoveryQuestionItem[]>(() => getActiveDiscoveryScript(problemText));
-  const [dynamicSummary, setDynamicSummary] = useState<string>(() => getActiveAiSummary(problemText));
-  const [dynamicAnalysis, setDynamicAnalysis] = useState<BusinessAnalysisReport>(() => getActiveBusinessAnalysis(problemText));
-  const [aiModelLabel, setAiModelLabel] = useState<string>("Groq 120B AI");
+  const [dynamicScript, setDynamicScript] = useState<DiscoveryQuestionItem[]>(() =>
+    getActiveDiscoveryScript(initialContext.problem, initialContext.businessName, initialContext.industry)
+  );
+  const [dynamicSummary, setDynamicSummary] = useState<string>(() =>
+    getActiveAiSummary(initialContext.problem, initialContext.businessName, initialContext.industry)
+  );
+  const [dynamicAnalysis, setDynamicAnalysis] = useState<BusinessAnalysisReport>(() =>
+    getActiveBusinessAnalysis(initialContext.problem, initialContext.businessName, initialContext.industry)
+  );
+  const [aiModelLabel, setAiModelLabel] = useState<string>("BizzMitra NLP Engine");
 
   const script = dynamicScript;
   const summaryText = dynamicSummary;
@@ -92,13 +118,21 @@ function DiscoveryPage() {
       if (raw) {
         const parsed = JSON.parse(raw);
         loadedText = parsed.problemStatement || parsed.summary || "";
-        bName = parsed.businessName || bName;
+        bName = parsed.businessName || parsed.name || bName;
         ind = parsed.industry || ind;
       }
     } catch {}
 
     if (!loadedText) loadedText = HR_CONSULTANCY_PROBLEM;
     setProblemText(loadedText);
+
+    // Immediate synchronous domain calibration
+    const localScript = getActiveDiscoveryScript(loadedText, bName, ind);
+    const localSummary = getActiveAiSummary(loadedText, bName, ind);
+    const localAnalysis = getActiveBusinessAnalysis(loadedText, bName, ind);
+    setDynamicScript(localScript);
+    setDynamicSummary(localSummary);
+    setDynamicAnalysis(localAnalysis);
 
     // Dynamically generate discovery questions & analysis via Groq 120B LLM
     void generateDynamicDiscovery(loadedText, bName, ind).then((res) => {
@@ -128,7 +162,11 @@ function DiscoveryPage() {
         console.warn(error.message);
       }
 
-      if (data && data.length > 0) {
+      // Check if existing messages match the current problem intake
+      const isMatchingCurrentProblem =
+        data && data.length > 0 && data[0]?.content?.trim() === loadedText.trim();
+
+      if (isMatchingCurrentProblem && data) {
         const loadedTurns = data.map((message) => ({
           role: message.role as Turn["role"],
           text: message.content,
@@ -136,7 +174,7 @@ function DiscoveryPage() {
         setTurns(loadedTurns);
         const answered = loadedTurns.filter((t) => t.role === "user").length - 1;
         setStep(Math.max(0, answered));
-        setComplete(loadedTurns.some((t) => t.text === summaryText));
+        setComplete(loadedTurns.some((t) => t.text === localSummary));
       } else {
         if (!id!.startsWith("ws-")) {
           const { data: ws } = await supabase
@@ -144,15 +182,24 @@ function DiscoveryPage() {
             .select("problem_statement")
             .eq("id", id!)
             .maybeSingle();
-          if (ws?.problem_statement) {
+          if (ws?.problem_statement && ws.problem_statement !== loadedText) {
             loadedText = ws.problem_statement;
             setProblemText(loadedText);
+            const wsScript = getActiveDiscoveryScript(loadedText, bName, ind);
+            setDynamicScript(wsScript);
+            setDynamicSummary(getActiveAiSummary(loadedText, bName, ind));
+            setDynamicAnalysis(getActiveBusinessAnalysis(loadedText, bName, ind));
             void generateDynamicDiscovery(loadedText, bName, ind).then((res) => {
               setDynamicScript(res.questions);
               setDynamicSummary(res.summary);
               setDynamicAnalysis(res.businessAnalysis);
               setAiModelLabel(res.source === "groq-llm" ? "Groq 120B AI" : "BizzMitra NLP Engine");
             });
+          }
+
+          // Clear any stale messages if problem has changed
+          if (data && data.length > 0 && !isMatchingCurrentProblem) {
+            await supabase.from("discovery_messages").delete().eq("workspace_id", id!);
           }
 
           await supabase.from("discovery_messages").insert({
@@ -203,13 +250,31 @@ function DiscoveryPage() {
         }
         setTurns((prev) => [...prev, { role: "ai", text: summaryText }]);
         setComplete(true);
-        toast.success("AI Discovery complete! Business Analysis Engine synthesized.");
+        completeDiscoveryAndUnlockAll();
+        toast.success("AI Discovery complete! All workspace blueprints are now unlocked.");
       }
       setThinking(false);
     }, 1200);
 
     return () => clearTimeout(t);
   }, [thinking, step, workspaceId, script, summaryText]);
+
+  useEffect(() => {
+    if (complete) {
+      completeDiscoveryAndUnlockAll();
+    }
+  }, [complete]);
+
+  function handleFastTrackComplete() {
+    setThinking(true);
+    setTimeout(() => {
+      setTurns((prev) => [...prev, { role: "ai", text: summaryText }]);
+      setComplete(true);
+      completeDiscoveryAndUnlockAll();
+      setThinking(false);
+      toast.success("AI Discovery complete! All workspace blueprints are now unlocked.");
+    }, 600);
+  }
 
   function submitAnswer(textToSubmit: string) {
     if (!textToSubmit.trim()) return;
@@ -365,9 +430,20 @@ function DiscoveryPage() {
               </div>
             ) : currentQuestion && !thinking ? (
               <div className="space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Select a response or type a custom answer:
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Select a response or type a custom answer:
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleFastTrackComplete}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary hover:bg-primary/20 transition-colors shadow-xs"
+                    title="Skip remaining questions and synthesize full business analysis now"
+                  >
+                    <Sparkles className="size-3" />
+                    <span>Synthesize & Unlock Solution Studio</span>
+                  </button>
+                </div>
 
                 {/* Quick Contextual Response Options */}
                 <div className="grid gap-2">
@@ -697,6 +773,8 @@ function DiscoveryPage() {
               ))}
             </div>
           </div>
+
+          <StageNextButton currentStageId="discovery" label="Proceed to Solution Studio" />
         </motion.section>
       )}
 

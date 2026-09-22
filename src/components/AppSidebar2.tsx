@@ -26,7 +26,9 @@ import {
   ArrowRight,
   ChevronDown,
   Shield,
+  Lock,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth, isTestingAccount } from "@/hooks/useAuth";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageSelector } from "./LanguageSelector";
@@ -34,6 +36,7 @@ import { useTranslation } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { isSuperAdminEmail } from "@/lib/admin-rbac-data";
 import { cn } from "@/lib/utils";
+import { isStageUnlocked, getUnlockedStages, WORKSPACE_STAGES } from "@/lib/workspace-stage-gate";
 
 interface SubMenuItem {
   label: string;
@@ -333,6 +336,20 @@ export function AppSidebar2({
     lang: "en",
   });
 
+  const [unlockedStages, setUnlockedStages] = React.useState<string[]>(() => getUnlockedStages());
+
+  React.useEffect(() => {
+    const handleStagesUpdate = () => {
+      setUnlockedStages(getUnlockedStages());
+    };
+    window.addEventListener("bizzmitra:stages-updated", handleStagesUpdate);
+    window.addEventListener("storage", handleStagesUpdate);
+    return () => {
+      window.removeEventListener("bizzmitra:stages-updated", handleStagesUpdate);
+      window.removeEventListener("storage", handleStagesUpdate);
+    };
+  }, []);
+
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const storedLang = window.localStorage.getItem("bizzmitra.language") || "en";
@@ -596,6 +613,9 @@ export function AppSidebar2({
                 const Icon = item.icon;
                 const isActive = pathname === item.to;
                 const isItemHovered = activeFlyout === item.id;
+                const isStage = WORKSPACE_STAGES.some((s) => s.id === item.id) || item.id === "crm";
+                const isGated = isStage && item.id !== "discovery" && item.id !== "export" && item.id !== "settings";
+                const isUnlocked = !isGated || isStageUnlocked(item.id);
 
                 return (
                   <div
@@ -605,14 +625,23 @@ export function AppSidebar2({
                   >
                     <Link
                       to={item.to}
-                      onClick={onNavigate}
+                      onClick={(e) => {
+                        if (!isUnlocked) {
+                          e.preventDefault();
+                          toast.warning(`Please complete earlier stages first to unlock ${getItemLabel(item)}.`);
+                          return;
+                        }
+                        onNavigate?.();
+                      }}
                       className={cn(
                         "group relative flex items-center gap-3 rounded-xl px-2.5 py-2 transition-all duration-200",
-                        isActive
-                          ? "bg-primary text-primary-foreground font-semibold shadow-sm glow-primary"
-                          : isItemHovered
-                            ? "bg-surface-2 text-foreground"
-                            : "text-muted-foreground hover:bg-surface-2/80 hover:text-foreground",
+                        !isUnlocked
+                          ? "opacity-50 cursor-not-allowed hover:bg-transparent"
+                          : isActive
+                            ? "bg-primary text-primary-foreground font-semibold shadow-sm glow-primary"
+                            : isItemHovered
+                              ? "bg-surface-2 text-foreground"
+                              : "text-muted-foreground hover:bg-surface-2/80 hover:text-foreground",
                       )}
                     >
                       {/* Task Icon */}
@@ -639,7 +668,11 @@ export function AppSidebar2({
                               <span className="truncate text-xs font-semibold leading-none">
                                 {getItemLabel(item)}
                               </span>
-                              {item.badge && (
+                              {!isUnlocked ? (
+                                <span className="rounded bg-muted/60 px-1.5 py-0.2 font-mono text-[8px] font-bold text-muted-foreground flex items-center gap-0.5">
+                                  <Lock className="size-2" /> Locked
+                                </span>
+                              ) : item.badge ? (
                                 <span
                                   className={cn(
                                     "rounded px-1.5 py-0.2 font-mono text-[8px] font-bold",
@@ -650,7 +683,7 @@ export function AppSidebar2({
                                 >
                                   {item.badge}
                                 </span>
-                              )}
+                              ) : null}
                             </div>
                             <p
                               className={cn(
@@ -755,20 +788,44 @@ export function AppSidebar2({
               {(() => {
                 const allItems = filteredPortalGroups.flatMap((g) => g.items);
                 const cur = allItems.find((i) => i.id === activeFlyout);
-                return cur?.subItems?.map((sub) => (
-                  <Link
-                    key={sub.label}
-                    to={sub.href}
-                    onClick={() => {
-                      setActiveFlyout(null);
-                      onNavigate?.();
-                    }}
-                    className="group flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
-                  >
-                    <span>{sub.label}</span>
-                    <ArrowRight className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
-                  </Link>
-                ));
+                const curIsGated = cur && (WORKSPACE_STAGES.some((s) => s.id === cur.id) || cur.id === "crm") && cur.id !== "discovery";
+                const curIsUnlocked = !curIsGated || (cur ? isStageUnlocked(cur.id) : true);
+
+                return cur?.subItems?.map((sub) => {
+                  if (!curIsUnlocked) {
+                    return (
+                      <button
+                        key={sub.label}
+                        type="button"
+                        onClick={() => {
+                          toast.warning(`Please complete earlier stages to unlock ${getItemLabel(cur!)}.`);
+                        }}
+                        className="group flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground/50 cursor-not-allowed hover:bg-transparent"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Lock className="size-2.5 opacity-60" />
+                          <span>{sub.label}</span>
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono">(Locked)</span>
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={sub.label}
+                      to={sub.href}
+                      onClick={() => {
+                        setActiveFlyout(null);
+                        onNavigate?.();
+                      }}
+                      className="group flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
+                    >
+                      <span>{sub.label}</span>
+                      <ArrowRight className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </Link>
+                  );
+                });
               })()}
             </div>
           </motion.div>

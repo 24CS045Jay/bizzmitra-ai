@@ -35,6 +35,7 @@ import {
   loadCollaborationState,
   saveCollaborationState,
 } from "@/lib/collaboration-data";
+import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/collaboration")({
   head: () => ({
@@ -52,6 +53,7 @@ export const Route = createFileRoute("/workspace/collaboration")({
 });
 
 export function CollaborationPage() {
+  useStageGate("collaboration");
   const [workspaceContext, setWorkspaceContext] = useState<{
     id?: string;
     name?: string;
@@ -703,6 +705,8 @@ export function CollaborationPage() {
             ))}
           </div>
         </Reveal>
+
+        <StageNextButton currentStageId="collaboration" label="Proceed to Universal Export Center" />
       </div>
     </AppShell>
   );

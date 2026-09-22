@@ -27,6 +27,7 @@ import {
   getDatabaseBlueprint,
   TableDef,
 } from "@/lib/database-data";
+import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/data")({
   head: () => ({
@@ -57,6 +58,7 @@ const METHOD_BADGES: Record<string, string> = {
 };
 
 function DataPage() {
+  useStageGate("data");
   const [activeTab, setActiveTab] = useState<MainTab>("erd");
   const [copiedSql, setCopiedSql] = useState(false);
   const [copiedCurlIndex, setCopiedCurlIndex] = useState<number | null>(null);
@@ -537,6 +539,8 @@ function DataPage() {
               </div>
             </motion.div>
           )}
+
+          <StageNextButton currentStageId="data" label="Proceed to Delivery Roadmap" />
         </div>
       </GenerationSequence>
     </AppShell>
