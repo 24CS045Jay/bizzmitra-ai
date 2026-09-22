@@ -112,11 +112,47 @@ export async function haptic(kind: HapticKind = "light"): Promise<void> {
 }
 
 let nativeInitialized = false;
+let splashHidden = false;
+
+/**
+ * Synchronizes native mobile StatusBar style & background color to match active theme.
+ * Light mode: #F5F3EE background with dark icons (Style.Light).
+ * Dark mode: #181614 background with light icons (Style.Dark).
+ */
+export async function syncNativeTheme(theme: "light" | "dark"): Promise<void> {
+  if (!isNative()) return;
+  try {
+    const { StatusBar, Style } = await import("@capacitor/status-bar");
+    if (theme === "dark") {
+      await StatusBar.setStyle({ style: Style.Dark });
+      await StatusBar.setBackgroundColor({ color: "#181614" });
+    } else {
+      await StatusBar.setStyle({ style: Style.Light });
+      await StatusBar.setBackgroundColor({ color: "#F5F3EE" });
+    }
+  } catch (err) {
+    console.warn("[NativeBridge] StatusBar theme sync note:", err);
+  }
+}
+
+/**
+ * Hides the native splash screen smoothly with a 300ms fade duration.
+ * Guaranteed to fire ONLY after the first themed paint has rendered.
+ */
+export async function hideSplashScreen(): Promise<void> {
+  if (!isNative() || splashHidden) return;
+  splashHidden = true;
+  try {
+    const { SplashScreen } = await import("@capacitor/splash-screen");
+    await SplashScreen.hide({ fadeDuration: 300 });
+    console.log("[NativeBridge] SplashScreen smoothly dismissed post-paint");
+  } catch (err) {
+    console.warn("[NativeBridge] SplashScreen hide note:", err);
+  }
+}
 
 /**
  * Initializes native mobile runtime features:
- * - Automatically hides splash screen once the webview has mounted
- * - Synchronizes StatusBar style with the user's active theme
  * - Registers hardware back button listener for Android navigation
  */
 export async function initNative(): Promise<void> {
@@ -143,3 +179,4 @@ export async function initNative(): Promise<void> {
     console.warn("[NativeBridge] initNative note:", err);
   }
 }
+

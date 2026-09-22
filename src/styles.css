@@ -405,14 +405,38 @@ select:-webkit-autofill {
   --sar: env(safe-area-inset-right, 0px);
 }
 
+html, body, #root {
+  max-width: 100vw;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
 html, body {
   /* Prevent bounce outside container and horizontal scroll leakage */
   overscroll-behavior: none;
+  overscroll-behavior-y: contain;
   min-height: 100dvh;
   /* Disable 300ms double-tap delay on mobile Safari & Chrome */
   touch-action: manipulation;
-  /* Disable tap grey flash on Android and iOS webviews */
+  /* Remove visible browser chrome artifacts & tap flashes */
   -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input, textarea, [contenteditable] {
+  -webkit-user-select: text; /* re-enable text selection for actual user input */
+}
+
+button, [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Universal active press feedback on touch / click */
+button:active, [role="button"]:active {
+  transform: scale(0.97);
+  transition: transform 120ms ease;
 }
 
 /* Safe Area Inset Helpers for Notched Screens, Dynamic Islands, & Gesture Bars */
@@ -444,9 +468,10 @@ html, body {
 
 /* Tablet & Mobile Canvas Adaptations */
 @media (max-width: 1024px) {
-  /* Optimize font rendering and tap targets on tablet & mobile */
-  button, [role="button"], a {
-    min-height: 38px;
+  /* Enforce min 44x44px touch target ergonomics per iOS & Android Human Interface Guidelines */
+  button, [role="button"], a.btn, input[type="button"], input[type="submit"] {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 
