@@ -30,6 +30,7 @@ import {
   generateOpenApiJson,
   generatePostgreSqlDdl,
   generateTechnicalSpecMarkdown,
+  generateDomainCsv,
 } from "@/lib/export-engine";
 import {
   exportToWordDoc,
@@ -37,6 +38,8 @@ import {
   exportToExcelWorkbook,
   exportToPowerPointDeck,
 } from "@/lib/document-exporters";
+import { getDatabaseBlueprint } from "@/lib/database-data";
+import { getRoadmapForWorkspace } from "@/lib/planning-data";
 import { isNative, saveAndShareFile } from "@/lib/native-bridge";
 
 export const Route = createFileRoute("/workspace/export")({
@@ -69,11 +72,13 @@ export function ExportCenterPage() {
     }
   }, []);
 
-  const scenarioName = workspaceContext?.name ?? "TalentCraft HR Consultancy";
+  const scenarioName = workspaceContext?.name ?? "Enterprise Modernization Blueprint";
+  const dbBlueprint = useMemo(() => getDatabaseBlueprint(workspaceContext), [workspaceContext]);
+  const roadmap = useMemo(() => getRoadmapForWorkspace(workspaceContext), [workspaceContext]);
 
-  const openApiContent = useMemo(() => generateOpenApiJson(scenarioName), [scenarioName]);
-  const sqlDdlContent = useMemo(() => generatePostgreSqlDdl(), []);
-  const specMarkdownContent = useMemo(() => generateTechnicalSpecMarkdown(scenarioName), [scenarioName]);
+  const openApiContent = useMemo(() => generateOpenApiJson(workspaceContext), [workspaceContext]);
+  const sqlDdlContent = useMemo(() => generatePostgreSqlDdl(workspaceContext), [workspaceContext]);
+  const specMarkdownContent = useMemo(() => generateTechnicalSpecMarkdown(workspaceContext), [workspaceContext]);
 
   const previewContent =
     activePreview === "spec"
@@ -98,19 +103,19 @@ export function ExportCenterPage() {
   };
 
   const handleDownloadSql = () => {
-    downloadFile("bizzmitra_schema_v1.sql", sqlDdlContent, "application/sql");
-    toast.success("Downloaded PostgreSQL 16+ DDL (.sql)");
+    downloadFile(`${dbBlueprint.domainId}_schema_v1.sql`, sqlDdlContent, "application/sql");
+    toast.success(`Downloaded PostgreSQL 16+ DDL (${dbBlueprint.domainId}_schema_v1.sql)`);
   };
 
   const handleDownloadCsv = () => {
-    const csvContent = `ID,Full Name,Role,Stage,Experience,Rating,Custom Attribute (LinkedIn)\nCAN-001,Aarav Patel,Senior React Engineer,Interview,6.5,4.8,https://linkedin.com/in/aarav-patel\nCAN-002,Meera Iyer,Fullstack Node Architect,Offer,8.0,4.9,https://linkedin.com/in/meera-iyer\nCAN-003,Rohan Verma,DevOps & Cloud Engineer,Screening,4.5,4.2,https://linkedin.com/in/rohan-v\nCAN-004,Ananya Sen,HR Operations Specialist,Interview,5.0,4.6,https://linkedin.com/in/ananya-sen`;
-    downloadFile(`${scenarioName.replace(/\s+/g, "_")}_Candidate_Roster.csv`, csvContent, "text/csv");
-    toast.success("Downloaded Candidate Roster (.csv)");
+    const { filename, content } = generateDomainCsv(workspaceContext);
+    downloadFile(filename, content, "text/csv");
+    toast.success(`Downloaded Domain Master Dataset (${filename})`);
   };
 
   const handlePrintPdf = () => {
     if (isNative()) {
-      const docHtml = exportToWordDocHtml(scenarioName);
+      const docHtml = exportToWordDocHtml(scenarioName, workspaceContext);
       void saveAndShareFile(`${scenarioName.replace(/\s+/g, "_")}_Executive_Blueprint.html`, docHtml, "text/html");
       toast.success("Opened Executive Blueprint in Share Sheet");
     } else {
@@ -119,17 +124,17 @@ export function ExportCenterPage() {
   };
 
   const handleDownloadWord = () => {
-    exportToWordDoc(scenarioName);
+    exportToWordDoc(scenarioName, workspaceContext);
     toast.success("Downloaded Microsoft Word Blueprint (.doc)");
   };
 
   const handleDownloadExcel = () => {
-    exportToExcelWorkbook(scenarioName);
+    exportToExcelWorkbook(scenarioName, workspaceContext);
     toast.success("Downloaded Microsoft Excel Estimates Model (.xls)");
   };
 
   const handleDownloadPowerPoint = () => {
-    exportToPowerPointDeck(scenarioName);
+    exportToPowerPointDeck(scenarioName, workspaceContext);
     toast.success("Downloaded Microsoft PowerPoint Presentation (.ppt)");
   };
 
@@ -148,6 +153,7 @@ export function ExportCenterPage() {
           setTimeout(() => handleDownloadExcel(), 300);
           setTimeout(() => handleDownloadPowerPoint(), 600);
           setTimeout(() => handleDownloadOpenApi(), 900);
+          setTimeout(() => handleDownloadSql(), 1200);
           toast.success("Universal Blueprint Package successfully bundled and downloaded!");
         }, 600);
       }
@@ -159,7 +165,7 @@ export function ExportCenterPage() {
       id: "pdf",
       title: "Executive PDF Blueprint",
       format: "PDF Document",
-      desc: "Board-ready presentation with executive summary, architecture diagrams, and financial ROI.",
+      desc: `Board-ready executive presentation for ${scenarioName} with architecture diagrams and financial ROI.`,
       badge: "Print & Export",
       action: handlePrintPdf,
       icon: Printer,
@@ -168,7 +174,7 @@ export function ExportCenterPage() {
       id: "word",
       title: "Microsoft Word Architecture Spec",
       format: "Word Document (.doc)",
-      desc: "Full editable implementation blueprint with system requirements, schedules, and risk register.",
+      desc: `Full editable implementation blueprint for ${scenarioName} with system requirements and domain models.`,
       badge: "Microsoft Word",
       action: handleDownloadWord,
       icon: FileText,
@@ -195,7 +201,7 @@ export function ExportCenterPage() {
       id: "openapi",
       title: "RESTful API Specification",
       format: "OpenAPI 3.1 JSON",
-      desc: "Interactive endpoint schemas for candidates, pipelines, stage transitions, and punch clocks.",
+      desc: `Interactive endpoint schemas for ${dbBlueprint.domainId.toUpperCase()} domain entities and operations.`,
       badge: "Swagger Ready",
       action: handleDownloadOpenApi,
       icon: FileCode2,
@@ -204,16 +210,16 @@ export function ExportCenterPage() {
       id: "sql",
       title: "PostgreSQL 16+ DDL Schema",
       format: "SQL Script",
-      desc: "Production database tables, GIN indexes on custom JSONB fields, and Row Level Security policies.",
+      desc: `Production schema with ${dbBlueprint.tables.length} domain tables, GIN indexes on custom JSONB fields, and Row Level Security.`,
       badge: "Multi-Tenant RLS",
       action: handleDownloadSql,
       icon: Database,
     },
     {
       id: "csv",
-      title: "Candidate & Financial Model Data",
+      title: `${dbBlueprint.domainId.toUpperCase()} Master Domain Data`,
       format: "Excel / CSV",
-      desc: "Candidate pipeline records with dynamic custom attributes (LinkedIn URL) and ROI sensitivity models.",
+      desc: `Production baseline records tailored to the active problem statement and domain schema.`,
       badge: "Live Data",
       action: handleDownloadCsv,
       icon: FileSpreadsheet,
@@ -223,6 +229,29 @@ export function ExportCenterPage() {
   return (
     <AppShell>
       <div className="space-y-8 pb-16">
+        {/* Dynamic Blueprint Context Banner */}
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                Active Blueprint Context: {scenarioName}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground line-clamp-1">
+              Industry: <span className="font-semibold text-foreground">{workspaceContext?.industry || "Custom Enterprise"}</span> &bull; Problem Statement: <span className="font-medium text-foreground">{workspaceContext?.problemStatement || workspaceContext?.description || "Full-stack enterprise modernization and workflow engine"}</span>
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="rounded-md bg-background/80 px-2.5 py-1 text-xs font-mono font-medium border border-border/50 text-foreground">
+              {dbBlueprint.domainId.toUpperCase()} ENGINE
+            </span>
+            <span className="rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              {dbBlueprint.tables.length} Tables · {dbBlueprint.apiEndpoints.length} APIs
+            </span>
+          </div>
+        </div>
+
         {/* Top Header Banner */}
         <Reveal className="neu p-6 md:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -240,7 +269,7 @@ export function ExportCenterPage() {
                 Universal Blueprint Deliverables & Export Center
               </h1>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Download the complete enterprise digital transformation package for <strong>{scenarioName}</strong> in board-ready PDF, Word, OpenAPI 3.1 JSON, Excel data, or PostgreSQL 16 DDL.
+                Download the complete enterprise digital transformation package for <strong>{scenarioName}</strong> in board-ready PDF, Word, Excel, PowerPoint, OpenAPI 3.1 JSON, domain CSV, or PostgreSQL 16 DDL.
               </p>
             </div>
 
@@ -258,7 +287,7 @@ export function ExportCenterPage() {
                   : "Download Complete Bundle (ZIP)"}
               </button>
               <span className="text-[11px] text-muted-foreground">
-                Packages all 5 enterprise formats in one click
+                Packages all 7 enterprise formats in one click
               </span>
             </div>
           </div>
@@ -273,7 +302,7 @@ export function ExportCenterPage() {
               <p className="mt-1 font-display text-xl font-bold text-emerald-600 dark:text-emerald-400">
                 100% Approved
               </p>
-              <p className="text-[11px] text-muted-foreground">4/4 Key Stakeholders</p>
+              <p className="text-[11px] text-muted-foreground">All Key Stakeholders Signed</p>
             </div>
 
             <div className="neu-inset p-3.5">
@@ -281,17 +310,17 @@ export function ExportCenterPage() {
                 <Layers className="size-3.5 text-primary" />
                 Export Formats
               </div>
-              <p className="mt-1 font-display text-xl font-bold">5 Deliverables</p>
-              <p className="text-[11px] text-muted-foreground">PDF, Word, OpenAPI, SQL, CSV</p>
+              <p className="mt-1 font-display text-xl font-bold">7 Deliverables</p>
+              <p className="text-[11px] text-muted-foreground">PDF, Word, Excel, PPT, OpenAPI, SQL, CSV</p>
             </div>
 
             <div className="neu-inset p-3.5">
               <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
                 <FileCode2 className="size-3.5 text-blue-500" />
-                Standard Standards
+                Schema & API Engine
               </div>
-              <p className="mt-1 font-display text-xl font-bold">OpenAPI 3.1 + PG 16</p>
-              <p className="text-[11px] text-muted-foreground">Production ready</p>
+              <p className="mt-1 font-display text-xl font-bold">{dbBlueprint.tables.length} Tables · PG 16</p>
+              <p className="text-[11px] text-muted-foreground">{dbBlueprint.apiEndpoints.length} REST endpoints defined</p>
             </div>
 
             <div className="neu-inset p-3.5">
@@ -299,8 +328,8 @@ export function ExportCenterPage() {
                 <Zap className="size-3.5 text-amber-500" />
                 Delivery Velocity
               </div>
-              <p className="mt-1 font-display text-xl font-bold">9 Weeks</p>
-              <p className="text-[11px] text-muted-foreground">68 Person-days planned</p>
+              <p className="mt-1 font-display text-xl font-bold">{roadmap.totalWeeks} Weeks</p>
+              <p className="text-[11px] text-muted-foreground">{roadmap.totalStoryPoints * 2} Person-days planned</p>
             </div>
           </div>
         </Reveal>
