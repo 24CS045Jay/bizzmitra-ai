@@ -41,26 +41,31 @@ export async function generateArtifact<T = unknown>(
   // Simulated inference latency (1.5–3s) — replace with the real LLM call.
   await delay(1500 + Math.random() * 1500);
   const payload = PAYLOADS[kind];
-  const workspaceId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
+  const workspaceId = typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.activeWorkspaceId") : null;
+  const isValidUuid = workspaceId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId);
 
-  if (workspaceId && kind !== "summary") {
-    const { data: latest, error: latestError } = await supabase
-      .from("artifacts")
-      .select("version")
-      .eq("workspace_id", workspaceId)
-      .eq("module_type", kind)
-      .order("version", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (latestError) throw latestError;
+  if (isValidUuid && kind !== "summary") {
+    try {
+      const { data: latest, error: latestError } = await supabase
+        .from("artifacts")
+        .select("version")
+        .eq("workspace_id", workspaceId)
+        .eq("module_type", kind)
+        .order("version", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    const { error } = await supabase.from("artifacts").insert({
-      workspace_id: workspaceId,
-      module_type: kind,
-      content: payload as Json,
-      version: (latest?.version ?? 0) + 1,
-    });
-    if (error) throw error;
+      if (!latestError) {
+        await supabase.from("artifacts").insert({
+          workspace_id: workspaceId,
+          module_type: kind,
+          content: payload as Json,
+          version: (latest?.version ?? 0) + 1,
+        });
+      }
+    } catch (err) {
+      console.warn(`[generateArtifact] Artifact persistence skipped for ${kind}:`, err);
+    }
   }
 
   return payload as T;
