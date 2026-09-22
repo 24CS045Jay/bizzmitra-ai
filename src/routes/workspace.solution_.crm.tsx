@@ -44,7 +44,7 @@ import {
 import { cn } from "@/lib/utils";
 import { saveAndShareFile } from "@/lib/native-bridge";
 
-export const Route = createFileRoute("/workspace/solution/crm")({
+export const Route = createFileRoute("/workspace/solution_/crm")({
   head: () => ({
     meta: [
       { title: "Interactive Prototype CRM — BizzMitra-AI" },

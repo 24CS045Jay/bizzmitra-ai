@@ -29,7 +29,7 @@ import { Route as WorkspaceProcessRouteImport } from './routes/workspace.process
 import { Route as WorkspaceRoadmapRouteImport } from './routes/workspace.roadmap'
 import { Route as WorkspaceSolutionRouteImport } from './routes/workspace.solution'
 import { Route as WorkspaceWireframesRouteImport } from './routes/workspace.wireframes'
-import { Route as WorkspaceSolutionCrmRouteImport } from './routes/workspace.solution.crm'
+import { Route as WorkspaceSolutionCrmRouteImport } from './routes/workspace.solution_.crm'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -132,9 +132,9 @@ const WorkspaceWireframesRoute = WorkspaceWireframesRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceSolutionCrmRoute = WorkspaceSolutionCrmRouteImport.update({
-  id: '/crm',
-  path: '/crm',
-  getParentRoute: () => WorkspaceSolutionRoute,
+  id: '/workspace/solution_/crm',
+  path: '/workspace/solution/crm',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -156,7 +156,7 @@ export interface FileRoutesByFullPath {
   '/workspace/new': typeof WorkspaceNewRoute
   '/workspace/process': typeof WorkspaceProcessRoute
   '/workspace/roadmap': typeof WorkspaceRoadmapRoute
-  '/workspace/solution': typeof WorkspaceSolutionRouteWithChildren
+  '/workspace/solution': typeof WorkspaceSolutionRoute
   '/workspace/wireframes': typeof WorkspaceWireframesRoute
   '/workspace/solution/crm': typeof WorkspaceSolutionCrmRoute
 }
@@ -179,7 +179,7 @@ export interface FileRoutesByTo {
   '/workspace/new': typeof WorkspaceNewRoute
   '/workspace/process': typeof WorkspaceProcessRoute
   '/workspace/roadmap': typeof WorkspaceRoadmapRoute
-  '/workspace/solution': typeof WorkspaceSolutionRouteWithChildren
+  '/workspace/solution': typeof WorkspaceSolutionRoute
   '/workspace/wireframes': typeof WorkspaceWireframesRoute
   '/workspace/solution/crm': typeof WorkspaceSolutionCrmRoute
 }
@@ -203,9 +203,9 @@ export interface FileRoutesById {
   '/workspace/new': typeof WorkspaceNewRoute
   '/workspace/process': typeof WorkspaceProcessRoute
   '/workspace/roadmap': typeof WorkspaceRoadmapRoute
-  '/workspace/solution': typeof WorkspaceSolutionRouteWithChildren
+  '/workspace/solution': typeof WorkspaceSolutionRoute
   '/workspace/wireframes': typeof WorkspaceWireframesRoute
-  '/workspace/solution/crm': typeof WorkspaceSolutionCrmRoute
+  '/workspace/solution_/crm': typeof WorkspaceSolutionCrmRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -276,7 +276,7 @@ export interface FileRouteTypes {
     | '/workspace/roadmap'
     | '/workspace/solution'
     | '/workspace/wireframes'
-    | '/workspace/solution/crm'
+    | '/workspace/solution_/crm'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -298,8 +298,9 @@ export interface RootRouteChildren {
   WorkspaceNewRoute: typeof WorkspaceNewRoute
   WorkspaceProcessRoute: typeof WorkspaceProcessRoute
   WorkspaceRoadmapRoute: typeof WorkspaceRoadmapRoute
-  WorkspaceSolutionRoute: typeof WorkspaceSolutionRouteWithChildren
+  WorkspaceSolutionRoute: typeof WorkspaceSolutionRoute
   WorkspaceWireframesRoute: typeof WorkspaceWireframesRoute
+  WorkspaceSolutionCrmRoute: typeof WorkspaceSolutionCrmRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -444,26 +445,15 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceWireframesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/workspace/solution/crm': {
-      id: '/workspace/solution/crm'
-      path: '/crm'
+    '/workspace/solution_/crm': {
+      id: '/workspace/solution_/crm'
+      path: '/workspace/solution/crm'
       fullPath: '/workspace/solution/crm'
       preLoaderRoute: typeof WorkspaceSolutionCrmRouteImport
-      parentRoute: typeof WorkspaceSolutionRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
-
-interface WorkspaceSolutionRouteChildren {
-  WorkspaceSolutionCrmRoute: typeof WorkspaceSolutionCrmRoute
-}
-
-const WorkspaceSolutionRouteChildren: WorkspaceSolutionRouteChildren = {
-  WorkspaceSolutionCrmRoute: WorkspaceSolutionCrmRoute,
-}
-
-const WorkspaceSolutionRouteWithChildren =
-  WorkspaceSolutionRoute._addFileChildren(WorkspaceSolutionRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -484,8 +474,9 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceNewRoute: WorkspaceNewRoute,
   WorkspaceProcessRoute: WorkspaceProcessRoute,
   WorkspaceRoadmapRoute: WorkspaceRoadmapRoute,
-  WorkspaceSolutionRoute: WorkspaceSolutionRouteWithChildren,
+  WorkspaceSolutionRoute: WorkspaceSolutionRoute,
   WorkspaceWireframesRoute: WorkspaceWireframesRoute,
+  WorkspaceSolutionCrmRoute: WorkspaceSolutionCrmRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
