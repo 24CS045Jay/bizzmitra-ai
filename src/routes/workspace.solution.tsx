@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 import { AppShell } from "@/components/AppShell";
@@ -182,9 +183,33 @@ function SolutionPage() {
     return () => window.removeEventListener("bizzmitra:studio-updated", handleStudioUpdate);
   }, []);
 
+  const handleRegenerate = async () => {
+    try {
+      toast.loading("Regenerating dynamic solution with Groq 120B AI...");
+      const res = await generateDynamicSolution(problemText, businessName, industry);
+      setFraming(res.framing);
+      setSolution(res.solution);
+      setModules(res.modules);
+      if (res.buildBuyMatrix && res.buildBuyMatrix.length > 0) {
+        setBuildBuyMatrix(res.buildBuyMatrix);
+      }
+      setAiModelLabel(res.source === "groq-llm" ? "Groq 120B AI" : "BizzMitra Strategic Engine");
+      toast.dismiss();
+      toast.success("Solution successfully regenerated!");
+    } catch {
+      toast.dismiss();
+      toast.error("Failed to regenerate solution");
+    }
+  };
+
   return (
     <AppShell>
-      <ArtifactHeader id="solution" kicker="Step 03" title="Framing & solution" />
+      <ArtifactHeader
+        id="solution"
+        kicker="Step 03"
+        title="Framing & solution"
+        onRegenerate={handleRegenerate}
+      />
 
       {/* Dynamic Model Status Bar */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2">
@@ -225,13 +250,24 @@ function SolutionPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setIsStudioOpen(true)}
-          className="neu-press flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground hover:brightness-105"
-        >
-          <Sliders className="size-3.5" />
-          Open Solution Studio
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleRegenerate}
+            className="neu-press flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3.5 py-2 text-xs font-bold text-primary hover:bg-primary/20"
+          >
+            <Wand2 className="size-3.5" />
+            Regenerate Solution
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsStudioOpen(true)}
+            className="neu-press flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground hover:brightness-105"
+          >
+            <Sliders className="size-3.5" />
+            Open Solution Studio
+          </button>
+        </div>
       </div>
 
       <GenerationSequence
@@ -579,6 +615,7 @@ function SolutionPage() {
       <SolutionStudioDrawer
         isOpen={isStudioOpen}
         onClose={() => setIsStudioOpen(false)}
+        onTriggerRegeneration={handleRegenerate}
         onSettingsChange={(newSettings) => setStudioSettings(newSettings)}
       />
     </AppShell>
