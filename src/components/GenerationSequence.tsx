@@ -32,14 +32,30 @@ export function GenerationSequence({
     const id = setInterval(() => {
       setActive((a) => Math.min(a + 1, steps.length - 1));
     }, stepMs);
-    run().then(() => {
+    const finish = () => {
       if (!alive) return;
       setActive(steps.length - 1);
       setTimeout(() => alive && setDone(true), 260);
-    });
+    };
+
+    run()
+      .then(finish)
+      .catch((err) => {
+        console.warn("[GenerationSequence] run failed, revealing content:", err);
+        finish();
+      });
+
+    // Safety watchdog: ensure UI never hangs if run() stalls or fails
+    const watchdog = setTimeout(() => {
+      if (alive) {
+        finish();
+      }
+    }, steps.length * stepMs + 1200);
+
     return () => {
       alive = false;
       clearInterval(id);
+      clearTimeout(watchdog);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoStart]);

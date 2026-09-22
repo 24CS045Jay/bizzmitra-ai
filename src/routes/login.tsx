@@ -36,17 +36,8 @@ function LoginPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (session && !busy) {
-      if (isTestingAccount(session.user?.email)) {
-        navigate({ to: "/dashboard" });
-        return;
-      }
-      const wsId = localStorage.getItem("bizzmitra.activeWorkspaceId");
-      if (wsId && wsId !== "ws-talentcraft-default") {
-        navigate({ to: "/dashboard" });
-      } else {
-        navigate({ to: "/workspace/new" });
-      }
+    if (session) {
+      navigate({ to: "/dashboard" });
     }
   }, [session, busy, navigate]);
 
@@ -74,8 +65,8 @@ function LoginPage() {
     if (error) {
       if (error.message.toLowerCase().includes("email not confirmed")) {
         signInWithCustomUser(email, email.split("@")[0]);
-        toast.info(`Welcome, ${email}! Let's create your first workspace.`);
-        navigate({ to: "/workspace/new" });
+        toast.info(`Welcome, ${email}! Check out your workspaces.`);
+        navigate({ to: "/dashboard" });
         return;
       }
       toast.error(error.message);
@@ -116,11 +107,11 @@ function LoginPage() {
       if (localWsId && localWsId !== "ws-talentcraft-default" && localCtx) {
         navigate({ to: "/dashboard" });
       } else {
-        // First-time user: Route directly to Create New Workspace!
+        // First-time user: Route to Workspaces hub where they can click Create Workspace!
         localStorage.removeItem("bizzmitra.activeWorkspaceId");
         localStorage.removeItem("bizzmitra.workspaceContext");
-        toast.info("Welcome! Let's set up your first business workspace.");
-        navigate({ to: "/workspace/new" });
+        toast.info("Welcome! Here is your workspace hub.");
+        navigate({ to: "/dashboard" });
       }
     }
   }

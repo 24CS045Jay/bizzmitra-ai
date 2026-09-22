@@ -263,6 +263,32 @@ export function SolutionStudioDrawer({
               </button>
             </div>
 
+            {/* Top Quick-Regenerate Action Bar (Immediate access without scrolling) */}
+            <div className="p-3.5 bg-gradient-to-r from-primary/15 via-primary/5 to-accent/15 border-b border-border flex flex-col gap-1.5 shrink-0 shadow-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                  <Sparkles className="size-3.5 text-primary" />
+                  Ready to apply customizations?
+                </span>
+                <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[9px] font-extrabold text-primary">
+                  v{settings.version}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  if (onTriggerRegeneration) {
+                    onTriggerRegeneration();
+                  } else {
+                    setIsRegenerating(true);
+                  }
+                }}
+                className="neu-press w-full rounded-xl bg-primary py-2.5 px-4 text-xs font-bold text-primary-foreground shadow-md flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.98] transition-all"
+              >
+                <Wand2 className="size-3.5 animate-spin-slow text-primary-foreground" />
+                Regenerate Solution with AI (v{settings.version})
+              </button>
+            </div>
+
             {/* Drawer Body */}
             <div className="flex-1 overflow-y-auto p-5 space-y-6">
               {activeTab === "ui" && (

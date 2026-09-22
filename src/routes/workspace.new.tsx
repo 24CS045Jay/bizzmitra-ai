@@ -15,7 +15,7 @@ import {
   Upload,
   Workflow,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
@@ -146,27 +146,137 @@ function IntakePage() {
     }, 1400);
   }
 
-  // Voice Recording Simulator
-  function toggleVoiceRecording() {
-    if (!recording) {
-      setRecording(true);
-      setRecordingSeconds(1);
-      const timer = setInterval(() => {
-        setRecordingSeconds((s) => {
-          if (s >= 3) {
-            clearInterval(timer);
-            setRecording(false);
-            setProblemStatement(VOICE_SAMPLE_TRANSCRIPT);
-            toast.success("Voice transcribed into problem context (Prototype Voice Simulator)");
-            return 0;
+  // Real Web Speech Recognition Engine
+  const recognitionRef = useRef<any>(null);
+  const recordingTimerRef = useRef<any>(null);
+
+  const BCP47_LANGUAGE_MAP: Record<string, string> = {
+    en: "en-US",
+    hi: "hi-IN",
+    gu: "gu-IN",
+    es: "es-ES",
+    fr: "fr-FR",
+    de: "de-DE",
+    ja: "ja-JP",
+    ar: "ar-SA",
+  };
+
+  const LANGUAGE_NAMES: Record<string, string> = {
+    en: "English",
+    hi: "Hindi (हिन्दी)",
+    gu: "Gujarati (ગુજરાતી)",
+    es: "Spanish (Español)",
+    fr: "French (Français)",
+    de: "German (Deutsch)",
+    ja: "Japanese (日本語)",
+    ar: "Arabic (العربية)",
+  };
+
+  function stopVoiceRecording() {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setRecording(false);
+  }
+
+  function startLiveSpeechRecognition() {
+    if (typeof window === "undefined") return;
+
+    const SpeechRecognitionClass =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognitionClass) {
+      toast.warning(
+        "Live Speech Recognition is not supported by your current browser (Chrome, Edge, or Safari recommended). Loaded sample transcript as fallback.",
+        { duration: 6000 }
+      );
+      setProblemStatement(VOICE_SAMPLE_TRANSCRIPT);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognitionClass();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = BCP47_LANGUAGE_MAP[lang] || "en-US";
+
+      let accumulatedFinal = "";
+
+      recognition.onstart = () => {
+        setRecording(true);
+        setRecordingSeconds(0);
+        toast.info(`Microphone active. Speak now in ${LANGUAGE_NAMES[lang]}...`);
+
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = setInterval(() => {
+          setRecordingSeconds((sec) => sec + 1);
+        }, 1000);
+      };
+
+      recognition.onresult = (event: any) => {
+        let interim = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcriptChunk = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            accumulatedFinal += transcriptChunk + " ";
+          } else {
+            interim += transcriptChunk;
           }
-          return s + 1;
-        });
-      }, 1000);
-    } else {
-      setRecording(false);
+        }
+        const fullTranscript = (accumulatedFinal + interim).trim();
+        if (fullTranscript) {
+          setProblemStatement(fullTranscript);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn("[SpeechRecognition] event error:", event.error);
+        if (event.error === "not-allowed" || event.error === "permission-denied") {
+          toast.error("Microphone access was denied. Please allow microphone permissions in your browser URL bar.");
+        } else if (event.error === "no-speech") {
+          toast.info("No speech detected. Please speak into your microphone.");
+        } else {
+          toast.error(`Speech recognition: ${event.error}`);
+        }
+        stopVoiceRecording();
+      };
+
+      recognition.onend = () => {
+        stopVoiceRecording();
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error("[SpeechRecognition] start error:", err);
+      toast.error("Could not activate microphone. Loaded sample transcript as fallback.");
+      setProblemStatement(VOICE_SAMPLE_TRANSCRIPT);
+      stopVoiceRecording();
     }
   }
+
+  function toggleVoiceRecording() {
+    if (recording) {
+      stopVoiceRecording();
+      toast.success("Voice recording saved to problem context!");
+    } else {
+      startLiveSpeechRecognition();
+    }
+  }
+
+  // Cleanup microphone on component unmount
+  useEffect(() => {
+    return () => {
+      stopVoiceRecording();
+    };
+  }, []);
 
   // Workspace Creation Handler
   async function createWorkspace() {
@@ -610,29 +720,65 @@ function IntakePage() {
                   </button>
 
                   <p className="mt-3 text-xs font-bold text-foreground">
-                    {recording ? `Recording & Transcribing (${recordingSeconds}s)...` : "Click to Speak Business Idea"}
+                    {recording
+                      ? `Listening live in ${LANGUAGE_NAMES[lang]} (${recordingSeconds}s)... Click to Stop`
+                      : "Click to Speak Business Idea"}
                   </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    Simulates speech-to-text audio ingestion directly into the problem context.
+                  <p className="mt-1 text-[11px] text-muted-foreground max-w-md">
+                    {recording
+                      ? "Speak your business bottlenecks and requirements clearly into your microphone."
+                      : "Uses live browser Web Speech Recognition to transcribe your voice directly into the business problem statement."}
                   </p>
 
                   {/* Equalizer animation */}
                   {recording && (
                     <div className="mt-3 flex items-center justify-center gap-1">
-                      {[12, 28, 16, 36, 20, 32, 14].map((h, i) => (
+                      {[12, 28, 16, 36, 20, 32, 14, 26, 18, 30].map((h, i) => (
                         <div
                           key={i}
-                          className="w-1 rounded-full bg-primary animate-pulse"
-                          style={{ height: `${h}px`, animationDelay: `${i * 120}ms` }}
+                          className="w-1 rounded-full bg-red-500 animate-pulse"
+                          style={{
+                            height: `${h}px`,
+                            animationDuration: `${0.4 + (i % 3) * 0.2}s`,
+                            animationDelay: `${i * 80}ms`,
+                          }}
                         />
                       ))}
                     </div>
                   )}
+
+                  {/* Fallback Sample button */}
+                  {!recording && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProblemStatement(VOICE_SAMPLE_TRANSCRIPT);
+                        toast.success("Loaded sample voice transcript (TalentCraft HR)");
+                      }}
+                      className="mt-3 text-[11px] font-semibold text-primary underline hover:text-primary/80 transition-colors"
+                    >
+                      Or insert sample transcript (TalentCraft HR)
+                    </button>
+                  )}
                 </div>
 
                 {problemStatement && (
-                  <div className="neu text-left p-3.5 text-xs text-muted-foreground">
-                    <strong className="text-foreground">Current Audio Transcript:</strong> {problemStatement}
+                  <div className="neu text-left p-4 rounded-xl border border-border/70 bg-card">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                        Live Voice Transcript
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setProblemStatement("")}
+                        className="text-[10px] text-muted-foreground hover:text-destructive underline"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
+                      {problemStatement}
+                    </p>
                   </div>
                 )}
               </motion.div>
