@@ -126,16 +126,21 @@ function DashboardPage() {
     void loadWorkspaces();
   }, [user, isTest]);
 
-  // First-time user protection: If non-test user has no workspace, route immediately to new intake
-  useEffect(() => {
-    if (!loading && !isTest && workspaces.length === 0) {
-      const raw = typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.workspaceContext") : null;
-      const wsId = typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.activeWorkspaceId") : null;
-      if (!wsId || wsId === "ws-talentcraft-default" || !raw) {
-        navigate({ to: "/workspace/new" });
-      }
+  function loadSampleDemoWorkspace() {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("bizzmitra.activeWorkspaceId", "ws-talentcraft-default");
+      window.localStorage.setItem(
+        "bizzmitra.workspaceContext",
+        JSON.stringify({
+          businessName: "TalentCraft HR Consultancy",
+          problemStatement: "Scaling remote tech recruitment and candidate onboarding automation",
+          industry: "HR & Recruitment",
+        }),
+      );
     }
-  }, [loading, isTest, workspaces, navigate]);
+    setActiveWsName("TalentCraft HR Consultancy");
+    toast.success("Loaded TalentCraft demo workspace!");
+  }
 
   // Evaluate risks and action items for the active workspace
   const blueprint = useMemo(
@@ -168,8 +173,112 @@ function DashboardPage() {
 
   const rawCtx = typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.workspaceContext") : null;
   const localWsId = typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.activeWorkspaceId") : null;
-  if (!isTest && workspaces.length === 0 && (!localWsId || localWsId === "ws-talentcraft-default" || !rawCtx)) {
-    return null;
+  const hasCustomWorkspace = workspaces.length > 0 || (localWsId && localWsId !== "ws-talentcraft-default" && rawCtx);
+
+  // If non-test user has no active workspaces, display the Workspaces Hub with Welcome Empty State & Create Action
+  if (!isTest && !hasCustomWorkspace) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-4xl py-6">
+          {/* Header */}
+          <Reveal>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 pb-6">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-0.5 text-[10px] font-bold text-primary uppercase tracking-wider">
+                    <LayoutGrid className="size-3" />
+                    Workspace Hub
+                  </span>
+                </div>
+                <h1 className="mt-2 font-display text-3xl font-extrabold sm:text-4xl text-foreground">
+                  Workspaces
+                </h1>
+                <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
+                  All projects, business blueprints, and AI transformation workspaces.
+                </p>
+              </div>
+
+              <Link
+                to="/workspace/new"
+                className="neu-press inline-flex items-center gap-2 self-start sm:self-auto rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground glow-primary shadow-sm"
+              >
+                <Plus className="size-4" />
+                <span>Create Workspace</span>
+              </Link>
+            </div>
+          </Reveal>
+
+          {/* Empty State Card */}
+          <Reveal delay={0.1}>
+            <div className="neu mt-8 p-8 sm:p-12 text-center rounded-2xl flex flex-col items-center justify-center">
+              <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-5 shadow-inner">
+                <Sparkles className="size-8 animate-pulse" />
+              </div>
+
+              <h2 className="font-display text-2xl font-bold text-foreground">
+                Create your first business workspace
+              </h2>
+              <p className="mt-2 max-w-lg text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                You do not have an active workspace yet. Create a workspace to frame your business challenge, run guided AI diagnostics, and generate tailored enterprise blueprints.
+              </p>
+
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  to="/workspace/new"
+                  className="neu-press inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground glow-primary shadow-md hover:brightness-105 transition-all"
+                >
+                  <Plus className="size-4" />
+                  <span>Create Your Workspace</span>
+                  <ArrowRight className="size-4 ml-1" />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={loadSampleDemoWorkspace}
+                  className="neu-sm neu-press inline-flex items-center gap-2 rounded-xl border border-border/80 bg-card px-4 py-3 text-xs font-bold text-foreground hover:bg-muted/50 transition-all"
+                >
+                  <Sparkles className="size-3.5 text-primary" />
+                  <span>Explore Demo Workspace (TalentCraft)</span>
+                </button>
+              </div>
+
+              {/* 3 Step Workflow Preview */}
+              <div className="mt-10 grid w-full gap-4 sm:grid-cols-3 text-left border-t border-border/60 pt-8">
+                <div className="rounded-xl border border-border/50 bg-card/60 p-4">
+                  <div className="size-7 rounded-lg bg-primary/15 text-primary text-xs font-bold flex items-center justify-center mb-2.5">
+                    1
+                  </div>
+                  <h4 className="font-semibold text-xs text-foreground">New Intake Form</h4>
+                  <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
+                    Frame your business context, problem statement, and primary transformation goals.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border/50 bg-card/60 p-4">
+                  <div className="size-7 rounded-lg bg-primary/15 text-primary text-xs font-bold flex items-center justify-center mb-2.5">
+                    2
+                  </div>
+                  <h4 className="font-semibold text-xs text-foreground">AI Guided Discovery</h4>
+                  <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
+                    Diagnostic agent conducts interactive interviews to reveal root bottlenecks.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border/50 bg-card/60 p-4">
+                  <div className="size-7 rounded-lg bg-primary/15 text-primary text-xs font-bold flex items-center justify-center mb-2.5">
+                    3
+                  </div>
+                  <h4 className="font-semibold text-xs text-foreground">Solution Cockpit</h4>
+                  <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
+                    Interactive solution maps, ready-to-use CRM prototypes, and roadmap tracking.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </AppShell>
+    );
   }
 
   return (
