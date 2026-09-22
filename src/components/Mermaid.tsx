@@ -1,7 +1,6 @@
-
 import { motion } from "motion/react";
-import { useEffect, useId, useRef, useState } from "react";
-import { Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, Loader2, RefreshCw } from "lucide-react";
 
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
@@ -10,23 +9,32 @@ let initialised = false;
 
 export function Mermaid({ chart, className }: { chart: string; className?: string }) {
   const { theme } = useTheme();
-  const id = useId().replace(/[:]/g, "");
   const ref = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>("");
   const [failed, setFailed] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [retryTrigger, setRetryTrigger] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setFailed(false);
+
+    // Generate a unique, collision-free ID for each render attempt
+    const renderId = `m_${Math.random().toString(36).slice(2, 9)}_${Date.now()}`;
+
     (async () => {
       try {
         const mermaid = (await import("mermaid")).default;
         const css = getComputedStyle(document.documentElement);
         const read = (v: string, f: string) => css.getPropertyValue(v).trim() || f;
+
         if (!initialised) {
           initialised = true;
         }
+
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "loose",
@@ -40,34 +48,71 @@ export function Mermaid({ chart, className }: { chart: string; className?: strin
             lineColor: read("--muted-foreground", "#8A8478"),
             secondaryColor: read("--muted", "#EDEAE3"),
             tertiaryColor: read("--surface", "#EDEAE3"),
-            fontSize: "14px",
+            fontSize: "13px",
           },
         });
-        const out = await mermaid.render(`m-${id}`, chart);
-        if (!cancelled) setSvg(out.svg);
-      } catch {
-        if (!cancelled) setFailed(true);
+
+        // Ensure no lingering element with this id exists in DOM
+        const prev = document.getElementById(renderId);
+        if (prev) prev.remove();
+        const prevD = document.getElementById(`d${renderId}`);
+        if (prevD) prevD.remove();
+
+        const out = await mermaid.render(renderId, chart);
+        if (!cancelled) {
+          setSvg(out.svg);
+          setLoading(false);
+          setFailed(false);
+        }
+      } catch (err) {
+        console.warn("Mermaid render error:", err);
+        if (!cancelled) {
+          setFailed(true);
+          setLoading(false);
+        }
+      } finally {
+        // Clean up any temporary placeholder elements Mermaid appended to document.body
+        try {
+          const el = document.getElementById(renderId);
+          if (el && el.parentElement === document.body) el.remove();
+          const elD = document.getElementById(`d${renderId}`);
+          if (elD && elD.parentElement === document.body) elD.remove();
+        } catch {}
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [chart, id, theme]);
-
-  if (failed) {
-    return (
-      <pre className="neu-inset overflow-auto p-4 text-xs text-muted-foreground">{chart}</pre>
-    );
-  }
+  }, [chart, theme, retryTrigger]);
 
   const handleZoomIn = () => setZoom((z) => Math.min(z + 0.25, 2.5));
   const handleZoomOut = () => setZoom((z) => Math.max(z - 0.25, 0.5));
   const handleResetZoom = () => setZoom(1);
 
+  if (failed) {
+    return (
+      <div className={cn("rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-3", className)}>
+        <div className="flex items-center justify-between text-xs text-destructive">
+          <span className="font-semibold">Unable to visually render diagram</span>
+          <button
+            onClick={() => setRetryTrigger((c) => c + 1)}
+            className="flex items-center gap-1 underline text-[11px] font-bold hover:text-foreground"
+          >
+            <RefreshCw className="size-3" /> Retry Render
+          </button>
+        </div>
+        <pre className="neu-inset overflow-auto p-3 text-[11px] text-muted-foreground font-mono max-h-60 whitespace-pre-wrap">
+          {chart}
+        </pre>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
-        "relative group flex flex-col rounded-xl border border-border/60 bg-card/40 backdrop-blur-sm",
+        "relative group flex flex-col rounded-xl border border-border/60 bg-card/40 backdrop-blur-sm transition-all",
         isFullscreen && "fixed inset-2 sm:inset-6 z-50 bg-background/95 border-border shadow-2xl p-4 overflow-hidden",
         className,
       )}
@@ -112,14 +157,23 @@ export function Mermaid({ chart, className }: { chart: string; className?: strin
         </button>
       </div>
 
+      {/* Loading state indicator */}
+      {loading && !svg && (
+        <div className="flex items-center justify-center py-24 text-xs text-muted-foreground gap-2">
+          <Loader2 className="size-4 animate-spin text-primary" />
+          <span>Rendering architectural diagram...</span>
+        </div>
+      )}
+
       {/* Diagram Scrollable Viewport */}
-      <div className="flex-1 w-full overflow-auto p-4 touch-pan-x touch-pan-y">
+      <div className="flex-1 w-full overflow-auto p-4 touch-pan-x touch-pan-y min-h-[320px] flex items-center justify-center">
         <motion.div
-          initial={{ opacity: 0, scale: 0.985 }}
-          animate={{ opacity: svg ? 1 : 0, scale: svg ? zoom : 0.985 }}
-          transition={{ duration: 0.3 }}
-          style={{ transformOrigin: "top left" }}
-          className="min-w-fit [&_svg]:h-auto [&_svg]:max-w-none"
+          key={chart}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: svg ? 1 : 0, scale: svg ? zoom : 0.98 }}
+          transition={{ duration: 0.2 }}
+          style={{ transformOrigin: "top center" }}
+          className="min-w-fit w-full flex justify-center [&_svg]:h-auto [&_svg]:max-w-full [&_svg]:mx-auto"
           ref={ref}
           dangerouslySetInnerHTML={{ __html: svg }}
         />
@@ -127,4 +181,3 @@ export function Mermaid({ chart, className }: { chart: string; className?: strin
     </div>
   );
 }
-
