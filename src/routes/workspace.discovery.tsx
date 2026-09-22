@@ -435,13 +435,13 @@ function DiscoveryPage() {
               <div className="neu-inset p-2.5 rounded-lg space-y-1">
                 <p className="font-bold text-foreground">Target Stakeholders</p>
                 <p className="text-[11px] text-muted-foreground">
-                  Recruiters (8 seats), Corporate Clients (35 accounts), Job Candidates
+                  {analysis.stakeholders.slice(0, 3).map((s) => `${s.role} (${s.count})`).join(", ")}
                 </p>
               </div>
               <div className="neu-inset p-2.5 rounded-lg space-y-1">
                 <p className="font-bold text-foreground">Identified Friction</p>
                 <p className="text-[11px] text-muted-foreground">
-                  Excel duplication, interview round 2 drop-off, 10-day contract signing
+                  {analysis.currentState.bottlenecks.slice(0, 3).join("; ")}
                 </p>
               </div>
             </div>

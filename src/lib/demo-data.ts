@@ -292,23 +292,163 @@ export const NEXA_BUSINESS_ANALYSIS: BusinessAnalysisReport = {
   ],
 };
 
+export const HEALTHCARE_DISCOVERY_SCRIPT: DiscoveryQuestionItem[] = [
+  {
+    question:
+      "Managing 14 pathology labs and 6 polyclinics with 350 medical staff requires robust instrument interfacing. What is your daily diagnostic test volume, and what analyzer communication protocols (HL7, ASTM, or RS-232 serial) do your laboratory machines use?",
+    hint: "Drives LIMS bidirectional middleware architecture, queue buffering, and edge IoT gateway requirements.",
+    whyWeAsk: "Determines whether laboratory instruments connect via cloud FHIR APIs or require localized edge serial-to-TCP connectors.",
+    missingEntity: "Daily test volume & lab instrument communication protocols",
+    options: [
+      "Around 2,800 daily diagnostic samples with bi-directional HL7/ASTM analyzer interfaces.",
+      "500-800 routine samples daily using USB/manual data export.",
+      "Over 6,000 multi-center samples with mixed legacy RS-232 serial interfaces.",
+    ],
+    answer: "Around 2,800 daily diagnostic samples with bi-directional HL7/ASTM analyzer interfaces.",
+  },
+  {
+    question:
+      "Home sample collection currently suffers an 18% loss rate due to paper slips. How many field phlebotomists do you dispatch daily, and do they currently have cold-chain temperature monitoring and digital barcode scanners?",
+    hint: "Sizes mobile phlebotomy application, route dispatch algorithms, and offline QR verification.",
+    whyWeAsk: "Calculates sample spoilage prevention ROI and required GPS update frequency.",
+    missingEntity: "Phlebotomy fleet size & cold-chain temperature tracking equipment",
+    options: [
+      "80+ field phlebotomists using personal smartphones with no GPS dispatch or digital barcode scanning.",
+      "25 in-house phlebotomists covering a single city zone.",
+      "150+ third-party logistics riders handling temperature-sensitive bio-specimens.",
+    ],
+    answer:
+      "80+ field phlebotomists using personal smartphones with no GPS dispatch or digital barcode scanning.",
+  },
+  {
+    question:
+      "Regarding Indian ABDM (Ayushman Bharat Digital Mission) compliance and WhatsApp delivery, what are your patient identity (ABHA) and data sovereignty requirements?",
+    hint: "Specifies ABDM M1/M2/M3 milestone scope, consent management, and automated report PDF encryption.",
+    whyWeAsk: "Ensures regulatory compliance with National Health Authority standards and zero patient data leakage.",
+    missingEntity: "ABHA ID verification integration & password-protected PDF dispatch",
+    options: [
+      "Mandatory ABHA ID creation, ABDM M1/M2 milestone integration, and password-protected WhatsApp PDF delivery.",
+      "Basic SMS link delivery with standard Aadhaar verification only.",
+      "Enterprise polyclinic portal with biometric patient check-in.",
+    ],
+    answer:
+      "Mandatory ABHA ID creation, ABDM M1/M2 milestone integration, and password-protected WhatsApp PDF delivery.",
+  },
+];
+
+export const HEALTHCARE_AI_SUMMARY =
+  "Captured: 2,800 tests/day across 14 labs, 80 field phlebotomists, 18% sample loss on paper slips, 48h turnaround due to manual transcription, and urgent ABDM/M1 compliance. I have framed the clinical bottlenecks, formulated an automated LIMS & phlebotomy dispatch blueprint, and synthesized the business analysis.";
+
+export const HEALTHCARE_BUSINESS_ANALYSIS: BusinessAnalysisReport = {
+  currentState: {
+    summary:
+      "ApexCare Diagnostics operates 14 pathology centers and 6 polyclinics using fragmented local LIMS software and manual WhatsApp coordination. Lab technicians type test results into Word templates by hand, home sample phlebotomists lose 18% of bookings due to paper slips, and patient reports take 48+ hours to deliver.",
+    tools: ["Legacy VB6 LIMS", "14 Decentralized Excel logs", "WhatsApp Staff Groups", "Paper phlebotomy slips"],
+    bottlenecks: [
+      "Manual transcription of automated blood analyzer readings into Word reports",
+      "18% home sample collection drop-off and sample spoilage during transit",
+      "48-hour report delivery delay causing high patient anxiety and doctor complaints",
+      "Zero compliance with national ABDM digital health records and ABHA standards",
+    ],
+    efficiencyScore: 31,
+  },
+  stakeholders: [
+    { role: "Lab Technicians & Pathologists", count: "85 certified staff", needs: "Direct bidirectional analyzer data sync, abnormal value auto-flagging", impact: "Critical" },
+    { role: "Field Phlebotomists", count: "80 collection agents", needs: "Mobile GPS route dispatch, barcode vial scanning, cold-chain temperature checks", impact: "High" },
+    { role: "Patients & Consulting Doctors", count: "2,800+ patients/day", needs: "Instant password-protected WhatsApp PDF reports, ABHA health locker sync", impact: "Critical" },
+    { role: "Operations & Quality Directors", count: "Executive Board", needs: "Centralized turnaround time analytics, NABL/ABDM compliance audit trails", impact: "High" },
+  ],
+  gapAnalysis: [
+    { area: "Analyzer Interfacing", current: "Manual data transcription from screen to paper/Word", future: "Bidirectional HL7/ASTM middleware auto-populating patient test parameters", severity: "Critical" },
+    { area: "Phlebotomy Logistics", current: "Paper collection slips and unoptimized routes", future: "GPS-optimized dispatch app with barcode vial verification and offline sync", severity: "Critical" },
+    { area: "Report Dispatch", current: "Physical paper collection or unencrypted email PDFs", future: "Automated WhatsApp Business API with 2FA password protection and ABHA M1 sync", severity: "High" },
+    { area: "ABDM Interoperability", current: "Zero national health locker integration", future: "Certified ABDM Milestone 1 & 2 Electronic Health Record (EHR) gateway", severity: "High" },
+  ],
+  futureState: {
+    summary:
+      "A cloud-native diagnostic operations platform featuring an automated HL7/ASTM analyzer middleware bridge, intelligent phlebotomist route dispatch, instant WhatsApp report distribution, and certified ABDM EHR interoperability.",
+    recommendedModules: [
+      "LIMS Analyzer Middleware (HL7/ASTM Engine)",
+      "Phlebotomy GPS Dispatch & Sample Barcoding Mobile App",
+      "WhatsApp & SMS Automated Encrypted Report Gateway",
+      "ABDM ABHA Milestone 1/2 Clinical EHR Registry",
+      "Critical Value AI Triage & Pathologist Approval Desk",
+    ],
+    automationOpportunities: [
+      "Zero-touch analyzer reading capture reducing transcription errors to 0%",
+      "Automated WhatsApp report push within 90 seconds of pathologist digital signature",
+      "Dynamic phlebotomist routing saving 42 minutes per morning collection route",
+      "Automated SMS alerts to consulting physicians on critical panic lab values",
+    ],
+  },
+  businessImpact: [
+    { metric: "Report Turnaround Time (TAT)", current: "48 hours", projected: "3.5 hours", improvement: "-92%" },
+    { metric: "Home Sample Loss / Spoilage", current: "18%", projected: "0.2%", improvement: "-98%" },
+    { metric: "Daily Patient Test Throughput", current: "2,800 tests", projected: "6,500 tests", improvement: "+132%" },
+    { metric: "Manual Transcription Errors", current: "4.8%", projected: "0.01%", improvement: "-99.8%" },
+    { metric: "ABDM / ABHA Compliance", current: "0% (Non-compliant)", projected: "100% Certified", improvement: "+100%" },
+  ],
+};
+
 export function getActiveDiscoveryScript(problemText?: string): DiscoveryQuestionItem[] {
-  if (problemText && (problemText.toLowerCase().includes("support") || problemText.toLowerCase().includes("ticket"))) {
+  const lower = (problemText || "").toLowerCase();
+  if (lower.includes("support") || lower.includes("ticket")) {
     return DISCOVERY_SCRIPT;
+  }
+  if (
+    lower.includes("pathology") ||
+    lower.includes("clinic") ||
+    lower.includes("health") ||
+    lower.includes("lims") ||
+    lower.includes("diagnostic") ||
+    lower.includes("patient") ||
+    lower.includes("biopsy") ||
+    lower.includes("apexcare") ||
+    lower.includes("hospital")
+  ) {
+    return HEALTHCARE_DISCOVERY_SCRIPT;
   }
   return HR_DISCOVERY_SCRIPT;
 }
 
 export function getActiveAiSummary(problemText?: string): string {
-  if (problemText && (problemText.toLowerCase().includes("support") || problemText.toLowerCase().includes("ticket"))) {
+  const lower = (problemText || "").toLowerCase();
+  if (lower.includes("support") || lower.includes("ticket")) {
     return AI_SUMMARY;
+  }
+  if (
+    lower.includes("pathology") ||
+    lower.includes("clinic") ||
+    lower.includes("health") ||
+    lower.includes("lims") ||
+    lower.includes("diagnostic") ||
+    lower.includes("patient") ||
+    lower.includes("biopsy") ||
+    lower.includes("apexcare") ||
+    lower.includes("hospital")
+  ) {
+    return HEALTHCARE_AI_SUMMARY;
   }
   return HR_AI_SUMMARY;
 }
 
 export function getActiveBusinessAnalysis(problemText?: string): BusinessAnalysisReport {
-  if (problemText && (problemText.toLowerCase().includes("support") || problemText.toLowerCase().includes("ticket"))) {
+  const lower = (problemText || "").toLowerCase();
+  if (lower.includes("support") || lower.includes("ticket")) {
     return NEXA_BUSINESS_ANALYSIS;
+  }
+  if (
+    lower.includes("pathology") ||
+    lower.includes("clinic") ||
+    lower.includes("health") ||
+    lower.includes("lims") ||
+    lower.includes("diagnostic") ||
+    lower.includes("patient") ||
+    lower.includes("biopsy") ||
+    lower.includes("apexcare") ||
+    lower.includes("hospital")
+  ) {
+    return HEALTHCARE_BUSINESS_ANALYSIS;
   }
   return HR_BUSINESS_ANALYSIS;
 }
