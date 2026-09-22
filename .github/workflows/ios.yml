@@ -58,7 +58,23 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      - name: Build iOS App
+      - name: Select Xcode Version
+        run: |
+          if [ -d "/Applications/Xcode_16.2.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_16.1.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_16.0.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
+          fi
+          xcodebuild -version
+
+      - name: Clean Derived Data
+        run: |
+          rm -rf ~/Library/Developer/Xcode/DerivedData
+          rm -rf build/DerivedData build/App.xcarchive build/Payload release
+
+      - name: Build iOS App Archive
         run: |
           mkdir -p build release
           
@@ -70,64 +86,70 @@ jobs:
           
           echo "Target: $BUILD_TARGET"
           
-          # Build iOS App: Try ad-hoc signing (ARM64 device for Sideloadly / real iPhones), fallback to unsigned, fallback to simulator
-          xcodebuild $BUILD_TARGET \
+          # Archive strictly for device (generic/platform=iOS). Never target iphonesimulator for release.
+          set -o pipefail
+          xcodebuild archive $BUILD_TARGET \
             -scheme App \
             -configuration Release \
             -destination "generic/platform=iOS" \
-            -derivedDataPath build/DerivedData \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=YES \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES \
-            DEVELOPMENT_TEAM="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
+            -archivePath build/App.xcarchive \
+            -skipPackagePluginValidation -skipMacroValidation \
+            -verbose \
             COMPILER_INDEX_STORE_ENABLE=NO \
-            clean build || \
-          xcodebuild $BUILD_TARGET \
-            -scheme App \
-            -configuration Release \
-            -destination "generic/platform=iOS" \
-            -derivedDataPath build/DerivedData \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            DEVELOPMENT_TEAM="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            clean build || \
-          xcodebuild $BUILD_TARGET \
-            -scheme App \
-            -configuration Release \
-            -destination "generic/platform=iOS Simulator" \
-            -derivedDataPath build/DerivedData \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            DEVELOPMENT_TEAM="" \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            clean build
+            CODE_SIGN_IDENTITY="" \
+            clean archive 2>&1 | tee build/xcodebuild.log || {
+              grep -E "(^error:|^.*: error:)" build/xcodebuild.log | head -n 30 | while IFS= read -r line; do
+                echo "::error title=XcodeBuild Error::$line"
+              done
+              exit 65
+            }
 
       - name: Package iOS IPA
         run: |
           mkdir -p release build/Payload
-          APP_PATH=$(find build/DerivedData -name "*.app" -type d | head -n 1)
-          if [ -z "$APP_PATH" ]; then
-            echo "Error: App bundle not found in build/DerivedData"
-            exit 1
+          
+          # First check if signed exportArchive is possible with provided signing profile
+          if [ -f "ios/ExportOptions.plist" ] && [ -n "${{ secrets.APPLE_CERTIFICATE_BASE64 }}" ]; then
+            echo "Attempting official exportArchive..."
+            xcodebuild -exportArchive \
+              -archivePath build/App.xcarchive \
+              -exportPath release \
+              -exportOptionsPlist ios/ExportOptions.plist || true
           fi
-          echo "Found compiled app at: $APP_PATH"
-          cp -r "$APP_PATH" build/Payload/
-          cd build && zip -r ../release/BizzMitra-ios.ipa Payload && cd ..
+          
+          # If .ipa does not exist yet (unsigned / ad-hoc device build), package from xcarchive payload
+          if [ ! -f "release/BizzMitra-ios.ipa" ]; then
+            APP_PATH=$(find build/App.xcarchive/Products/Applications -name "*.app" -type d | head -n 1)
+            if [ -z "$APP_PATH" ]; then
+              APP_PATH=$(find build -name "*.app" -type d | head -n 1)
+            fi
+            
+            if [ -z "$APP_PATH" ]; then
+              echo "Error: App bundle not found in xcarchive"
+              exit 1
+            fi
+            
+            echo "Found compiled app bundle at: $APP_PATH"
+            cp -r "$APP_PATH" build/Payload/
+            cd build && zip -r ../release/BizzMitra-ios.ipa Payload && cd ..
+          fi
+          
           ls -lh release/BizzMitra-ios.ipa
 
       - name: Upload iOS IPA Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: BizzMitra-ios.ipa
           path: release/BizzMitra-ios.ipa
           if-no-files-found: error
+
+      - name: Upload Xcode Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: build/xcodebuild.log
+          if-no-files-found: ignore

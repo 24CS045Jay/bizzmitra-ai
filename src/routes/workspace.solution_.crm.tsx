@@ -444,7 +444,7 @@ function CRMPage() {
                   key={s}
                   onClick={() => setStageFilter(s)}
                   className={cn(
-                    "relative rounded-full px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
+                    "relative shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
                     stageFilter === s
                       ? "text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent",

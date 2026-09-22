@@ -247,28 +247,30 @@ function Compare() {
           </p>
         </Reveal>
 
-        <Stagger className="mt-12 overflow-hidden rounded-2xl bg-card border border-border/70 neu-reflect shadow-sm">
-          <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-4 border-b border-border px-5 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground sm:px-7">
-            <span>Capability</span>
-            <span>Today&apos;s stack</span>
-            <span className="text-primary">BizzMitra-AI</span>
-          </div>
-          {COMPETITOR_ROWS.map((r) => (
-            <StaggerItem key={r.capability}>
-              <div className="grid grid-cols-[1.1fr_1fr_1fr] items-start gap-4 border-b border-border/60 px-5 py-5 text-sm last:border-0 sm:px-7">
-                <span className="font-semibold">{r.capability}</span>
-                <span className="flex gap-2 text-muted-foreground">
-                  <Minus className="mt-0.5 size-3.5 shrink-0" />
-                  {r.them}
-                </span>
-                <span className="flex gap-2">
-                  <Check className="mt-0.5 size-3.5 shrink-0 text-sage" />
-                  {r.us}
-                </span>
-              </div>
-            </StaggerItem>
-          ))}
-        </Stagger>
+        <div className="mt-12 overflow-x-auto max-w-full rounded-2xl border border-border/70 neu-reflect shadow-sm">
+          <Stagger className="min-w-[540px] bg-card">
+            <div className="grid grid-cols-[1.1fr_1fr_1fr] gap-4 border-b border-border px-5 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground sm:px-7">
+              <span>Capability</span>
+              <span>Today&apos;s stack</span>
+              <span className="text-primary">BizzMitra-AI</span>
+            </div>
+            {COMPETITOR_ROWS.map((r) => (
+              <StaggerItem key={r.capability}>
+                <div className="grid grid-cols-[1.1fr_1fr_1fr] items-start gap-4 border-b border-border/60 px-5 py-5 text-sm last:border-0 sm:px-7">
+                  <span className="font-semibold">{r.capability}</span>
+                  <span className="flex gap-2 text-muted-foreground">
+                    <Minus className="mt-0.5 size-3.5 shrink-0" />
+                    {r.them}
+                  </span>
+                  <span className="flex gap-2">
+                    <Check className="mt-0.5 size-3.5 shrink-0 text-sage" />
+                    {r.us}
+                  </span>
+                </div>
+              </StaggerItem>
+            ))}
+          </Stagger>
+        </div>
       </div>
     </section>
   );

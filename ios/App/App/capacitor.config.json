@@ -39,6 +39,8 @@
 		"AppPlugin",
 		"FilesystemPlugin",
 		"HapticsPlugin",
-		"SharePlugin"
+		"SharePlugin",
+		"SplashScreenPlugin",
+		"StatusBarPlugin"
 	]
 }

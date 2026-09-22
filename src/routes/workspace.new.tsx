@@ -481,11 +481,11 @@ function IntakePage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Step 3: Provide Business Context
             </p>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full scrollbar-none sm:flex-wrap">
               <button
                 type="button"
                 onClick={() => setActiveTab("prompt")}
-                className={`neu-sm px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
+                className={`neu-sm shrink-0 px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
                   activeTab === "prompt" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -494,7 +494,7 @@ function IntakePage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("upload")}
-                className={`neu-sm px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
+                className={`neu-sm shrink-0 px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
                   activeTab === "upload" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -503,7 +503,7 @@ function IntakePage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("url")}
-                className={`neu-sm px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
+                className={`neu-sm shrink-0 px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
                   activeTab === "url" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -512,7 +512,7 @@ function IntakePage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("voice")}
-                className={`neu-sm px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
+                className={`neu-sm shrink-0 px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
                   activeTab === "voice" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -521,7 +521,7 @@ function IntakePage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("legacy")}
-                className={`neu-sm px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
+                className={`neu-sm shrink-0 px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 ${
                   activeTab === "legacy" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -564,7 +564,7 @@ function IntakePage() {
                             setIndustry("D2C E-Commerce");
                           }
                         }}
-                        className="neu-sm px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+                        className="neu-sm px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground text-left max-w-full break-words whitespace-normal"
                       >
                         {chip}
                       </button>
@@ -577,7 +577,7 @@ function IntakePage() {
             {/* Tab 2: Document Upload */}
             {activeTab === "upload" && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                <div className="neu-inset flex flex-col items-center justify-center p-8 text-center border border-dashed border-border rounded-xl">
+                <div className="neu-inset flex flex-col items-center justify-center p-5 sm:p-8 text-center border border-dashed border-border rounded-xl">
                   <Upload className="size-8 text-primary/80 animate-bounce" />
                   <p className="mt-3 text-xs font-bold text-foreground">
                     Drag & Drop Business Requirements (PDF, DOCX, PPTX, BRD)
@@ -586,37 +586,37 @@ function IntakePage() {
                     Prototype Extractor will parse entities, goals, and constraints into your workspace context.
                   </p>
 
-                  <div className="mt-4 flex flex-wrap gap-2.5 justify-center">
+                  <div className="mt-4 flex flex-wrap gap-2.5 justify-center max-w-full">
                     <button
                       type="button"
                       onClick={() => setIsDocModalOpen(true)}
-                      className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground flex items-center gap-2 shadow-sm glow-primary hover:opacity-90 active:scale-95"
+                      className="rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground flex items-center justify-center gap-2 shadow-sm glow-primary hover:opacity-90 active:scale-95 text-center max-w-full break-words whitespace-normal"
                     >
-                      <Upload className="size-4" /> Upload Real Document (PDF, Word, PPTX, SOP, BRD)
+                      <Upload className="size-4 shrink-0" /> Upload Real Document (PDF, Word, PPTX, SOP, BRD)
                     </button>
                   </div>
 
-                  <div className="mt-2 flex flex-wrap gap-2 justify-center opacity-80">
+                  <div className="mt-2 flex flex-wrap gap-2 justify-center opacity-80 max-w-full">
                     <button
                       type="button"
                       onClick={() => handleSimulateUpload("TalentCraft_Recruitment_BRD_v2.pdf", "pdf")}
                       className="neu-sm neu-press px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-primary flex items-center gap-1.5"
                     >
-                      <FileText className="size-3" /> Sample BRD (.PDF)
+                      <FileText className="size-3 shrink-0" /> Sample BRD (.PDF)
                     </button>
                     <button
                       type="button"
                       onClick={() => handleSimulateUpload("Hiring_Operations_SOP.docx", "docx")}
                       className="neu-sm neu-press px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-primary flex items-center gap-1.5"
                     >
-                      <FileText className="size-3" /> Sample SOP (.DOCX)
+                      <FileText className="size-3 shrink-0" /> Sample SOP (.DOCX)
                     </button>
                     <button
                       type="button"
                       onClick={() => handleSimulateUpload("Transformation_Strategy.pptx", "pptx")}
                       className="neu-sm neu-press px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-primary flex items-center gap-1.5"
                     >
-                      <FileSpreadsheet className="size-3" /> Sample Deck (.PPTX)
+                      <FileSpreadsheet className="size-3 shrink-0" /> Sample Deck (.PPTX)
                     </button>
                   </div>
 
@@ -640,7 +640,7 @@ function IntakePage() {
                   <div className="neu p-4 border border-border/70 rounded-xl bg-card/60">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <CheckCircle2 className="size-4 text-emerald-500" />
+                        <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
                         <div>
                           <p className="text-xs font-bold text-foreground">{uploadedDoc.name}</p>
                           <p className="text-[10px] text-muted-foreground">
@@ -667,19 +667,19 @@ function IntakePage() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                 <div className="neu-inset p-4">
                   <label className="block text-xs font-semibold text-foreground">Company Website / App URL</label>
-                  <div className="mt-2 flex gap-2">
+                  <div className="mt-2 flex flex-col sm:flex-row gap-2">
                     <input
                       type="url"
                       value={urlInput}
                       onChange={(e) => setUrlInput(e.target.value)}
                       placeholder="https://your-company.com"
-                      className="w-full bg-transparent text-xs outline-none"
+                      className="w-full min-w-0 bg-transparent text-xs outline-none"
                     />
                     <button
                       type="button"
                       onClick={handleAnalyzeUrl}
                       disabled={analyzingUrl}
-                      className="neu-sm neu-press px-4 py-2 text-xs font-semibold text-primary whitespace-nowrap"
+                      className="neu-sm neu-press px-4 py-2 text-xs font-semibold text-primary shrink-0 self-start sm:self-auto"
                     >
                       {analyzingUrl ? "Crawling & Analyzing..." : "Analyze Website"}
                     </button>
@@ -838,9 +838,9 @@ function IntakePage() {
       </Reveal>
 
       {/* Action Footer */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-4">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <AlertCircle className="size-3.5 text-primary" />
+          <AlertCircle className="size-3.5 shrink-0 text-primary" />
           <span>Context will be locked and carried forward across all 11 blueprint modules.</span>
         </div>
 
@@ -848,7 +848,7 @@ function IntakePage() {
           type="button"
           onClick={createWorkspace}
           disabled={!problemStatement.trim() || busy}
-          className="neu-press rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
+          className="neu-press rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-md transition-all flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50 shrink-0"
         >
           {busy ? (
             <span>{strings.creating}</span>

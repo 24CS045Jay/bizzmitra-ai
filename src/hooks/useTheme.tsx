@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { hideSplashScreen, syncNativeTheme } from "@/lib/native-bridge";
 
 type Theme = "light" | "dark";
 
@@ -32,6 +33,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore storage quota / access issues
     }
+
+    // Sync native status bar color with active theme and dismiss splash once painted
+    void syncNativeTheme(theme);
+    void hideSplashScreen();
   }, [theme]);
 
   const setTheme = (newTheme: Theme) => {
