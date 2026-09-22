@@ -14,7 +14,7 @@ export const CHAIN = [
   { id: "intake", label: "Intake", to: "/workspace/new" },
   { id: "discovery", label: "Discovery", to: "/workspace/discovery" },
   { id: "solution", label: "Framing & Solution", to: "/workspace/solution" },
-  { id: "crm", label: "HR CRM", to: "/workspace/solution/crm" },
+  { id: "crm", label: "Prototype CRM", to: "/workspace/solution/crm" },
   { id: "architecture", label: "Architecture", to: "/workspace/architecture" },
   { id: "process", label: "Process", to: "/workspace/process" },
   { id: "wireframes", label: "UX", to: "/workspace/wireframes" },
