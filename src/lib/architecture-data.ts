@@ -94,46 +94,46 @@ export const HR_HLD_DIAGRAM = `graph TB
   C1 --> E3
   C3 --> E3
 
-  classDef client fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF;
-  classDef edge fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF;
-  classDef service fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF;
-  classDef ai fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF;
-  classDef data fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF;
+  classDef client fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef edge fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef service fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef ai fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF
+  classDef data fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
 
-  class A1,A2,A3 client;
-  class B1,B2 edge;
-  class C1,C2,C3,C4 service;
-  class D1,D2 ai;
-  class E1,E2,E3 data;
+  class A1,A2,A3 client
+  class B1,B2 edge
+  class C1,C2,C3,C4 service
+  class D1,D2 ai
+  class E1,E2,E3 data
 `;
 
 export const HR_LLD_DIAGRAM = `sequenceDiagram
   autonumber
-  actor Recruiter as Recruiter / Consultant
-  participant WebApp as Web Client (React)
-  participant Gateway as API Gateway (Fastify)
-  participant ATSSvc as Core ATS Service
-  participant AttSvc as Attendance Service
-  participant Queue as Redis Celery Queue
-  participant AIEngine as AI Embedding Engine
-  participant DB as PostgreSQL 16 (RDS)
+  actor Recruiter as "Recruiter / Consultant"
+  participant WebApp as "Web Client"
+  participant Gateway as "API Gateway"
+  participant ATSSvc as "Core ATS Service"
+  participant AttSvc as "Attendance Service"
+  participant Queue as "Redis Celery Queue"
+  participant AIEngine as "AI Embedding Engine"
+  participant DB as "PostgreSQL Database"
 
-  Note over Recruiter,WebApp: Flow A: Punch-In & Attendance Verification
-  Recruiter->>WebApp: Clicks "Punch In"
-  WebApp->>Gateway: POST /api/v1/attendance/punch (HMAC Token)
-  Gateway->>AttSvc: Validate Consultant ID & Timestamp
-  AttSvc->>DB: INSERT INTO attendance_punches (status=Active)
-  AttSvc-->>WebApp: 201 Created (Clock running: 00:00:00)
+  Note over Recruiter,WebApp: Flow A - Attendance Verification
+  Recruiter->>WebApp: Clicks Punch-In Button
+  WebApp->>Gateway: POST /api/v1/attendance/punch [HMAC Token]
+  Gateway->>AttSvc: Validate Consultant ID and Timestamp
+  AttSvc->>DB: INSERT INTO attendance_punches
+  AttSvc-->>WebApp: 201 Created [Clock Running]
 
-  Note over Recruiter,WebApp: Flow B: Dynamic Schema & AI Candidate Ingestion
-  Recruiter->>WebApp: Adds Candidate + Custom Attributes (Notice Period, CTC)
-  WebApp->>Gateway: POST /api/v1/candidates (Payload with customValues)
-  Gateway->>ATSSvc: Validate Schema against Studio v1.1 AST
-  ATSSvc->>DB: INSERT INTO candidates & candidate_metadata
-  ATSSvc->>Queue: Enqueue Resume Vectorization (candidate_id)
+  Note over Recruiter,WebApp: Flow B - Candidate Ingestion and AI Match
+  Recruiter->>WebApp: Submits Candidate Profile and Custom Attributes
+  WebApp->>Gateway: POST /api/v1/candidates [Validated Payload]
+  Gateway->>ATSSvc: Validate Schema against Studio AST
+  ATSSvc->>DB: INSERT INTO candidates and metadata
+  ATSSvc->>Queue: Enqueue Resume Vectorization Job
   Queue->>AIEngine: Generate 1536-dim Embedding
-  AIEngine->>DB: UPDATE candidate SET embedding = vector_data
-  ATSSvc-->>WebApp: 200 OK (Candidate visible in pipeline with custom badges)
+  AIEngine->>DB: UPDATE candidate SET embedding
+  ATSSvc-->>WebApp: 200 OK [Candidate Visible in Pipeline]
 `;
 
 export const HR_TOPOLOGY_DIAGRAM = `graph LR
@@ -184,17 +184,17 @@ export const HR_TOPOLOGY_DIAGRAM = `graph LR
   T_ATS --> T_CACHE
   T_AI --> T_PG
 
-  classDef c1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF;
-  classDef c2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF;
-  classDef c3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF;
-  classDef c4 fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF;
-  classDef c5 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF;
+  classDef c1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef c2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef c3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef c4 fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF
+  classDef c5 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
 
-  class T_UI,T_PORTAL,T_PWA c1;
-  class T_WAF,T_GW,T_AUTH c2;
-  class T_ATS,T_ATT,T_COL c3;
-  class T_REDIS_Q,T_WORKER,T_AI c4;
-  class T_PG,T_CACHE,T_S3 c5;
+  class T_UI,T_PORTAL,T_PWA c1
+  class T_WAF,T_GW,T_AUTH c2
+  class T_ATS,T_ATT,T_COL c3
+  class T_REDIS_Q,T_WORKER,T_AI c4
+  class T_PG,T_CACHE,T_S3 c5
 `;
 
 export const HR_SECURITY_SLA_DIAGRAM = `graph TB
@@ -237,17 +237,17 @@ export const HR_SECURITY_SLA_DIAGRAM = `graph TB
   SEC_RLS --> SEC_DB
   SEC_APP --> SEC_REDIS
 
-  classDef zone1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF;
-  classDef zone2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF;
-  classDef zone3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF;
-  classDef zone4 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF;
-  classDef zone5 fill:#16A34A,stroke:#15803D,stroke-width:2px,color:#FFFFFF;
+  classDef zone1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef zone2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef zone3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef zone4 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
+  classDef zone5 fill:#16A34A,stroke:#15803D,stroke-width:2px,color:#FFFFFF
 
-  class SEC_USERS,SEC_CF zone1;
-  class SEC_GW,SEC_RATE zone2;
-  class SEC_APP,SEC_WORK,SEC_MTLS zone3;
-  class SEC_DB,SEC_RLS,SEC_REDIS zone4;
-  class SLA_1,SLA_2,SLA_3,SLA_4 zone5;
+  class SEC_USERS,SEC_CF zone1
+  class SEC_GW,SEC_RATE zone2
+  class SEC_APP,SEC_WORK,SEC_MTLS zone3
+  class SEC_DB,SEC_RLS,SEC_REDIS zone4
+  class SLA_1,SLA_2,SLA_3,SLA_4 zone5
 `;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -306,42 +306,42 @@ export const SOLAR_HLD_DIAGRAM = `graph TB
   S_TEL --> S_REDIS
   S_OPS --> S_S3
 
-  classDef client fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF;
-  classDef edge fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF;
-  classDef service fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF;
-  classDef ai fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF;
-  classDef data fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF;
+  classDef client fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef edge fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef service fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef ai fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF
+  classDef data fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
 
-  class S_APP,S_OPS,S_CUST client;
-  class S_WAF,S_IOT,S_GW edge;
-  class S_TEL,S_GRID,S_DISP,S_YIELD service;
-  class S_KAFKA,S_AI ai;
-  class S_TIME,S_PG,S_REDIS,S_S3 data;
+  class S_APP,S_OPS,S_CUST client
+  class S_WAF,S_IOT,S_GW edge
+  class S_TEL,S_GRID,S_DISP,S_YIELD service
+  class S_KAFKA,S_AI ai
+  class S_TIME,S_PG,S_REDIS,S_S3 data
 `;
 
 export const SOLAR_LLD_DIAGRAM = `sequenceDiagram
   autonumber
-  actor Tech as Solar Field Technician
-  participant Inverter as Solar Inverter (IoT Gateway)
-  participant MQTT as AWS IoT Core (MQTT Broker)
-  participant TelSvc as Inverter Telemetry Svc
-  participant Kafka as Kafka Event Stream
-  participant AnomalyAI as Solar AI Anomaly Engine
-  participant TimeDB as TimescaleDB Hypertable
-  participant DispatchSvc as Work Order Dispatcher
+  actor Tech as "Solar Field Technician"
+  participant Inverter as "Solar Inverter Gateway"
+  participant MQTT as "AWS IoT Core [MQTT]"
+  participant TelSvc as "Inverter Telemetry Svc"
+  participant Kafka as "Kafka Event Stream"
+  participant AnomalyAI as "Solar AI Anomaly Engine"
+  participant TimeDB as "TimescaleDB Hypertable"
+  participant DispatchSvc as "Work Order Dispatcher"
 
-  Note over Inverter,MQTT: Inverter Sensor Burst Ingestion (10,000 pings/sec)
-  Inverter->>MQTT: PUBLISH /telemetry/inverter/{id} (Voltage, Amps, Temp=72C)
+  Note over Inverter,MQTT: Sensor Ingestion Burst - 10k pings/sec
+  Inverter->>MQTT: PUBLISH /telemetry/inverter/payload [Voltage, Amps, Temp 72C]
   MQTT->>TelSvc: Stream payload via TLS mutual authentication
-  TelSvc->>TimeDB: Bulk INSERT INTO sensor_telemetry (compressed hypertable)
+  TelSvc->>TimeDB: Bulk INSERT INTO sensor_telemetry
   TelSvc->>Kafka: Emit event InverterTelemetryReceived
 
-  Note over Kafka,AnomalyAI: Real-Time Arc Fault & Thermal Runaway Detection
-  Kafka->>AnomalyAI: Consume stream window (Last 60 seconds)
-  AnomalyAI->>AnomalyAI: Detect thermal anomaly: Inverter Temp > 70C for 3 min
-  AnomalyAI->>DispatchSvc: Trigger Urgent Work Order: Overheating Inverter
-  DispatchSvc->>Tech: Push Alert via Mobile PWA ("Inspect Inverter Array #4")
-  Tech-->>DispatchSvc: 200 OK (Technician dispatched with offline schematic)
+  Note over Kafka,AnomalyAI: Real-Time Arc Fault and Thermal Runaway Detection
+  Kafka->>AnomalyAI: Consume stream window of last 60 seconds
+  AnomalyAI->>AnomalyAI: Detect thermal anomaly - Inverter Temp above 70C
+  AnomalyAI->>DispatchSvc: Trigger Urgent Work Order for Overheating Inverter
+  DispatchSvc->>Tech: Push Alert via Mobile PWA - Inspect Array 4
+  Tech-->>DispatchSvc: 200 OK [Technician Dispatched]
 `;
 
 export const SOLAR_TOPOLOGY_DIAGRAM = `graph LR
@@ -391,17 +391,17 @@ export const SOLAR_TOPOLOGY_DIAGRAM = `graph LR
   SOL_GSVC --> SOL_PG
   SOL_TSVC --> SOL_RED
 
-  classDef c1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF;
-  classDef c2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF;
-  classDef c3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF;
-  classDef c4 fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF;
-  classDef c5 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF;
+  classDef c1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef c2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef c3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef c4 fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF
+  classDef c5 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
 
-  class SOL_INV,SOL_MET,SOL_TECH c1;
-  class SOL_MQTT,SOL_WAF,SOL_AUTH c2;
-  class SOL_TSVC,SOL_GSVC,SOL_WSVC c3;
-  class SOL_KAFKA,SOL_FLINK,SOL_ML c4;
-  class SOL_TIME,SOL_PG,SOL_RED c5;
+  class SOL_INV,SOL_MET,SOL_TECH c1
+  class SOL_MQTT,SOL_WAF,SOL_AUTH c2
+  class SOL_TSVC,SOL_GSVC,SOL_WSVC c3
+  class SOL_KAFKA,SOL_FLINK,SOL_ML c4
+  class SOL_TIME,SOL_PG,SOL_RED c5
 `;
 
 export const SOLAR_SECURITY_SLA_DIAGRAM = `graph TB
@@ -444,17 +444,17 @@ export const SOLAR_SECURITY_SLA_DIAGRAM = `graph TB
   SOL_ECS --> SOL_DB2
   SOL_ECS --> SOL_DB3
 
-  classDef zone1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF;
-  classDef zone2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF;
-  classDef zone3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF;
-  classDef zone4 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF;
-  classDef zone5 fill:#16A34A,stroke:#15803D,stroke-width:2px,color:#FFFFFF;
+  classDef zone1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef zone2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef zone3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef zone4 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
+  classDef zone5 fill:#16A34A,stroke:#15803D,stroke-width:2px,color:#FFFFFF
 
-  class SOL_FIELD,SOL_CERT zone1;
-  class SOL_ING,SOL_WAF2 zone2;
-  class SOL_ECS,SOL_ISO,SOL_STREAM zone3;
-  class SOL_DB1,SOL_DB2,SOL_DB3 zone4;
-  class SOL_SLA1,SOL_SLA2,SOL_SLA3,SOL_SLA4 zone5;
+  class SOL_FIELD,SOL_CERT zone1
+  class SOL_ING,SOL_WAF2 zone2
+  class SOL_ECS,SOL_ISO,SOL_STREAM zone3
+  class SOL_DB1,SOL_DB2,SOL_DB3 zone4
+  class SOL_SLA1,SOL_SLA2,SOL_SLA3,SOL_SLA4 zone5
 `;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -509,45 +509,44 @@ export const HEALTHCARE_HLD_DIAGRAM = `graph TB
   H_LIS --> H_REDIS
   H_BILL --> H_PG
 
-  classDef client fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF;
-  classDef edge fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF;
-  classDef service fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF;
-  classDef ai fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF;
-  classDef data fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF;
+  classDef client fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef edge fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef service fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef ai fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF
+  classDef data fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
 
-  class H_DOC,H_PAT,H_LAB client;
-  class H_WAF,H_GW edge;
-  class H_LIS,H_REP,H_CRIT,H_BILL service;
-  class H_QUEUE,H_AI ai;
-  class H_PG,H_S3,H_REDIS data;
+  class H_DOC,H_PAT,H_LAB client
+  class H_WAF,H_GW edge
+  class H_LIS,H_REP,H_CRIT,H_BILL service
+  class H_QUEUE,H_AI ai
+  class H_PG,H_S3,H_REDIS data
 `;
 
 export const HEALTHCARE_LLD_DIAGRAM = `sequenceDiagram
   autonumber
-  actor LabTech as Pathologist / Lab Tech
-  participant Scanner as 2D Barcode Scanner
-  participant Gateway as FHIR / HL7 API Gateway
-  participant LISSvc as LIS Routing Service
-  participant Queue as RabbitMQ Task Broker
-  participant PathologyAI as Clinical Pathology AI
-  participant AlertSvc as Critical Value Dispatcher
-  participant DB as HIPAA PostgreSQL 16
-  actor Doctor as Attending Physician
+  actor LabTech as "Pathologist / Lab Tech"
+  participant Scanner as "2D Barcode Scanner"
+  participant Gateway as "FHIR / HL7 API Gateway"
+  participant LISSvc as "LIS Routing Service"
+  participant Queue as "RabbitMQ Task Broker"
+  participant PathologyAI as "Clinical Pathology AI"
+  participant AlertSvc as "Critical Value Dispatcher"
+  participant DB as "HIPAA PostgreSQL 16"
+  actor Doctor as "Attending Physician"
 
-  Note over LabTech,Scanner: Specimen Barcode Scan & Analyzer Ingestion
-  LabTech->>Scanner: Scans Blood Tube Barcode (UUID: SPEC-9021)
-  Scanner->>Gateway: POST /fhir/v4/Observation (HMAC Auth, Hemoglobin=5.8 g/dL)
+  Note over LabTech,Scanner: Specimen Barcode Scan and Ingestion
+  LabTech->>Scanner: Scans Blood Tube Barcode SPEC-9021
+  Scanner->>Gateway: POST /fhir/v4/Observation [Hemoglobin 5.8 g/dL]
   Gateway->>LISSvc: Validate Patient Chain-of-Custody
-  LISSvc->>DB: INSERT INTO specimen_tracking (status=Analyzing)
-  LISSvc->>Queue: Enqueue SpecimenValidationJob (SPEC-9021)
-
+  LISSvc->>DB: INSERT INTO specimen_tracking
+  LISSvc->>Queue: Enqueue SpecimenValidationJob
   Note over Queue,PathologyAI: Emergency Critical Range Anomaly Detection
   Queue->>PathologyAI: Parse observation against demographic baseline
-  PathologyAI->>PathologyAI: Detect CRITICAL LOW Hemoglobin (< 6.0 g/dL)
-  PathologyAI->>AlertSvc: Trigger Tier-1 Emergency Physician Alert
-  AlertSvc->>Doctor: Automated SMS & Phone Call ("Critical Lab Result for Patient #402")
-  Doctor-->>AlertSvc: Acknowledges Critical Value Receipt (Audit Logged)
-  LISSvc-->>LabTech: 200 OK (Specimen verified & Critical Notification Dispatched)
+  PathologyAI->>PathologyAI: Detect CRITICAL LOW Hemoglobin
+  PathologyAI->>AlertSvc: Trigger Tier-1 Emergency Alert
+  AlertSvc->>Doctor: Automated Dispatch - Critical Lab Result
+  Doctor-->>AlertSvc: Acknowledges Critical Value Receipt
+  LISSvc-->>LabTech: 200 OK [Specimen Verified and Dispatched]
 `;
 
 export const HEALTHCARE_TOPOLOGY_DIAGRAM = `graph LR
@@ -597,17 +596,17 @@ export const HEALTHCARE_TOPOLOGY_DIAGRAM = `graph LR
   MED_LISSVC --> MED_RED
   MED_RBAC --> MED_AUDIT
 
-  classDef c1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF;
-  classDef c2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF;
-  classDef c3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF;
-  classDef c4 fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF;
-  classDef c5 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF;
+  classDef c1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef c2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef c3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef c4 fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF
+  classDef c5 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
 
-  class MED_DOC,MED_PAT,MED_ANAL c1;
-  class MED_WAF,MED_FHIR,MED_RBAC c2;
-  class MED_LISSVC,MED_REPSVC,MED_ALERTSVC c3;
-  class MED_MQ,MED_NLP,MED_AUDIT c4;
-  class MED_PG,MED_S3,MED_RED c5;
+  class MED_DOC,MED_PAT,MED_ANAL c1
+  class MED_WAF,MED_FHIR,MED_RBAC c2
+  class MED_LISSVC,MED_REPSVC,MED_ALERTSVC c3
+  class MED_MQ,MED_NLP,MED_AUDIT c4
+  class MED_PG,MED_S3,MED_RED c5
 `;
 
 export const HEALTHCARE_SECURITY_SLA_DIAGRAM = `graph TB
@@ -650,17 +649,17 @@ export const HEALTHCARE_SECURITY_SLA_DIAGRAM = `graph TB
   MED_CLUSTER --> MED_S3_VAULT
   MED_CLUSTER --> MED_LOGS
 
-  classDef zone1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF;
-  classDef zone2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF;
-  classDef zone3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF;
-  classDef zone4 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF;
-  classDef zone5 fill:#16A34A,stroke:#15803D,stroke-width:2px,color:#FFFFFF;
+  classDef zone1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef zone2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef zone3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef zone4 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
+  classDef zone5 fill:#16A34A,stroke:#15803D,stroke-width:2px,color:#FFFFFF
 
-  class MED_USERS,MED_CF zone1;
-  class MED_GATE,MED_SAN zone2;
-  class MED_CLUSTER,MED_ENCRYPT,MED_QUEUE_ZONE zone3;
-  class MED_POSTGRES,MED_S3_VAULT,MED_LOGS zone4;
-  class MED_SLA1,MED_SLA2,MED_SLA3,MED_SLA4 zone5;
+  class MED_USERS,MED_CF zone1
+  class MED_GATE,MED_SAN zone2
+  class MED_CLUSTER,MED_ENCRYPT,MED_QUEUE_ZONE zone3
+  class MED_POSTGRES,MED_S3_VAULT,MED_LOGS zone4
+  class MED_SLA1,MED_SLA2,MED_SLA3,MED_SLA4 zone5
 `;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -715,44 +714,44 @@ export const LOGISTICS_HLD_DIAGRAM = `graph TB
   L_POD --> L_S3
   L_ROUTE --> L_GIS
 
-  classDef client fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF;
-  classDef edge fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF;
-  classDef service fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF;
-  classDef ai fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF;
-  classDef data fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF;
+  classDef client fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef edge fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef service fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef ai fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF
+  classDef data fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
 
-  class L_DISP,L_DRIV,L_CUST client;
-  class L_WAF,L_GW edge;
-  class L_TRACK,L_ROUTE,L_POD,L_COLD service;
-  class L_KAFKA,L_AI ai;
-  class L_GIS,L_REDIS,L_S3 data;
+  class L_DISP,L_DRIV,L_CUST client
+  class L_WAF,L_GW edge
+  class L_TRACK,L_ROUTE,L_POD,L_COLD service
+  class L_KAFKA,L_AI ai
+  class L_GIS,L_REDIS,L_S3 data
 `;
 
 export const LOGISTICS_LLD_DIAGRAM = `sequenceDiagram
   autonumber
-  actor Driver as Fleet Truck Driver
-  participant MobileApp as Driver App (React Native)
-  participant Gateway as Telematics Gateway (Fastify)
-  participant TrackingSvc as Vehicle Tracking Svc
-  participant Kafka as Apache Kafka Stream
-  participant RouteAI as Dynamic ETA Engine
-  participant RedisGeo as Redis GeoSpatial Index
-  participant PostGIS as PostgreSQL 16 (PostGIS)
-  actor Customer as Consignee / Customer
+  actor Driver as "Fleet Truck Driver"
+  participant MobileApp as "Driver Navigation App"
+  participant Gateway as "Telematics Gateway"
+  participant TrackingSvc as "Vehicle Tracking Svc"
+  participant Kafka as "Apache Kafka Stream"
+  participant RouteAI as "Dynamic ETA Engine"
+  participant RedisGeo as "Redis GeoSpatial Index"
+  participant PostGIS as "PostgreSQL 16 PostGIS"
+  actor Customer as "Consignee / Customer"
 
-  Note over Driver,MobileApp: Real-Time GPS Telemetry Ping (Every 3 seconds)
-  Driver->>MobileApp: Vehicle moving along Interstate 90
-  MobileApp->>Gateway: POST /api/v1/telematics/ping (Lat: 42.36, Lng: -71.05, Speed: 62mph)
+  Note over Driver,MobileApp: Real-Time GPS Telemetry Ping - Every 3s
+  Driver->>MobileApp: Vehicle moving along Highway Route
+  MobileApp->>Gateway: POST /api/v1/telematics/ping [Coordinates and Speed]
   Gateway->>TrackingSvc: Forward raw coordinate packet
-  TrackingSvc->>RedisGeo: GEOADD fleet_active_drivers -71.05 42.36 truck_104
+  TrackingSvc->>RedisGeo: GEOADD fleet_active_drivers
   TrackingSvc->>Kafka: Publish DriverPositionUpdated event
 
-  Note over Kafka,RouteAI: Geofence Verification & Live ETA Calculation
+  Note over Kafka,RouteAI: Geofence Verification and Live ETA
   Kafka->>RouteAI: Evaluate distance to destination waypoint
-  RouteAI->>PostGIS: ST_DWithin(truck_geom, customer_geofence, 500 meters)
-  RouteAI->>RouteAI: Recalculate ETA: 12 minutes (Traffic adjusted)
-  RouteAI->>Customer: Push Webhook ("Driver is 2 miles away. Prepare dock.")
-  Customer-->>RouteAI: 200 OK (Dock 4 reserved for unloading)
+  RouteAI->>PostGIS: ST_DWithin spatial geofence calculation
+  RouteAI->>RouteAI: Recalculate ETA traffic adjusted
+  RouteAI->>Customer: Push Webhook - Driver is 2 miles away
+  Customer-->>RouteAI: 200 OK [Dock 4 Reserved]
 `;
 
 export const LOGISTICS_TOPOLOGY_DIAGRAM = `graph LR
@@ -801,17 +800,17 @@ export const LOGISTICS_TOPOLOGY_DIAGRAM = `graph LR
   LOG_TRK --> LOG_RED
   LOG_POD --> LOG_S3
 
-  classDef c1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF;
-  classDef c2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF;
-  classDef c3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF;
-  classDef c4 fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF;
-  classDef c5 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF;
+  classDef c1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef c2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef c3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef c4 fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF
+  classDef c5 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
 
-  class LOG_DISP,LOG_DRV,LOG_CUST c1;
-  class LOG_WAF,LOG_GW,LOG_AUTH c2;
-  class LOG_TRK,LOG_ROT,LOG_POD c3;
-  class LOG_KAFKA,LOG_ETA,LOG_ALERT c4;
-  class LOG_GIS,LOG_RED,LOG_S3 c5;
+  class LOG_DISP,LOG_DRV,LOG_CUST c1
+  class LOG_WAF,LOG_GW,LOG_AUTH c2
+  class LOG_TRK,LOG_ROT,LOG_POD c3
+  class LOG_KAFKA,LOG_ETA,LOG_ALERT c4
+  class LOG_GIS,LOG_RED,LOG_S3 c5
 `;
 
 export const LOGISTICS_SECURITY_SLA_DIAGRAM = `graph TB
@@ -854,17 +853,17 @@ export const LOGISTICS_SECURITY_SLA_DIAGRAM = `graph TB
   LOG_SERVICES --> LOG_GEO_REDIS
   LOG_POSTGIS --> LOG_BACKUP
 
-  classDef zone1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF;
-  classDef zone2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF;
-  classDef zone3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF;
-  classDef zone4 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF;
-  classDef zone5 fill:#16A34A,stroke:#15803D,stroke-width:2px,color:#FFFFFF;
+  classDef zone1 fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef zone2 fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef zone3 fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef zone4 fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
+  classDef zone5 fill:#16A34A,stroke:#15803D,stroke-width:2px,color:#FFFFFF
 
-  class LOG_FLEET,LOG_EDGE zone1;
-  class LOG_INGEST,LOG_TOKEN zone2;
-  class LOG_SERVICES,LOG_STREAM,LOG_MESH zone3;
-  class LOG_POSTGIS,LOG_GEO_REDIS,LOG_BACKUP zone4;
-  class LOG_SLA1,LOG_SLA2,LOG_SLA3,LOG_SLA4 zone5;
+  class LOG_FLEET,LOG_EDGE zone1
+  class LOG_INGEST,LOG_TOKEN zone2
+  class LOG_SERVICES,LOG_STREAM,LOG_MESH zone3
+  class LOG_POSTGIS,LOG_GEO_REDIS,LOG_BACKUP zone4
+  class LOG_SLA1,LOG_SLA2,LOG_SLA3,LOG_SLA4 zone5
 `;
 
 // ─────────────────────────────────────────────────────────────────────────────

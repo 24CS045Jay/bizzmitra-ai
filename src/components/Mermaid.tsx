@@ -21,57 +21,79 @@ export function Mermaid({ chart, className }: { chart: string; className?: strin
     let cancelled = false;
     setLoading(true);
     setFailed(false);
+    setSvg("");
 
-    // Generate a unique, collision-free ID for each render attempt
-    const renderId = `m_${Math.random().toString(36).slice(2, 9)}_${Date.now()}`;
+    // Generate a valid, collision-free CSS-safe ID (starts with a letter, alphanumeric only)
+    const uniqueSuffix = Math.random().toString(36).replace(/[^a-z0-9]/g, "").slice(0, 8);
+    const renderId = `m${uniqueSuffix}${Date.now().toString(36).replace(/[^a-z0-9]/g, "")}`;
 
     (async () => {
       try {
         const mermaid = (await import("mermaid")).default;
-        const css = getComputedStyle(document.documentElement);
-        const read = (v: string, f: string) => css.getPropertyValue(v).trim() || f;
+        const isDark =
+          theme === "dark" ||
+          (typeof document !== "undefined" && document.documentElement.classList.contains("dark"));
 
         if (!initialised) {
           initialised = true;
         }
 
+        // Initialize Mermaid with safe hex colors and suppressErrorRendering: true
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "loose",
-          fontFamily: "Inter Tight, sans-serif",
-          theme: "base",
-          themeVariables: {
-            background: "transparent",
-            primaryColor: read("--surface-2", "#fff"),
-            primaryTextColor: read("--foreground", "#1B1B1B"),
-            primaryBorderColor: read("--primary", "#FF5A3C"),
-            lineColor: read("--muted-foreground", "#8A8478"),
-            secondaryColor: read("--muted", "#EDEAE3"),
-            tertiaryColor: read("--surface", "#EDEAE3"),
-            fontSize: "13px",
-          },
+          suppressErrorRendering: true,
+          fontFamily: "Inter, system-ui, -apple-system, sans-serif",
+          theme: isDark ? "dark" : "neutral",
+          themeVariables: isDark
+            ? {
+                darkMode: true,
+                background: "transparent",
+                mainBkg: "#1c1c24",
+                nodeBorder: "#ff5a3c",
+                primaryColor: "#282834",
+                primaryTextColor: "#f4f4f6",
+                primaryBorderColor: "#ff5a3c",
+                lineColor: "#9ca3af",
+                secondaryColor: "#323242",
+                tertiaryColor: "#1c1c24",
+                fontSize: "13px",
+              }
+            : {
+                darkMode: false,
+                background: "transparent",
+                mainBkg: "#ffffff",
+                nodeBorder: "#ff5a3c",
+                primaryColor: "#f8f8fa",
+                primaryTextColor: "#18181b",
+                primaryBorderColor: "#ff5a3c",
+                lineColor: "#71717a",
+                secondaryColor: "#f1f0ea",
+                tertiaryColor: "#f8f8fa",
+                fontSize: "13px",
+              },
         });
 
-        // Ensure no lingering element with this id exists in DOM
+        // Ensure no lingering elements from previous attempts exist
         const prev = document.getElementById(renderId);
         if (prev) prev.remove();
         const prevD = document.getElementById(`d${renderId}`);
         if (prevD) prevD.remove();
 
         const out = await mermaid.render(renderId, chart);
-        if (!cancelled) {
+        if (!cancelled && out?.svg) {
           setSvg(out.svg);
           setLoading(false);
           setFailed(false);
         }
       } catch (err) {
-        console.warn("Mermaid render error:", err);
+        console.error("Mermaid diagram render error:", err);
         if (!cancelled) {
           setFailed(true);
           setLoading(false);
         }
       } finally {
-        // Clean up any temporary placeholder elements Mermaid appended to document.body
+        // Clean up any temporary elements Mermaid may have left behind
         try {
           const el = document.getElementById(renderId);
           if (el && el.parentElement === document.body) el.remove();
@@ -166,15 +188,11 @@ export function Mermaid({ chart, className }: { chart: string; className?: strin
       )}
 
       {/* Diagram Scrollable Viewport */}
-      <div className="flex-1 w-full overflow-auto p-4 touch-pan-x touch-pan-y min-h-[320px] flex items-center justify-center">
-        <motion.div
-          key={chart}
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: svg ? 1 : 0, scale: svg ? zoom : 0.98 }}
-          transition={{ duration: 0.2 }}
-          style={{ transformOrigin: "top center" }}
-          className="min-w-fit w-full flex justify-center [&_svg]:h-auto [&_svg]:max-w-full [&_svg]:mx-auto"
+      <div className="flex-1 w-full overflow-auto p-4 touch-pan-x touch-pan-y min-h-[360px] flex justify-center">
+        <div
           ref={ref}
+          style={{ transform: `scale(${zoom})`, transformOrigin: "top center" }}
+          className="min-w-fit w-full flex justify-center [&_svg]:block [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:mx-auto transition-transform duration-150"
           dangerouslySetInnerHTML={{ __html: svg }}
         />
       </div>

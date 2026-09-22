@@ -27,7 +27,6 @@ import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { GenerationSequence } from "@/components/GenerationSequence";
 import { Mermaid } from "@/components/Mermaid";
-import { Stagger, StaggerItem } from "@/components/motion/primitives";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import {
   getArchitectureBlueprint,
@@ -167,9 +166,9 @@ function ArchitecturePage() {
         steps={GENERATION_STEPS.architecture}
         run={() => generateArtifact("architecture")}
       >
-        <Stagger className="space-y-6">
+        <div className="space-y-6">
           {/* ═══ Header Tabs & Action Bar ═══ */}
-          <StaggerItem className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="neu-sm inline-flex flex-wrap gap-1 p-1 bg-surface/60 rounded-xl">
               {(
                 [
@@ -212,11 +211,17 @@ function ArchitecturePage() {
                 <span>Inspect Nodes</span>
               </button>
             </div>
-          </StaggerItem>
+          </div>
 
           {/* ═══ Tab 1: High Level Design (HLD) ═══ */}
           {tab === "hld" && (
-            <StaggerItem className="neu p-6 space-y-4">
+            <motion.div
+              key="hld"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="neu p-6 space-y-4"
+            >
               <div className="flex flex-wrap items-center justify-between border-b border-border/60 pb-3 gap-2">
                 <div>
                   <div className="flex items-center gap-2">
@@ -237,7 +242,7 @@ function ArchitecturePage() {
               </div>
 
               <div className="overflow-x-auto rounded-xl bg-card/60 p-4 border border-border/60">
-                <Mermaid chart={blueprint.hldDiagram} />
+                <Mermaid key="hld" chart={blueprint.hldDiagram} />
               </div>
 
               {/* Node Inspector Callout Chips */}
@@ -262,12 +267,18 @@ function ArchitecturePage() {
                   ))}
                 </div>
               </div>
-            </StaggerItem>
+            </motion.div>
           )}
 
           {/* ═══ Tab 2: Low Level Sequence Design (LLD) ═══ */}
           {tab === "lld" && (
-            <StaggerItem className="neu p-6 space-y-4">
+            <motion.div
+              key="lld"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="neu p-6 space-y-4"
+            >
               <div className="flex flex-wrap items-center justify-between border-b border-border/60 pb-3 gap-2">
                 <div>
                   <div className="flex items-center gap-2">
@@ -288,14 +299,20 @@ function ArchitecturePage() {
               </div>
 
               <div className="overflow-x-auto rounded-xl bg-card/60 p-4 border border-border/60">
-                <Mermaid chart={blueprint.lldDiagram} />
+                <Mermaid key="lld" chart={blueprint.lldDiagram} />
               </div>
-            </StaggerItem>
+            </motion.div>
           )}
 
           {/* ═══ Tab 3: Component & 5-Layer Topology Diagram ═══ */}
           {tab === "components" && (
-            <StaggerItem className="neu p-6 space-y-5">
+            <motion.div
+              key="components"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="neu p-6 space-y-5"
+            >
               <div className="flex flex-wrap items-center justify-between border-b border-border/60 pb-3 gap-2">
                 <div>
                   <div className="flex items-center gap-2">
@@ -314,7 +331,7 @@ function ArchitecturePage() {
               </div>
 
               <div className="overflow-x-auto rounded-xl bg-card/60 p-4 border border-border/60">
-                <Mermaid chart={blueprint.topologyDiagram} />
+                <Mermaid key="topology" chart={blueprint.topologyDiagram} />
               </div>
 
               {/* Component Node Directory Cards */}
@@ -374,12 +391,18 @@ function ArchitecturePage() {
                   ))}
                 </div>
               </div>
-            </StaggerItem>
+            </motion.div>
           )}
 
           {/* ═══ Tab 4: Security Boundaries & SLA Diagram ═══ */}
           {tab === "sla" && (
-            <StaggerItem className="neu p-6 space-y-5">
+            <motion.div
+              key="sla"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="neu p-6 space-y-5"
+            >
               <div className="flex flex-wrap items-center justify-between border-b border-border/60 pb-3 gap-2">
                 <div>
                   <div className="flex items-center gap-2">
@@ -400,7 +423,7 @@ function ArchitecturePage() {
               </div>
 
               <div className="overflow-x-auto rounded-xl bg-card/60 p-4 border border-border/60">
-                <Mermaid chart={blueprint.securitySlaDiagram} />
+                <Mermaid key="sla" chart={blueprint.securitySlaDiagram} />
               </div>
 
               {/* Enterprise Security Policies & Latency Budgets Table */}
@@ -448,11 +471,11 @@ function ArchitecturePage() {
                   </table>
                 </div>
               </div>
-            </StaggerItem>
+            </motion.div>
           )}
 
           {/* ═══ Architecture Rationale Cards ═══ */}
-          <StaggerItem className="neu p-6">
+          <div className="neu p-6">
             <h2 className="font-display text-base font-bold">Key Architectural Decisions</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {blueprint.keyDecisions.map((item) => (
@@ -467,8 +490,8 @@ function ArchitecturePage() {
                 </div>
               ))}
             </div>
-          </StaggerItem>
-        </Stagger>
+          </div>
+        </div>
       </GenerationSequence>
 
       {/* ═══ Component Inspection Slide-Out Drawer ═══ */}
