@@ -38,6 +38,7 @@ import {
 } from "@/lib/demo-data";
 import { supabase } from "@/integrations/supabase/client";
 import { loadStudioSettings } from "@/lib/solution-studio";
+import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/solution")({
   head: () => ({
@@ -87,6 +88,7 @@ const MODULE_TIME_TAGS: Record<string, Exclude<TimeTag, "All">> = {
 };
 
 function SolutionPage() {
+  useStageGate("solution");
   const [problemText, setProblemText] = useState(HR_CONSULTANCY_PROBLEM);
   const [businessName, setBusinessName] = useState("Enterprise Business");
   const [industry, setIndustry] = useState("Cross-Industry");
@@ -610,6 +612,8 @@ function SolutionPage() {
             </div>
           </StaggerItem>
         </Stagger>
+
+        <StageNextButton currentStageId="solution" label="Proceed to Architecture Models" />
       </GenerationSequence>
 
       {/* Solution Studio Slide-Out Drawer */}

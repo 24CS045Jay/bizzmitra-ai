@@ -390,67 +390,831 @@ export const HEALTHCARE_BUSINESS_ANALYSIS: BusinessAnalysisReport = {
   ],
 };
 
-export function getActiveDiscoveryScript(problemText?: string): DiscoveryQuestionItem[] {
-  const lower = (problemText || "").toLowerCase();
-  if (lower.includes("support") || lower.includes("ticket")) {
-    return DISCOVERY_SCRIPT;
-  }
+// ─────────────────────────────────────────────────────────────────────────────
+// QUICK-COMMERCE & DARK STORE DISCOVERY BLUEPRINT
+// ─────────────────────────────────────────────────────────────────────────────
+export const QUICKCOMMERCE_DISCOVERY_SCRIPT: DiscoveryQuestionItem[] = [
+  {
+    question:
+      "Welcome to BizzMitra! Scaling dark store quick-commerce requires synchronizing order flow, picker travel velocity, and inventory accuracy. What is your daily order throughput per dark store and average active SKU count?",
+    hint: "Volume and catalog size determine your real-time Redis queue capacity, inventory cache partitioning, and order batching windows.",
+    whyWeAsk: "Sizes high-concurrency database connection pools, WebSockets for picker tablets, and Redis caching.",
+    missingEntity: "Daily dark store order velocity & active SKU catalog size",
+    options: [
+      "Around 700 - 1,000 orders/day per dark store across 3,500 fast-moving grocery and FMCG SKUs.",
+      "200 - 400 orders/day with 1,500 boutique or specialty items.",
+      "2,500+ peak orders/day across high-density mega micro-fulfillment centers.",
+    ],
+    answer: "Around 700 - 1,000 orders/day per dark store across 3,500 fast-moving grocery and FMCG SKUs.",
+  },
+  {
+    question:
+      "A 10-minute delivery SLA demands sub-3-minute pick and pack. Where does operational lag or stock-out discrepancy occur inside your dark store fulfillment flow today?",
+    hint: "Identifies whether delays stem from aisle travel distance, barcode verification lag, or phantom stock discrepancies.",
+    whyWeAsk: "Determines whether to architect algorithmic wave-picking, Bluetooth ring scanner verification, or aisle heatmaps.",
+    missingEntity: "In-store picking bottlenecks & inventory synchronization failure points",
+    options: [
+      "Pickers spend 12+ minutes searching unoptimized aisles; phantom stock causes 18% cancellation when items are missing on shelf.",
+      "Disconnected ERP sync takes 15 minutes to reflect sales, leading to double-allocation of the same SKU.",
+      "Packing and rider handoff bottleneck because paper slips don't show real-time rider arrival ETAs.",
+    ],
+    answer:
+      "Pickers spend 12+ minutes searching unoptimized aisles; phantom stock causes 18% cancellation when items are missing on shelf.",
+  },
+  {
+    question:
+      "For inventory replenishment between central mother-hubs and your micro-fulfillment centers, how are stock transfers and perishable spoilage handled?",
+    hint: "Specifies requirements for automated reorder triggers, batch expiry tracking, and inter-store stock transfers.",
+    whyWeAsk: "Defines the multi-warehouse inventory state machine and automated purchase-order generation rules.",
+    missingEntity: "Replenishment cadence, mother-hub transfer protocols, and expiry controls",
+    options: [
+      "Manual daily Excel transfer orders; we need automated dynamic rebalancing based on 3-day predictive run-rate and FIFO batch expiry.",
+      "Nightly batch replenishment from a single central DC with fixed truck routes.",
+      "Direct vendor store-door deliveries with decentralized local PO creation.",
+    ],
+    answer:
+      "Manual daily Excel transfer orders; we need automated dynamic rebalancing based on 3-day predictive run-rate and FIFO batch expiry.",
+  },
+];
+
+export const QUICKCOMMERCE_AI_SUMMARY =
+  "Captured: High order velocity across urban dark stores, 12,000+ SKU catalog, 24-minute current fulfillment cycle vs 10-minute SLA, 18% inventory stock-out cancellations, and manual Excel-driven mother-hub transfers. I have framed the dark store bottlenecks, formulated an automated wave-picking and dynamic inventory rebalancing architecture, and synthesized the business analysis.";
+
+export const QUICKCOMMERCE_BUSINESS_ANALYSIS: BusinessAnalysisReport = {
+  currentState: {
+    summary:
+      "Dark store operations are bottlenecked by manual pick-and-pack routing and asynchronous inventory sync with central ERP. Pickers spend 14 minutes searching unorganized aisles, stock discrepancies trigger 18% order cancellations at checkout, and mother-hub replenishment relies on manual spreadsheets.",
+    tools: ["Legacy ERP", "Decentralized Excel Rebalancing Sheets", "WhatsApp Store Groups", "Paper Picking Slips"],
+    bottlenecks: [
+      "Picker aisle travel time averaging 14 minutes per order due to unoptimized item sequencing",
+      "18% stock-out cancellation rate caused by 20-minute latency in ERP inventory updates",
+      "Manual Excel stock transfers between central mother-hubs and micro-fulfillment centers",
+      "Lack of real-time picking telemetry, rider arrival synchronization, and shelf expiry tracking",
+    ],
+    efficiencyScore: 34,
+  },
+  stakeholders: [
+    { role: "Dark Store Pickers & Store Managers", count: "320 store staff", needs: "Tablet-guided shortest-path picking route, barcode ring verification", impact: "Critical" },
+    { role: "Last-Mile Delivery Fleet", count: "1,200 delivery partners", needs: "Sub-2 minute bag handoff, synchronized rider arrival dispatch", impact: "Critical" },
+    { role: "Supply Chain & Hub Managers", count: "65 store supervisors", needs: "Automated replenishment alerts, live SKU stock-out monitoring", impact: "High" },
+    { role: "Head of Operations & VP Retail", count: "Executive Board", needs: "SLA compliance dashboards, stock shrink analytics, cross-store inventory balancing", impact: "High" },
+  ],
+  gapAnalysis: [
+    { area: "Order Picking Routing", current: "Paper picking slips and manual memory-based item search", future: "Algorithmic pick-path sequencing with Bluetooth ring barcode verification", severity: "Critical" },
+    { area: "Inventory Synchronization", current: "Asynchronous 20-minute batch sync causing double-selling", future: "Sub-100ms Redis real-time stock allocation with distributed locking", severity: "Critical" },
+    { area: "Hub Replenishment", current: "Manual morning spreadsheets prone to stock-outs", future: "Automated dynamic rebalancing triggered by predictive SKU velocity and lead times", severity: "High" },
+    { area: "Perishable Expiry Management", current: "Visual manual inspection on shelves", future: "Batch-level FIFO/FEFO barcode verification and automated markdown triggers", severity: "Medium" },
+  ],
+  futureState: {
+    summary:
+      "An automated micro-fulfillment operations platform featuring algorithmic shortest-path wave picking, sub-100ms bi-directional inventory locking, and predictive dynamic replenishment across all dark stores.",
+    recommendedModules: [
+      "Autonomous Pick-Path Sequencing & Wave Optimization Engine",
+      "Real-Time Multi-Tenant Inventory Ledger with Distributed Locking",
+      "Mother-Hub Dynamic Replenishment & Stock Transfer Dispatcher",
+      "Last-Mile Rider ETA Synchronization & Instant Handoff Terminal",
+      "Batch Expiry & Cold-Chain Perishable Quality Guard",
+    ],
+    automationOpportunities: [
+      "Shortest-path aisle navigation reducing picker travel time from 14 mins to sub-3.5 mins",
+      "Real-time atomic stock reservation eliminating 18% inventory stock-out cancellations",
+      "Automated mother-hub stock transfer orders generated every 4 hours based on sales velocity",
+      "Synchronized rider dispatch matching bag packaging completion with rider doorstep arrival",
+    ],
+  },
+  businessImpact: [
+    { metric: "Order Fulfillment Latency", current: "24 minutes", projected: "7.5 minutes", improvement: "-68%" },
+    { metric: "Stock-Out Cancellation Rate", current: "18%", projected: "1.2%", improvement: "-93%" },
+    { metric: "Picker Daily Order Capacity", current: "35 orders/picker", projected: "85 orders/picker", improvement: "+142%" },
+    { metric: "Mother-Hub Transfer Time", current: "6 hours (manual)", projected: "Instant (automated)", improvement: "-95%" },
+    { metric: "Perishable Inventory Shrink", current: "8.4%", projected: "1.1%", improvement: "-87%" },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SOLAR & CLEAN TECH DISCOVERY BLUEPRINT
+// ─────────────────────────────────────────────────────────────────────────────
+export const SOLAR_DISCOVERY_SCRIPT: DiscoveryQuestionItem[] = [
+  {
+    question:
+      "Welcome to BizzMitra! Monitoring distributed solar photovoltaic plants requires real-time telemetry and automated inverter dispatch. What is your total generation capacity and number of distributed inverter plants?",
+    hint: "Capacity and inverter counts define your Modbus/DNP3 ingestion queues, TimescaleDB partitions, and gateway sizing.",
+    whyWeAsk: "Sizes high-frequency time-series telemetry databases and edge gateway edge workers.",
+    missingEntity: "Total Megawatt (MW) capacity & distributed inverter counts",
+    options: [
+      "Around 120 MW across 45 distributed solar PV micro-grids and 600 string inverters.",
+      "Under 25 MW across rooftop commercial installations.",
+      "500+ MW utility-scale solar generation with central inverters.",
+    ],
+    answer: "Around 120 MW across 45 distributed solar PV micro-grids and 600 string inverters.",
+  },
+  {
+    question:
+      "Grid curtailment and equipment thermal clipping demand sub-second response. Where does operational generation loss or downtime occur today?",
+    hint: "Identifies whether loss is caused by delayed SCADA alerts, manual truck rolls, or lagging irradiance normalization.",
+    whyWeAsk: "Architects automated curtailment solvers and predictive inverter thermal anomaly alerts.",
+    missingEntity: "Generation loss failure modes & SCADA alert latencies",
+    options: [
+      "SCADA alarms arrive 18 minutes late on email; technicians spend 4 days diagnosing clipping, causing 22% generation loss.",
+      "Manual truck rolls to remote substations cost ₹45,000 per false alarm.",
+      "PPA revenue settlement disputes due to unverified inverter log discrepancies.",
+    ],
+    answer:
+      "SCADA alarms arrive 18 minutes late on email; technicians spend 4 days diagnosing clipping, causing 22% generation loss.",
+  },
+  {
+    question:
+      "For grid interconnect compliance (IEEE 1547 / CEA) and field crew dispatch, what are your core operational requirements?",
+    hint: "Defines automated setpoint dispatch, work-order creation, and regulatory audit trail generation.",
+    whyWeAsk: "Specifies edge mTLS security, automated work-order generation, and compliance reporting.",
+    missingEntity: "Interconnect compliance protocols & field maintenance dispatch rules",
+    options: [
+      "Sub-500ms automated curtailment response, automated field technician dispatch on fault, and instant IEEE 1547 compliance logs.",
+      "Daily email summary reports with manual ticket dispatch.",
+      "Real-time SCADA dashboard with manual setpoint adjustment.",
+    ],
+    answer:
+      "Sub-500ms automated curtailment response, automated field technician dispatch on fault, and instant IEEE 1547 compliance logs.",
+  },
+];
+
+export const SOLAR_AI_SUMMARY =
+  "Captured: 120 MW capacity across 45 distributed solar micro-grids, 600 inverters, 18-minute SCADA alert lag, 22% generation downtime from clipping, and manual truck rolls. I have framed the telemetry bottlenecks, formulated an automated SCADA event-stream and edge curtailment architecture, and synthesized the business analysis.";
+
+export const SOLAR_BUSINESS_ANALYSIS: BusinessAnalysisReport = {
+  currentState: {
+    summary:
+      "Solar plant operations suffer from disconnected SCADA telemetry and delayed alarm triage. Field engineers manually compile inverter logs from distributed sites, leading to 22% preventable generation loss and delayed grid interconnect compliance reporting.",
+    tools: ["Legacy SCADA Desktop", "Manual Excel Generation Logs", "WhatsApp Field Dispatch", "Paper Work Orders"],
+    bottlenecks: [
+      "18-minute latency in SCADA alarm ingestion causing delayed curtailment response",
+      "22% lost generation yield due to undetected inverter thermal clipping",
+      "Manual truck rolls to remote sites costing significant OPEX per false alarm",
+      "Multi-week delays in compiling IEEE 1547 regulatory audit filings",
+    ],
+    efficiencyScore: 38,
+  },
+  stakeholders: [
+    { role: "SCADA & Electrical Operations Engineers", count: "18 plant engineers", needs: "Sub-500ms inverter telemetry, automated thermal anomaly detection", impact: "Critical" },
+    { role: "Field Maintenance Squads", count: "45 field technicians", needs: "Mobile dispatch with GPS site routing, offline work-order checklists", impact: "High" },
+    { role: "Grid Compliance & PPA Settlers", count: "Compliance Team", needs: "Verifiable generation audit logs, IEEE 1547 automated certifications", impact: "Critical" },
+    { role: "VP Renewable Energy", count: "Executive Board", needs: "Real-time MW yield tracking, asset health index, OPEX optimization", impact: "High" },
+  ],
+  gapAnalysis: [
+    { area: "Telemetry Ingestion", current: "Delayed batch polling prone to data gaps", future: "High-frequency Modbus/DNP3 event stream into partitioned time-series storage", severity: "Critical" },
+    { area: "Inverter Anomaly Detection", current: "Manual review of logs after client complaint", future: "Automated ML curve fitting detecting string degradation and thermal clipping", severity: "Critical" },
+    { area: "Field Dispatch", current: "Uncoordinated phone calls and false truck rolls", future: "Condition-based automated work-order generation with part inventory check", severity: "High" },
+    { area: "Compliance Auditing", current: "6 weeks of manual spreadsheet reconciliation", future: "Instant 1-click IEEE 1547 and grid interconnect attestation report", severity: "High" },
+  ],
+  futureState: {
+    summary:
+      "A cloud-native solar telemetry and plant intelligence platform featuring sub-500ms Modbus streaming, autonomous inverter anomaly triage, and automated grid compliance reporting.",
+    recommendedModules: [
+      "High-Frequency SCADA Ingestion & Edge Worker Gateway",
+      "Autonomous Inverter Thermal Clipping & Anomaly Solver",
+      "Condition-Based Field Dispatch & Mobile Work-Order Hub",
+      "IEEE 1547 Grid Compliance & PPA Revenue Settlement Engine",
+      "Predictive Degradation & Solar Asset Health Index",
+    ],
+    automationOpportunities: [
+      "Sub-500ms automated curtailment reducing grid non-compliance penalties to zero",
+      "Algorithmic string comparison eliminating 22% generation downtime",
+      "Automated root-cause diagnostics deflecting 70% of unnecessary truck rolls",
+      "Instant compliance export saving 180 person-hours per audit cycle",
+    ],
+  },
+  businessImpact: [
+    { metric: "Generation Loss from Clipping", current: "22%", projected: "1.8%", improvement: "-92%" },
+    { metric: "SCADA Ingestion Latency", current: "18 minutes", projected: "< 500 ms", improvement: "-99.9%" },
+    { metric: "Unnecessary Truck Rolls", current: "24 / month", projected: "5 / month", improvement: "-79%" },
+    { metric: "PPA Revenue Yield", current: "82% yield", projected: "98.4% yield", improvement: "+20%" },
+    { metric: "Audit Compilation Time", current: "6 weeks", projected: "4 hours", improvement: "-98%" },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOGISTICS & COLD-CHAIN FLEET DISCOVERY BLUEPRINT
+// ─────────────────────────────────────────────────────────────────────────────
+export const LOGISTICS_DISCOVERY_SCRIPT: DiscoveryQuestionItem[] = [
+  {
+    question:
+      "Welcome to BizzMitra! Managing refrigerated supply chain logistics requires continuous cold-chain visibility and automated driver dispatch. What is your active fleet size and monthly consignment volume?",
+    hint: "Fleet size and shipment velocity define your IoT GPS stream partitions, route geofences, and alert queues.",
+    whyWeAsk: "Sizes real-time GPS stream brokers, geofencing query throughput, and driver app push channels.",
+    missingEntity: "Fleet vehicle count & monthly refrigerated consignment volume",
+    options: [
+      "Around 320 refrigerated reefer trucks transporting 4,200 consignments monthly across inter-state corridors.",
+      "50 - 100 urban local delivery vans handling intra-city cold drops.",
+      "1,000+ multi-modal freight containers across national distribution networks.",
+    ],
+    answer: "Around 320 refrigerated reefer trucks transporting 4,200 consignments monthly across inter-state corridors.",
+  },
+  {
+    question:
+      "Cold-chain integrity demands zero temperature excursions. Where do transit delays, cargo spoilage, or compliance gaps occur today?",
+    hint: "Identifies whether excursions occur during transit, loading dock delays, or driver manual log omissions.",
+    whyWeAsk: "Specifies IoT BLE sensor integration, automated excursion alerts, and electronic proof-of-delivery (e-POD).",
+    missingEntity: "Cargo spoilage root causes & dock handoff latencies",
+    options: [
+      "Reefer temperature fluctuations go unnoticed in transit; 8.4% cargo spoilage discovered only upon dock delivery.",
+      "Manual paper waybills and uncoordinated dock arrival cause 4-hour detention delays at receiver warehouses.",
+      "Lack of real-time GPS ETA creates missed delivery time-windows and contractual SLA penalties.",
+    ],
+    answer:
+      "Reefer temperature fluctuations go unnoticed in transit; 8.4% cargo spoilage discovered only upon dock delivery.",
+  },
+  {
+    question:
+      "For driver workflow, delivery verification, and ERP freight billing, what are your core operational needs?",
+    hint: "Determines whether drivers need mobile e-POD with offline signature and instant invoice triggering.",
+    whyWeAsk: "Defines mobile driver app offline-sync, digital bill-of-lading verification, and instant billing.",
+    missingEntity: "Proof of delivery protocol & freight payment reconciliation requirements",
+    options: [
+      "Driver mobile app with offline temperature logging, digital barcode e-POD, and instant ERP invoice generation.",
+      "Simple SMS location updates with manual physical paper POD return.",
+      "Central dispatch tracking only; billing processed weekly on spreadsheet reconciliation.",
+    ],
+    answer:
+      "Driver mobile app with offline temperature logging, digital barcode e-POD, and instant ERP invoice generation.",
+  },
+];
+
+export const LOGISTICS_AI_SUMMARY =
+  "Captured: 320 refrigerated reefer trucks, 4,200 monthly consignments, 8.4% cargo spoilage from undetected temperature excursions, 4-hour dock detention lag, and manual paper PODs. I have framed the cold-chain telemetry bottlenecks, formulated an automated IoT tracking and digital e-POD platform architecture, and synthesized the business analysis.";
+
+export const LOGISTICS_BUSINESS_ANALYSIS: BusinessAnalysisReport = {
+  currentState: {
+    summary:
+      "Fleet operations are hindered by unmonitored cold-chain excursions and manual paper waybills. Drivers manually log temperatures on paper clipboards, transit reefer failures go undetected until delivery, and freight invoices wait 14 days for physical POD return.",
+    tools: ["Standalone GPS Portal", "Paper Bill of Lading", "WhatsApp Dispatch Groups", "Excel Detention Trackers"],
+    bottlenecks: [
+      "8.4% perishable spoilage rate caused by undetected reefer temperature deviations during transit",
+      "4-hour detention turnaround lag at destination warehouses due to uncoordinated arrival notifications",
+      "14-day billing collection cycle delayed by physical return of paper proof-of-delivery (POD) sheets",
+      "Zero automated geofence departure or unauthorized stop detection across interstate corridors",
+    ],
+    efficiencyScore: 36,
+  },
+  stakeholders: [
+    { role: "Fleet Dispatchers & Route Planners", count: "24 dispatchers", needs: "Live fleet telemetry map, automated geofence violation alerts", impact: "Critical" },
+    { role: "Reefer Truck Drivers", count: "320 drivers", needs: "Simple mobile app for BLE temperature sync, digital barcode e-POD sign-off", impact: "Critical" },
+    { role: "Warehouse Receiving Supervisors", count: "48 dock managers", needs: "Accurate rolling ETA, instant temperature excursion certificate", impact: "High" },
+    { role: "VP Supply Chain & Operations", count: "Executive Board", needs: "Transit shrink reduction, fuel efficiency analytics, automated ERP freight billing", impact: "High" },
+  ],
+  gapAnalysis: [
+    { area: "Cold-Chain Monitoring", current: "Manual clipboard temperature notes prone to falsification", future: "Automated BLE sensor IoT stream logging temperature every 60s with anomaly alerts", severity: "Critical" },
+    { area: "Proof of Delivery", current: "Physical signed paper slips taking 10-14 days to return", future: "Mobile digital e-POD with camera damage capture, barcode verification, and geo-stamp", severity: "Critical" },
+    { area: "Dock Coordination", current: "Trucks arrive unannounced creating parking congestion", future: "Predictive dynamic ETA triggering automated dock bay reservation 45 mins prior", severity: "High" },
+    { area: "Freight Settlement", current: "Manual 3-way invoice reconciliation in Excel", future: "Instant ERP invoice release triggered automatically upon valid e-POD upload", severity: "High" },
+  ],
+  futureState: {
+    summary:
+      "A cloud-native cold-chain logistics platform combining continuous IoT reefer telemetry, mobile driver e-POD, and automated ERP billing settlement.",
+    recommendedModules: [
+      "Continuous IoT Reefer & BLE Sensor Telemetry Engine",
+      "Driver Mobile e-POD & Offline Delivery Verification App",
+      "Predictive Geofencing & Rolling ETA Dispatch Tower",
+      "Automated Freight Settlement & 3-Way Reconciliation Gateway",
+      "Cold-Chain Compliance & Excursion Incident Audit Logger",
+    ],
+    automationOpportunities: [
+      "Instant push alerts on 2°C temperature threshold breaches preventing 85% of cargo spoilage",
+      "Digital e-POD reducing invoice payment collection turnaround from 14 days to sub-24 hours",
+      "Automated warehouse dock scheduling saving 3.2 hours detention per truck drop",
+      "Automated route deviation alerts reducing unauthorized stops and fuel waste",
+    ],
+  },
+  businessImpact: [
+    { metric: "Perishable Cargo Spoilage", current: "8.4%", projected: "0.4%", improvement: "-95%" },
+    { metric: "Dock Detention Wait Time", current: "4.2 hours", projected: "45 minutes", improvement: "-82%" },
+    { metric: "Freight Billing Cycle Time", current: "14 days", projected: "6 hours", improvement: "-98%" },
+    { metric: "Temperature Audit Compliance", current: "62% (manual)", projected: "100% (tamper-proof)", improvement: "+61%" },
+    { metric: "Daily Dispatch Capacity", current: "4,200 loads", projected: "7,800 loads", improvement: "+85%" },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FINTECH & LENDING DISCOVERY BLUEPRINT
+// ─────────────────────────────────────────────────────────────────────────────
+export const FINTECH_DISCOVERY_SCRIPT: DiscoveryQuestionItem[] = [
+  {
+    question:
+      "Welcome to BizzMitra! Modernizing digital lending and underwriting requires rapid bureau verification and automated risk scoring. What is your daily loan application volume and average loan ticket size?",
+    hint: "Volume and ticket size size your bureau API rate limits, OCR extraction pipelines, and automated approval thresholds.",
+    whyWeAsk: "Sizes async document processing workers, bureau score cache, and fraud detection concurrency.",
+    missingEntity: "Daily application throughput & average loan ticket size",
+    options: [
+      "Around 1,500 daily loan applications with an average ticket size of ₹85,000 across MSME and consumer credit.",
+      "200 - 300 high-ticket commercial applications averaging ₹15-25 Lakhs.",
+      "5,000+ micro-credit applications averaging ₹10,000.",
+    ],
+    answer: "Around 1,500 daily loan applications with an average ticket size of ₹85,000 across MSME and consumer credit.",
+  },
+  {
+    question:
+      "A 96-hour turnaround time causes 35% borrower drop-off. Where do underwriting bottlenecks or manual review delays occur in your origination funnel today?",
+    hint: "Identifies whether delays occur in bank statement parsing, bureau matching, or manual credit manager sign-off.",
+    whyWeAsk: "Determines whether to architect automated bank statement analyzers, decision rule engines, or video KYC.",
+    missingEntity: "Underwriting bottleneck stages & applicant drop-off points",
+    options: [
+      "Credit managers spend 2.5 hours manually typing PDF bank statements and verifying PAN/Aadhaar cards.",
+      "Bureau credit pulls take 4 hours to reconcile with internal blacklist databases.",
+      "Disbursal approvals stall because paper loan agreements require physical branch visits.",
+    ],
+    answer:
+      "Credit managers spend 2.5 hours manually typing PDF bank statements and verifying PAN/Aadhaar cards.",
+  },
+  {
+    question:
+      "For loan disbursal, e-mandate repayment setup (e-NACH), and regulatory compliance, what are your core operational needs?",
+    hint: "Specifies requirements for automated penny-drop verification, e-Sign contracts, and RBI compliance reporting.",
+    whyWeAsk: "Defines payment gateway webhooks, e-mandate registration, and statutory audit logging.",
+    missingEntity: "Disbursal automation, e-NACH setup, and regulatory compliance protocols",
+    options: [
+      "Instant penny-drop bank validation, Aadhaar e-Sign agreement, automated e-NACH mandate, and instant payment gateway disbursal.",
+      "Next-day batch NEFT transfer with physical signed cheques.",
+      "Manual branch cash disbursal with in-person verification.",
+    ],
+    answer:
+      "Instant penny-drop bank validation, Aadhaar e-Sign agreement, automated e-NACH mandate, and instant payment gateway disbursal.",
+  },
+];
+
+export const FINTECH_AI_SUMMARY =
+  "Captured: 1,500 daily loan applications, ₹85,000 average ticket size, 96-hour turnaround lag causing 35% borrower drop-off, manual bank statement PDF parsing, and delayed paper agreement execution. I have framed the underwriting bottlenecks, formulated an automated decision rule engine and instant e-NACH disbursal platform architecture, and synthesized the business analysis.";
+
+export const FINTECH_BUSINESS_ANALYSIS: BusinessAnalysisReport = {
+  currentState: {
+    summary:
+      "Lending operations are throttled by manual document verification and legacy credit assessment. Credit managers spend 2.5 hours typing bank statement PDFs into Excel, bureau checks are uncoordinated, and loan turnaround takes 96 hours, leading to 35% borrower drop-off.",
+    tools: ["Legacy Core Banking (CBS)", "Manual PDF Bank Scrapers", "Excel Scorecards", "Paper Loan Files"],
+    bottlenecks: [
+      "96-hour average loan approval cycle time resulting in 35% applicant drop-off to competitors",
+      "Manual data entry of bank statements and KYC documents consuming 65% of credit officer time",
+      "Fragmented bureau reporting checks lacking automated deduplication and fraud scorecards",
+      "Delayed paper agreement sign-off and manual bank account validation stalling disbursals",
+    ],
+    efficiencyScore: 32,
+  },
+  stakeholders: [
+    { role: "Underwriting & Credit Risk Managers", count: "35 credit officers", needs: "Instant automated bank statement analysis, algorithmic credit scorecards", impact: "Critical" },
+    { role: "Loan Applicants & Borrowers", count: "1,500 applicants/day", needs: "Sub-15 minute decisioning, paperless mobile KYC, instant loan disbursal", impact: "Critical" },
+    { role: "Operations & Disbursal Teams", count: "12 ops specialists", needs: "Automated penny-drop verification, zero-touch e-NACH mandate registration", impact: "High" },
+    { role: "Chief Risk Officer & Compliance", count: "Executive Board", needs: "RBI statutory compliance, audit trail logs, portfolio default rate protection", impact: "High" },
+  ],
+  gapAnalysis: [
+    { area: "Document Extraction", current: "Manual PDF reading and Excel entry prone to fraud", future: "Automated OCR and financial statement analysis extracting 180+ risk features in 30s", severity: "Critical" },
+    { area: "Credit Decisioning", current: "Subjective manual scorecards taking 24-48 hours", future: "Algorithmic decision rules engine evaluating bureau, income, and debt-to-income in 3s", severity: "Critical" },
+    { area: "Contract Signing", current: "Physical stamp paper agreements requiring branch visit", future: "Legally compliant Aadhaar OTP e-Sign contract execution in 60s", severity: "High" },
+    { area: "Disbursal & Repayment", current: "Manual NEFT batch files created at end of day", future: "Automated 24/7 instant IMPS disbursal with registered e-NACH auto-debit mandate", severity: "High" },
+  ],
+  futureState: {
+    summary:
+      "A cloud-native digital lending platform featuring automated financial document extraction, sub-10s algorithmic risk scoring, and zero-touch e-NACH disbursal.",
+    recommendedModules: [
+      "Intelligent OCR & Financial Statement Extraction Engine",
+      "Algorithmic Credit Decisioning & Risk Rule Matrix",
+      "Aadhaar e-Sign & Digital Contract Automation Desk",
+      "Penny-Drop Bank Verification & Instant IMPS Disbursal Bridge",
+      "Automated e-NACH Mandate & Portfolio Health Telemetry",
+    ],
+    automationOpportunities: [
+      "Straight-through processing (STP) auto-approving 60% of eligible borrowers in under 5 minutes",
+      "Automated bank statement parsing eliminating 2.5 hours manual entry per loan application",
+      "Instant penny drop verifying beneficiary account title match with 0% disbursal failure",
+      "Automated e-NACH reducing default delinquency and manual collections follow-up",
+    ],
+  },
+  businessImpact: [
+    { metric: "Loan Turnaround Time (TAT)", current: "96 hours", projected: "18 minutes", improvement: "-99.6%" },
+    { metric: "Applicant Drop-Off Rate", current: "35%", projected: "4.5%", improvement: "-87%" },
+    { metric: "Credit Officer Applications / Day", current: "8 applications", projected: "45 applications", improvement: "+462%" },
+    { metric: "First-Payment Default (FPD)", current: "3.8%", projected: "0.9%", improvement: "-76%" },
+    { metric: "Disbursal Operational Cost", current: "₹1,850 / loan", projected: "₹120 / loan", improvement: "-93%" },
+  ],
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UNIVERSAL DYNAMIC HEURISTIC GENERATOR (FOR ANY CUSTOM DOMAIN)
+// ─────────────────────────────────────────────────────────────────────────────
+export function generateUniversalCustomDiscovery(
+  problemText?: string,
+  businessName?: string,
+  industry?: string,
+): {
+  questions: DiscoveryQuestionItem[];
+  summary: string;
+  businessAnalysis: BusinessAnalysisReport;
+} {
+  const safeTitle = businessName || "Enterprise Modernization Initiative";
+  const safeIndustry = industry || "Enterprise Operations & Cloud Transformation";
+  const safeProblem = problemText || "Manual siloed processes, turnaround lag, and lack of automated telemetry.";
+
+  const questions: DiscoveryQuestionItem[] = [
+    {
+      question: `Welcome to BizzMitra! Designing the solution architecture for ${safeTitle} requires sizing your core operational volume. What is your current monthly transaction or operational volume across your key systems?`,
+      hint: `Volume sizes your database concurrency, caching layers, and throughput capacity for ${safeIndustry}.`,
+      whyWeAsk: "Defines infrastructure scaling, API rate-limiting, and database connection pool requirements.",
+      missingEntity: "Monthly operational volume & active users/entities",
+      options: [
+        `High volume: Over 5,000 transactions/records processed monthly across internal and partner operations.`,
+        `Medium volume: 1,000 - 3,000 transactions monthly with steady seasonal growth.`,
+        `Specialized / Enterprise: Under 1,000 high-value complex transactions with strict compliance.`,
+      ],
+      answer: `High volume: Over 5,000 transactions/records processed monthly across internal and partner operations.`,
+    },
+    {
+      question: `Regarding the operational challenge: "${safeProblem.slice(0, 110)}...", where does the most severe bottleneck, data loss, or turnaround delay occur today?`,
+      hint: "Identifies whether pain points stem from manual coordination, fragmented tools, or legacy integration failures.",
+      whyWeAsk: "Determines which specific workflow transitions and microservices to prioritize in Sprint 1.",
+      missingEntity: "Primary failure point & workflow bottleneck root causes",
+      options: [
+        `Manual handoffs and disjointed spreadsheets consume over 60% of team time and lead to communication lag.`,
+        `Legacy software lacks real-time APIs, forcing periodic batch manual exports and data reconciliation.`,
+        `Lack of mobile accessibility and real-time alerts prevents field/desk teams from reacting swiftly.`,
+      ],
+      answer: `Manual handoffs and disjointed spreadsheets consume over 60% of team time and lead to communication lag.`,
+    },
+    {
+      question: `For target system architecture, security compliance, and user roles in ${safeIndustry}, what are your non-negotiable operational requirements?`,
+      hint: "Specifies requirements for role-based access control (RBAC), multi-tenant data isolation, and export capabilities.",
+      whyWeAsk: "Ensures the generated PostgreSQL schema, API endpoints, and wireframes meet enterprise governance standards.",
+      missingEntity: "Governance, multi-tenancy, and security compliance constraints",
+      options: [
+        `PostgreSQL Row-Level Security (RLS) for tenant isolation, JWT authentication, and automated audit logging.`,
+        `Real-time executive dashboards with automated PDF/Excel reporting and webhook integration.`,
+        `Sub-80ms client response time with mobile-responsive progressive web app capabilities.`,
+      ],
+      answer: `PostgreSQL Row-Level Security (RLS) for tenant isolation, JWT authentication, and automated audit logging.`,
+    },
+  ];
+
+  const summary = `Captured operational parameters for ${safeTitle} in ${safeIndustry}. Identified key throughput constraints, manual spreadsheet bottlenecks, and target cloud-native architecture requirements. I have synthesized the comprehensive business analysis report and solution blueprint.`;
+
+  const businessAnalysis: BusinessAnalysisReport = {
+    currentState: {
+      summary: `${safeTitle} currently operates with fragmented manual processes and disconnected communication channels. The team experiences significant turnaround latency, manual human error, and lack of real-time visibility across ${safeIndustry} workflows.`,
+      tools: ["Decentralized Spreadsheets", "Email / WhatsApp Coordination", "Legacy Silos", "Manual Documentation"],
+      bottlenecks: [
+        "Heavy reliance on manual data entry and spreadsheet tracking consuming substantial team hours",
+        "Delayed turnaround times resulting in operational backlog and partner/customer friction",
+        "Lack of centralized audit trails and real-time operational telemetry",
+        "Fragmented tools preventing scalable business expansion",
+      ],
+      efficiencyScore: 35,
+    },
+    stakeholders: [
+      { role: "Operations & Execution Team", count: "Core Staff", needs: "Automated workflow tools, intuitive unified interface", impact: "Critical" },
+      { role: "Department Heads & Managers", count: "Management", needs: "Real-time task tracking, bottleneck alerts, SLA monitors", impact: "High" },
+      { role: "Customers / External Partners", count: "All Users", needs: "Fast turnaround, transparent status updates, high reliability", impact: "Critical" },
+      { role: "Executive Leadership", count: "Board / CXO", needs: "Comprehensive ROI, operational visibility, compliance attestation", impact: "High" },
+    ],
+    gapAnalysis: [
+      { area: "Workflow Automation", current: "Manual repetitive human handoffs and spreadsheet updates", future: "Event-driven automated queues and asynchronous background workers", severity: "Critical" },
+      { area: "Data Synchronization", current: "Siloed files and delayed manual reconciliation", future: "Centralized PostgreSQL database with Row-Level Security and REST APIs", severity: "Critical" },
+      { area: "Operational Visibility", current: "Retrospective monthly reviews with stale data", future: "Live real-time dashboards with automated alerting and anomaly detection", severity: "High" },
+      { area: "Compliance & Governance", current: "Incomplete manual paper and spreadsheet logs", future: "Tamper-evident audit ledger and automated exportable compliance packages", severity: "High" },
+    ],
+    futureState: {
+      summary: `A modern, cloud-native automated platform tailored to ${safeTitle}, engineered to eliminate manual bottlenecks, streamline ${safeIndustry} workflows, and provide end-to-end operational visibility.`,
+      recommendedModules: [
+        "Automated Core Workflow Engine & Task Queue",
+        "Central Multi-Tenant Database & REST API Gateway",
+        "Real-Time Executive Analytics & Operational Telemetry",
+        "Role-Based Access Control (RBAC) & Governance Audit Log",
+        "Universal Multi-Format Export Center (PDF, Word, Excel, OpenAPI)",
+      ],
+      automationOpportunities: [
+        "Elimination of manual spreadsheet data reconciliation across daily operations",
+        "Sub-second automated notification dispatch on critical workflow status changes",
+        "Straight-through processing reducing operational turnaround time by over 65%",
+        "Automated compliance report generation saving hours of preparation per cycle",
+      ],
+    },
+    businessImpact: [
+      { metric: "Operational Turnaround Time", current: "Baseline", projected: "70% Faster", improvement: "-70%" },
+      { metric: "Manual Error & Discrepancy Rate", current: "High", projected: "< 1%", improvement: "-90%" },
+      { metric: "Team Productive Capacity", current: "Strained", projected: "2.5x Output", improvement: "+150%" },
+      { metric: "Audit & Compliance Readiness", current: "Manual (Weeks)", projected: "Instant (Automated)", improvement: "-95%" },
+      { metric: "Estimated Payback Horizon", current: "N/A", projected: "3.5 - 5 Months", improvement: "Rapid ROI" },
+    ],
+  };
+
+  return { questions, summary, businessAnalysis };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MULTI-DOMAIN RESOLVER FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+export function getActiveDiscoveryScript(
+  problemText?: string,
+  businessName?: string,
+  industry?: string,
+): DiscoveryQuestionItem[] {
+  const combined = `${problemText || ""} ${businessName || ""} ${industry || ""}`.toLowerCase();
+
+  // 1. Quick-Commerce & Dark Stores / Retail / Inventory
   if (
-    lower.includes("pathology") ||
-    lower.includes("clinic") ||
-    lower.includes("health") ||
-    lower.includes("lims") ||
-    lower.includes("diagnostic") ||
-    lower.includes("patient") ||
-    lower.includes("biopsy") ||
-    lower.includes("apexcare") ||
-    lower.includes("hospital")
+    combined.includes("dark store") ||
+    combined.includes("quick-commerce") ||
+    combined.includes("quick commerce") ||
+    combined.includes("e-commerce") ||
+    combined.includes("ecommerce") ||
+    combined.includes("d2c") ||
+    combined.includes("retail") ||
+    combined.includes("inventory") ||
+    combined.includes("sku") ||
+    combined.includes("pick-and-pack") ||
+    combined.includes("pick and pack") ||
+    combined.includes("fulfillment") ||
+    combined.includes("stock-out") ||
+    combined.includes("stockout") ||
+    combined.includes("quickcart")
+  ) {
+    return QUICKCOMMERCE_DISCOVERY_SCRIPT;
+  }
+
+  // 2. Solar & Clean Tech
+  if (
+    combined.includes("solar") ||
+    combined.includes("clean tech") ||
+    combined.includes("photovoltaic") ||
+    combined.includes("inverter") ||
+    combined.includes("scada") ||
+    combined.includes("renewable") ||
+    combined.includes("curtailment") ||
+    combined.includes("grid")
+  ) {
+    return SOLAR_DISCOVERY_SCRIPT;
+  }
+
+  // 3. Logistics & Cold-Chain Fleet
+  if (
+    combined.includes("logistics") ||
+    combined.includes("cold-chain") ||
+    combined.includes("cold chain") ||
+    combined.includes("reefer") ||
+    combined.includes("fleet") ||
+    combined.includes("truck") ||
+    combined.includes("cargo") ||
+    combined.includes("transport") ||
+    combined.includes("freight") ||
+    combined.includes("consignment")
+  ) {
+    return LOGISTICS_DISCOVERY_SCRIPT;
+  }
+
+  // 4. FinTech & Lending
+  if (
+    combined.includes("fintech") ||
+    combined.includes("lending") ||
+    combined.includes("loan") ||
+    combined.includes("nbfc") ||
+    combined.includes("underwriting") ||
+    combined.includes("bureau") ||
+    combined.includes("credit") ||
+    combined.includes("banking") ||
+    combined.includes("disbursal")
+  ) {
+    return FINTECH_DISCOVERY_SCRIPT;
+  }
+
+  // 5. Healthcare & Diagnostics
+  if (
+    combined.includes("pathology") ||
+    combined.includes("clinic") ||
+    combined.includes("health") ||
+    combined.includes("lims") ||
+    combined.includes("diagnostic") ||
+    combined.includes("patient") ||
+    combined.includes("biopsy") ||
+    combined.includes("phlebotomy") ||
+    combined.includes("hospital")
   ) {
     return HEALTHCARE_DISCOVERY_SCRIPT;
   }
-  return HR_DISCOVERY_SCRIPT;
+
+  // 6. Customer Support
+  if (combined.includes("support") || combined.includes("ticket") || combined.includes("freshdesk")) {
+    return DISCOVERY_SCRIPT;
+  }
+
+  // 7. TalentCraft HR & Staffing (ONLY when specifically matching HR/recruitment keywords)
+  if (
+    combined.includes("talentcraft") ||
+    combined.includes("recruitment") ||
+    combined.includes("candidate") ||
+    combined.includes("staffing") ||
+    combined.includes("recruiter") ||
+    combined.includes("hr consultancy")
+  ) {
+    return HR_DISCOVERY_SCRIPT;
+  }
+
+  // 8. Universal Custom Problem Fallback
+  return generateUniversalCustomDiscovery(problemText, businessName, industry).questions;
 }
 
-export function getActiveAiSummary(problemText?: string): string {
-  const lower = (problemText || "").toLowerCase();
-  if (lower.includes("support") || lower.includes("ticket")) {
-    return AI_SUMMARY;
-  }
+export function getActiveAiSummary(
+  problemText?: string,
+  businessName?: string,
+  industry?: string,
+): string {
+  const combined = `${problemText || ""} ${businessName || ""} ${industry || ""}`.toLowerCase();
+
   if (
-    lower.includes("pathology") ||
-    lower.includes("clinic") ||
-    lower.includes("health") ||
-    lower.includes("lims") ||
-    lower.includes("diagnostic") ||
-    lower.includes("patient") ||
-    lower.includes("biopsy") ||
-    lower.includes("apexcare") ||
-    lower.includes("hospital")
+    combined.includes("dark store") ||
+    combined.includes("quick-commerce") ||
+    combined.includes("quick commerce") ||
+    combined.includes("e-commerce") ||
+    combined.includes("ecommerce") ||
+    combined.includes("d2c") ||
+    combined.includes("retail") ||
+    combined.includes("inventory") ||
+    combined.includes("sku") ||
+    combined.includes("pick-and-pack") ||
+    combined.includes("pick and pack") ||
+    combined.includes("fulfillment") ||
+    combined.includes("stock-out") ||
+    combined.includes("stockout") ||
+    combined.includes("quickcart")
+  ) {
+    return QUICKCOMMERCE_AI_SUMMARY;
+  }
+
+  if (
+    combined.includes("solar") ||
+    combined.includes("clean tech") ||
+    combined.includes("photovoltaic") ||
+    combined.includes("inverter") ||
+    combined.includes("scada") ||
+    combined.includes("renewable") ||
+    combined.includes("curtailment") ||
+    combined.includes("grid")
+  ) {
+    return SOLAR_AI_SUMMARY;
+  }
+
+  if (
+    combined.includes("logistics") ||
+    combined.includes("cold-chain") ||
+    combined.includes("cold chain") ||
+    combined.includes("reefer") ||
+    combined.includes("fleet") ||
+    combined.includes("truck") ||
+    combined.includes("cargo") ||
+    combined.includes("transport") ||
+    combined.includes("freight") ||
+    combined.includes("consignment")
+  ) {
+    return LOGISTICS_AI_SUMMARY;
+  }
+
+  if (
+    combined.includes("fintech") ||
+    combined.includes("lending") ||
+    combined.includes("loan") ||
+    combined.includes("nbfc") ||
+    combined.includes("underwriting") ||
+    combined.includes("bureau") ||
+    combined.includes("credit") ||
+    combined.includes("banking") ||
+    combined.includes("disbursal")
+  ) {
+    return FINTECH_AI_SUMMARY;
+  }
+
+  if (
+    combined.includes("pathology") ||
+    combined.includes("clinic") ||
+    combined.includes("health") ||
+    combined.includes("lims") ||
+    combined.includes("diagnostic") ||
+    combined.includes("patient") ||
+    combined.includes("biopsy") ||
+    combined.includes("phlebotomy") ||
+    combined.includes("hospital")
   ) {
     return HEALTHCARE_AI_SUMMARY;
   }
-  return HR_AI_SUMMARY;
+
+  if (combined.includes("support") || combined.includes("ticket") || combined.includes("freshdesk")) {
+    return AI_SUMMARY;
+  }
+
+  if (
+    combined.includes("talentcraft") ||
+    combined.includes("recruitment") ||
+    combined.includes("candidate") ||
+    combined.includes("staffing") ||
+    combined.includes("recruiter") ||
+    combined.includes("hr consultancy")
+  ) {
+    return HR_AI_SUMMARY;
+  }
+
+  return generateUniversalCustomDiscovery(problemText, businessName, industry).summary;
 }
 
-export function getActiveBusinessAnalysis(problemText?: string): BusinessAnalysisReport {
-  const lower = (problemText || "").toLowerCase();
-  if (lower.includes("support") || lower.includes("ticket")) {
-    return NEXA_BUSINESS_ANALYSIS;
-  }
+export function getActiveBusinessAnalysis(
+  problemText?: string,
+  businessName?: string,
+  industry?: string,
+): BusinessAnalysisReport {
+  const combined = `${problemText || ""} ${businessName || ""} ${industry || ""}`.toLowerCase();
+
   if (
-    lower.includes("pathology") ||
-    lower.includes("clinic") ||
-    lower.includes("health") ||
-    lower.includes("lims") ||
-    lower.includes("diagnostic") ||
-    lower.includes("patient") ||
-    lower.includes("biopsy") ||
-    lower.includes("apexcare") ||
-    lower.includes("hospital")
+    combined.includes("dark store") ||
+    combined.includes("quick-commerce") ||
+    combined.includes("quick commerce") ||
+    combined.includes("e-commerce") ||
+    combined.includes("ecommerce") ||
+    combined.includes("d2c") ||
+    combined.includes("retail") ||
+    combined.includes("inventory") ||
+    combined.includes("sku") ||
+    combined.includes("pick-and-pack") ||
+    combined.includes("pick and pack") ||
+    combined.includes("fulfillment") ||
+    combined.includes("stock-out") ||
+    combined.includes("stockout") ||
+    combined.includes("quickcart")
+  ) {
+    return QUICKCOMMERCE_BUSINESS_ANALYSIS;
+  }
+
+  if (
+    combined.includes("solar") ||
+    combined.includes("clean tech") ||
+    combined.includes("photovoltaic") ||
+    combined.includes("inverter") ||
+    combined.includes("scada") ||
+    combined.includes("renewable") ||
+    combined.includes("curtailment") ||
+    combined.includes("grid")
+  ) {
+    return SOLAR_BUSINESS_ANALYSIS;
+  }
+
+  if (
+    combined.includes("logistics") ||
+    combined.includes("cold-chain") ||
+    combined.includes("cold chain") ||
+    combined.includes("reefer") ||
+    combined.includes("fleet") ||
+    combined.includes("truck") ||
+    combined.includes("cargo") ||
+    combined.includes("transport") ||
+    combined.includes("freight") ||
+    combined.includes("consignment")
+  ) {
+    return LOGISTICS_BUSINESS_ANALYSIS;
+  }
+
+  if (
+    combined.includes("fintech") ||
+    combined.includes("lending") ||
+    combined.includes("loan") ||
+    combined.includes("nbfc") ||
+    combined.includes("underwriting") ||
+    combined.includes("bureau") ||
+    combined.includes("credit") ||
+    combined.includes("banking") ||
+    combined.includes("disbursal")
+  ) {
+    return FINTECH_BUSINESS_ANALYSIS;
+  }
+
+  if (
+    combined.includes("pathology") ||
+    combined.includes("clinic") ||
+    combined.includes("health") ||
+    combined.includes("lims") ||
+    combined.includes("diagnostic") ||
+    combined.includes("patient") ||
+    combined.includes("biopsy") ||
+    combined.includes("phlebotomy") ||
+    combined.includes("hospital")
   ) {
     return HEALTHCARE_BUSINESS_ANALYSIS;
   }
-  return HR_BUSINESS_ANALYSIS;
+
+  if (combined.includes("support") || combined.includes("ticket") || combined.includes("freshdesk")) {
+    return NEXA_BUSINESS_ANALYSIS;
+  }
+
+  if (
+    combined.includes("talentcraft") ||
+    combined.includes("recruitment") ||
+    combined.includes("candidate") ||
+    combined.includes("staffing") ||
+    combined.includes("recruiter") ||
+    combined.includes("hr consultancy")
+  ) {
+    return HR_BUSINESS_ANALYSIS;
+  }
+
+  return generateUniversalCustomDiscovery(problemText, businessName, industry).businessAnalysis;
 }
 
 export const HR_PROBLEM_FRAMING = {

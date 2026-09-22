@@ -34,6 +34,7 @@ import {
   SprintPhase,
 } from "@/lib/planning-data";
 import { evaluateBlueprintRisks } from "@/lib/risk-evaluator";
+import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/roadmap")({
   head: () => ({
@@ -51,6 +52,7 @@ export const Route = createFileRoute("/workspace/roadmap")({
 });
 
 export function RoadmapPage() {
+  useStageGate("roadmap");
   // Read active workspace context reactively
   const [workspaceContext, setWorkspaceContext] = useState<{
     id?: string;
@@ -647,6 +649,8 @@ export function RoadmapPage() {
               ))}
             </div>
           </Reveal>
+
+          <StageNextButton currentStageId="roadmap" label="Proceed to Financial ROI & Readiness" />
         </div>
       </GenerationSequence>
 

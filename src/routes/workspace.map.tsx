@@ -29,6 +29,7 @@ import {
   ArtifactNode,
   getArtifactMapForWorkspace,
 } from "@/lib/artifact-map-data";
+import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/map")({
   head: () => ({
@@ -46,6 +47,7 @@ export const Route = createFileRoute("/workspace/map")({
 });
 
 export function ArtifactMapPage() {
+  useStageGate("map");
   const [selectedNodeId, setSelectedNodeId] = useState<string>("hr-crm");
   const [activeLayerFilter, setActiveLayerFilter] = useState<ArtifactLayer | "all">("all");
 
@@ -470,6 +472,8 @@ export function ArtifactMapPage() {
             </div>
           </div>
         </Reveal>
+
+        <StageNextButton currentStageId="map" label="Proceed to Governance & Collaboration" />
       </div>
     </AppShell>
   );

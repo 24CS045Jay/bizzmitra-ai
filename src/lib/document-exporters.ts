@@ -37,7 +37,7 @@ export function exportToWordDocHtml(projectName: string, workspaceContext?: any)
   const roadmap = getRoadmapForWorkspace(ctx);
   const roi = getRoiModelForWorkspace(ctx);
 
-  const apiRows = (dbBlueprint.apiEndpoints || []).slice(0, 5).map((api: any) => `
+  const apiRows = (dbBlueprint.apiSpecifications || dbBlueprint.apiEndpoints || []).slice(0, 5).map((api: any) => `
     <tr>
       <td><code>${api.method}</code></td>
       <td><code>${api.path}</code></td>
@@ -139,7 +139,7 @@ export function exportToWordDocHtml(projectName: string, workspaceContext?: any)
 
   <h2>4. Financial Model & Projected ROI</h2>
   <ul>
-    <li><strong>Implementation CapEx:</strong> ~${roi.summary.implementationCost} (${roadmap.totalWeeks}-week rollout)</li>
+    <li><strong>Implementation CapEx:</strong> ~${roi.summary.implementationCost} (${roadmap.targetTimelineWeeks || roadmap.totalWeeks || 8}-week rollout)</li>
     <li><strong>Projected Annual Operational Savings:</strong> ~${roi.summary.annualSavings} per year</li>
     <li><strong>Net Payback Horizon:</strong> ${roi.summary.paybackMonths} months post-deployment</li>
     <li><strong>3-Year Cumulative ROI Multiple:</strong> ${roi.summary.threeYearRoi}%</li>
@@ -360,9 +360,9 @@ export function exportToPowerPointDeck(projectName: string, workspaceContext?: a
       ${phaseBulletList}
     </ul>
     <div class="metric-grid">
-      <div class="metric-card"><span>Target Go-Live</span><p>${roadmap.totalWeeks} Weeks</p></div>
-      <div class="metric-card"><span>Sprint Velocity</span><p>${roadmap.velocity} Pts/Sprint</p></div>
-      <div class="metric-card"><span>Total Scope</span><p>${roadmap.totalStoryPoints} Pts</p></div>
+      <div class="metric-card"><span>Target Go-Live</span><p>${roadmap.targetTimelineWeeks || roadmap.totalWeeks || 8} Weeks</p></div>
+      <div class="metric-card"><span>Person-Days</span><p>${roadmap.totalPersonDays || 70} Days</p></div>
+      <div class="metric-card"><span>Confidence Score</span><p>${roadmap.confidenceScore || 92}%</p></div>
     </div>
     <div class="footer-note">Slide 4 of 5 • BizzMitra-AI Executive Deck</div>
   </div>

@@ -391,7 +391,7 @@ function SettingsPage() {
           <dl className="grid grid-cols-2 gap-3 text-xs neu-inset p-3">
             <div>
               <dt className="text-muted-foreground">Domain Schema</dt>
-              <dd className="font-semibold text-foreground">{dbBlueprint.tables.length} Tables · {dbBlueprint.apiEndpoints.length} APIs</dd>
+              <dd className="font-semibold text-foreground">{(dbBlueprint.tables || []).length} Tables · {(dbBlueprint.apiSpecifications || dbBlueprint.apiEndpoints || []).length} APIs</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Tenant Security</dt>
