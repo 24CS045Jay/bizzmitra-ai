@@ -1,12 +1,13 @@
 /**
  * Enterprise Collaboration, Approval Workflows & Activity Audit Log Engine
- * Powers cross-functional stakeholder reviews, in-context comments, and immutable audit trails.
+ * Powers cross-functional stakeholder reviews, in-context comments, and immutable audit trails
+ * with full multi-domain problem-statement adaptability.
  */
 
 export type ApprovalStatus = "draft" | "in_review" | "approved";
 
 export type ApproverSignOff = {
-  role: "Solution Architect" | "Product Delivery Lead" | "HR Operations Lead" | "Security & Compliance";
+  role: string;
   name: string;
   email: string;
   signed: boolean;
@@ -52,173 +53,501 @@ export type AuditLogEntry = {
 
 export type CollaborationWorkspaceState = {
   workspaceId: string;
+  scenarioName: string;
   overallStatus: ApprovalStatus;
   signOffs: ApproverSignOff[];
   comments: ArtifactComment[];
   auditLogs: AuditLogEntry[];
 };
 
-export const INITIAL_COLLABORATION_STATE: CollaborationWorkspaceState = {
-  workspaceId: "ws-talentcraft-hr",
-  overallStatus: "approved",
-  signOffs: [
-    {
-      role: "Solution Architect",
-      name: "Aarav Sharma",
-      email: "aarav@enterprise-arch.io",
-      signed: true,
-      signedAt: "Sep 12, 2026 · 10:15 AM",
-      comments: "PostgreSQL multi-tenant schema with RLS verified. Ready for Phase 1 MVP sprint.",
-    },
-    {
-      role: "HR Operations Lead",
-      name: "Pooja Verma",
-      email: "pooja@talentcraft.co",
-      signed: true,
-      signedAt: "Sep 12, 2026 · 11:30 AM",
-      comments: "Reviewed candidate pipeline stages and punch clock. Solves our spreadsheet bottleneck completely.",
-    },
-    {
-      role: "Product Delivery Lead",
-      name: "Marcus Vance",
-      email: "marcus@bizzmitra.ai",
-      signed: true,
-      signedAt: "Sep 12, 2026 · 11:45 AM",
-      comments: "9-week delivery timeline (68 person-days) is achievable within Q4 engineering capacity.",
-    },
-    {
-      role: "Security & Compliance",
-      name: "Neha Sundaram",
-      email: "neha.s@legal-corp.com",
-      signed: true,
-      signedAt: "Sep 12, 2026 · 12:05 PM",
-      comments: "DPDP Act compliance 180-day resume retention policy added to Risk Register and approved.",
-    },
-  ],
-  comments: [
-    {
-      id: "c-101",
-      artifactId: "data",
-      artifactName: "Database Designer & REST APIs",
-      author: {
-        name: "Aarav Sharma",
+export function getCollaborationStateForWorkspace(
+  workspaceContext?: {
+    name?: string;
+    businessName?: string;
+    industry?: string;
+    problemStatement?: string;
+    description?: string;
+  } | null
+): CollaborationWorkspaceState {
+  const name = workspaceContext?.businessName || workspaceContext?.name || "TalentCraft HR Consultancy";
+  const industry = workspaceContext?.industry || "HR & Recruitment Services";
+  const problem = workspaceContext?.problemStatement || workspaceContext?.description || "";
+  const combined = `${name} ${industry} ${problem}`.toLowerCase();
+
+  // 1. Clean Tech & Solar
+  if (
+    combined.includes("solar") ||
+    combined.includes("clean tech") ||
+    combined.includes("renewable") ||
+    combined.includes("energy") ||
+    combined.includes("inverter") ||
+    combined.includes("photovoltaic") ||
+    combined.includes("grid")
+  ) {
+    return {
+      workspaceId: "ws-solar-telemetry",
+      scenarioName: name,
+      overallStatus: "approved",
+      signOffs: [
+        {
+          role: "Lead SCADA Architect",
+          name: "Vikram Sengupta",
+          email: "vikram.s@powergrid-systems.io",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 10:15 AM",
+          comments: "Modbus TCP/RTU edge collection with TimescaleDB hypertables verified. Sub-second curtailment response conforms to grid specs.",
+        },
+        {
+          role: "Plant Operations Lead",
+          name: "Rajesh Kulkarni",
+          email: "rajesh@solarplants.com",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 11:30 AM",
+          comments: "Inverter string monitoring and mobile field work-order app solves truck roll bottlenecks completely.",
+        },
+        {
+          role: "Product Delivery Lead",
+          name: "Marcus Vance",
+          email: "marcus@bizzmitra.ai",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 11:45 AM",
+          comments: "10-week SCADA rollout plan (82 person-days) is achievable within Q4 engineering capacity.",
+        },
+        {
+          role: "Security & Grid Compliance",
+          name: "Ananya Deshmukh",
+          email: "ananya.d@grid-safety.org",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 12:05 PM",
+          comments: "IEEE 1547.1 interconnection compliance and mTLS hardware token protection approved.",
+        },
+      ],
+      comments: [
+        {
+          id: "c-sol-1",
+          artifactId: "data",
+          artifactName: "Database & Telemetry APIs",
+          author: { name: "Vikram Sengupta", role: "Lead SCADA Architect" },
+          content: "Ensure TimescaleDB hypertable chunk interval is set to 24h for optimal 1Hz inverter telemetry indexing.",
+          timestamp: "Yesterday, 04:45 PM",
+          severity: "blocking",
+          resolved: true,
+          replies: [
+            {
+              id: "r-sol-1",
+              authorName: "BizzMitra AI Engine",
+              authorRole: "AI Architect",
+              content: "TimescaleDB chunk time interval of 1 day configured with 7-day compressed rollup in PostgreSQL DDL.",
+              timestamp: "Yesterday, 04:50 PM",
+            },
+          ],
+        },
+        {
+          id: "c-sol-2",
+          artifactId: "roadmap",
+          artifactName: "Implementation Roadmap",
+          author: { name: "Rajesh Kulkarni", role: "Plant Operations Lead" },
+          content: "Field engineers need offline PWA training during Phase 1 so they can test cabinet QR scans early.",
+          timestamp: "Today, 09:15 AM",
+          severity: "feedback",
+          resolved: false,
+          replies: [
+            {
+              id: "r-sol-2",
+              authorName: "Param Shah",
+              authorRole: "Transformation Lead",
+              content: "Scheduled an offline PWA technician demo session during Week 3 of the Telemetry Sprint.",
+              timestamp: "Today, 09:30 AM",
+            },
+          ],
+        },
+      ],
+      auditLogs: [
+        {
+          id: "log-sol-1",
+          actor: { name: "Param Shah", type: "user", role: "Transformation Lead" },
+          action: "Approved Transformation Blueprint",
+          category: "governance",
+          details: `Transitioned ${name} governance state from Under Review to Approved for Implementation.`,
+          timestamp: "12:05 PM",
+        },
+        {
+          id: "log-sol-2",
+          actor: { name: "BizzMitra AI Engine", type: "ai", role: "AI Planning Engine" },
+          action: "Synthesized 10-Week SCADA Delivery Plan",
+          category: "ai_generation",
+          details: "Calculated 82 person-day schedule across Telemetry Ingestion, Curtailment Automation, and Grid Certification sprints.",
+          timestamp: "11:15 AM",
+        },
+      ],
+    };
+  }
+
+  // 2. Healthcare & Clinical Diagnostics
+  if (
+    combined.includes("health") ||
+    combined.includes("clinic") ||
+    combined.includes("hospital") ||
+    combined.includes("medical") ||
+    combined.includes("lab") ||
+    combined.includes("doctor") ||
+    combined.includes("patient") ||
+    combined.includes("diagnostic") ||
+    combined.includes("pathology")
+  ) {
+    return {
+      workspaceId: "ws-healthcare-lis",
+      scenarioName: name,
+      overallStatus: "approved",
+      signOffs: [
+        {
+          role: "Biomedical Systems Architect",
+          name: "Dr. Arvind Menon",
+          email: "arvind.m@healthtech-core.org",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 10:15 AM",
+          comments: "ASTM serial analyzer drivers and HIPAA column encryption verified. Specimen barcode pipeline ready.",
+        },
+        {
+          role: "Chief Pathologist / Lab Director",
+          name: "Dr. Radhika Nair",
+          email: "radhika.nair@clinpath.org",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 11:30 AM",
+          comments: "Sub-90s critical panic value dispatch and delta-check algorithm eliminate sample mix-up risks.",
+        },
+        {
+          role: "Product Delivery Lead",
+          name: "Marcus Vance",
+          email: "marcus@bizzmitra.ai",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 11:45 AM",
+          comments: "9-week LIS rollout plan (76 person-days) is on schedule for CAP/NABL accreditation.",
+        },
+        {
+          role: "HIPAA & Patient Data Officer",
+          name: "Neha Sundaram",
+          email: "neha.s@legal-corp.com",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 12:05 PM",
+          comments: "HL7 FHIR v4 DiagnosticReport endpoints and HIPAA Zero-Trust patient vault approved.",
+        },
+      ],
+      comments: [
+        {
+          id: "c-hlth-1",
+          artifactId: "data",
+          artifactName: "Database & FHIR APIs",
+          author: { name: "Dr. Arvind Menon", role: "Biomedical Systems Architect" },
+          content: "Ensure critical panic value notifications trigger push alerts and IVR phone escalation simultaneously.",
+          timestamp: "Yesterday, 04:45 PM",
+          severity: "blocking",
+          resolved: true,
+        },
+      ],
+      auditLogs: [
+        {
+          id: "log-hlth-1",
+          actor: { name: "Param Shah", type: "user", role: "Transformation Lead" },
+          action: "Approved Clinical LIS Blueprint",
+          category: "governance",
+          details: `Validated HIPAA Zero-Trust compliance and CAP audit readiness for ${name}.`,
+          timestamp: "12:05 PM",
+        },
+      ],
+    };
+  }
+
+  // 3. Fleet Logistics & Supply Chain
+  if (
+    combined.includes("logistics") ||
+    combined.includes("fleet") ||
+    combined.includes("delivery") ||
+    combined.includes("truck") ||
+    combined.includes("dispatch") ||
+    combined.includes("transport") ||
+    combined.includes("freight") ||
+    combined.includes("cargo") ||
+    combined.includes("warehouse") ||
+    combined.includes("supply chain")
+  ) {
+    return {
+      workspaceId: "ws-logistics-fleet",
+      scenarioName: name,
+      overallStatus: "approved",
+      signOffs: [
+        {
+          role: "Geospatial Systems Architect",
+          name: "Karan Johar",
+          email: "karan.j@georouting.io",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 10:15 AM",
+          comments: "PostGIS spatial geofence indexing and sub-100ms entry/exit detection verified.",
+        },
+        {
+          role: "Fleet Operations Director",
+          name: "Harpreet Singh",
+          email: "harpreet@freightlines.com",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 11:30 AM",
+          comments: "Multi-stop CVRP route optimization solver and driver mobile app reduce fuel costs by 18%.",
+        },
+        {
+          role: "Product Delivery Lead",
+          name: "Marcus Vance",
+          email: "marcus@bizzmitra.ai",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 11:45 AM",
+          comments: "8-week fleet cutover plan (72 person-days) ready for driver onboarding.",
+        },
+        {
+          role: "DOT & Safety Compliance Officer",
+          name: "Neha Sundaram",
+          email: "neha.s@legal-corp.com",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 12:05 PM",
+          comments: "DOT Hours of Service (HOS) automated safety monitors and driver manifest encryption approved.",
+        },
+      ],
+      comments: [
+        {
+          id: "c-log-1",
+          artifactId: "process",
+          artifactName: "Process Intelligence (BPMN)",
+          author: { name: "Harpreet Singh", role: "Fleet Operations Director" },
+          content: "Ensure driver mobile app stores electronic signatures offline when traveling through mountain dead zones.",
+          timestamp: "Yesterday, 04:45 PM",
+          severity: "blocking",
+          resolved: true,
+        },
+      ],
+      auditLogs: [
+        {
+          id: "log-log-1",
+          actor: { name: "Param Shah", type: "user", role: "Transformation Lead" },
+          action: "Approved Fleet Logistics Blueprint",
+          category: "governance",
+          details: `Approved VRP route optimization and carrier EDI architecture for ${name}.`,
+          timestamp: "12:05 PM",
+        },
+      ],
+    };
+  }
+
+  // 4. FinTech & Lending
+  if (
+    combined.includes("fintech") ||
+    combined.includes("lending") ||
+    combined.includes("loan") ||
+    combined.includes("banking") ||
+    combined.includes("payment") ||
+    combined.includes("credit") ||
+    combined.includes("wallet") ||
+    combined.includes("underwriting") ||
+    combined.includes("nbfc")
+  ) {
+    return {
+      workspaceId: "ws-fintech-lending",
+      scenarioName: name,
+      overallStatus: "approved",
+      signOffs: [
+        {
+          role: "FinTech Core Ledger Architect",
+          name: "Siddharth Mehta",
+          email: "siddharth.m@fintechcore.io",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 10:15 AM",
+          comments: "Double-entry accounting ledger with strict debit/credit equality constraints verified in PostgreSQL.",
+        },
+        {
+          role: "Chief Risk Officer (CRO)",
+          name: "Rohit Agarwal",
+          email: "rohit@capitaltrust.com",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 11:30 AM",
+          comments: "Instant bureau gateway and automated underwriting scorecards reduce loan sanction time from 72h to 15m.",
+        },
+        {
+          role: "Payment Operations Lead",
+          name: "Marcus Vance",
+          email: "marcus@bizzmitra.ai",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 11:45 AM",
+          comments: "8-week banking rollout plan (74 person-days) approved for escrow disbursement.",
+        },
+        {
+          role: "Regulatory & RBI Compliance Officer",
+          name: "Neha Sundaram",
+          email: "neha.s@legal-corp.com",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 12:05 PM",
+          comments: "RBI NBFC compliance and Aadhaar vault tokenization approved.",
+        },
+      ],
+      comments: [
+        {
+          id: "c-fin-1",
+          artifactId: "data",
+          artifactName: "Database & Financial APIs",
+          author: { name: "Siddharth Mehta", role: "FinTech Core Ledger Architect" },
+          content: "Ensure double-entry journal balance constraint triggers an immediate roll-back if transaction legs do not net to 0.",
+          timestamp: "Yesterday, 04:45 PM",
+          severity: "blocking",
+          resolved: true,
+        },
+      ],
+      auditLogs: [
+        {
+          id: "log-fin-1",
+          actor: { name: "Param Shah", type: "user", role: "Transformation Lead" },
+          action: "Approved FinTech Architecture Blueprint",
+          category: "governance",
+          details: `Verified PCI-DSS compliance and double-entry ledger state for ${name}.`,
+          timestamp: "12:05 PM",
+        },
+      ],
+    };
+  }
+
+  // 5. Default / HR Consultancy (TalentCraft)
+  return {
+    workspaceId: "ws-talentcraft-hr",
+    scenarioName: name,
+    overallStatus: "approved",
+    signOffs: [
+      {
         role: "Lead Solution Architect",
+        name: "Aarav Sharma",
+        email: "aarav@enterprise-arch.io",
+        signed: true,
+        signedAt: "Sep 12, 2026 · 10:15 AM",
+        comments: "PostgreSQL multi-tenant schema with RLS verified. Ready for Phase 1 MVP sprint.",
       },
-      content:
-        "Ensure the PostgreSQL candidate custom fields table uses GIN indexing for fast JSONB querying across custom attributes like LinkedIn URL.",
-      timestamp: "Yesterday, 04:45 PM",
-      severity: "blocking",
-      resolved: true,
-      replies: [
-        {
-          id: "r-1",
-          authorName: "BizzMitra AI Engine",
-          authorRole: "AI Architect",
-          content: "GIN index `idx_candidates_custom_attributes` has been added to the generated PostgreSQL DDL schema.",
-          timestamp: "Yesterday, 04:50 PM",
-        },
-      ],
-    },
-    {
-      id: "c-102",
-      artifactId: "roadmap",
-      artifactName: "AI Implementation Planning Engine",
-      author: {
-        name: "Pooja Verma",
+      {
         role: "HR Operations Lead",
+        name: "Pooja Verma",
+        email: "pooja@talentcraft.co",
+        signed: true,
+        signedAt: "Sep 12, 2026 · 11:30 AM",
+        comments: "Reviewed candidate pipeline stages and punch clock. Solves our spreadsheet bottleneck completely.",
       },
-      content:
-        "Can we schedule recruiter training workshops before Phase 1 cutover instead of waiting for Phase 3?",
-      timestamp: "Today, 09:15 AM",
-      severity: "feedback",
-      resolved: false,
-      replies: [
-        {
-          id: "r-2",
-          authorName: "Param Shah",
-          authorRole: "Transformation Lead",
-          content: "Good point. We will run an initial 2-hour onboarding session during Week 2 of the Foundation Sprint.",
-          timestamp: "Today, 09:30 AM",
-        },
-      ],
-    },
-    {
-      id: "c-103",
-      artifactId: "roi",
-      artifactName: "Financial ROI & Transformation Cockpit",
-      author: {
-        name: "Marcus Vance",
+      {
         role: "Product Delivery Lead",
+        name: "Marcus Vance",
+        email: "marcus@bizzmitra.ai",
+        signed: true,
+        signedAt: "Sep 12, 2026 · 11:45 AM",
+        comments: "9-week delivery timeline (68 person-days) is achievable within Q4 engineering capacity.",
       },
-      content:
-        "The 2.4-month payback model looks solid. CFO confirmed the ₹280k annual software & setup budget is pre-approved.",
-      timestamp: "Today, 10:00 AM",
-      severity: "approved",
-      resolved: true,
-    },
-  ],
-  auditLogs: [
-    {
-      id: "log-001",
-      actor: { name: "Param Shah", type: "user", role: "Transformation Lead" },
-      action: "Approved Transformation Blueprint",
-      category: "governance",
-      details: "Transitioned workspace governance state from Under Review to Approved for Implementation.",
-      timestamp: "12:05 PM",
-    },
-    {
-      id: "log-002",
-      actor: { name: "BizzMitra AI Engine", type: "ai", role: "AI Planning Engine" },
-      action: "Synthesized 9-Week Delivery Plan",
-      category: "ai_generation",
-      details: "Calculated 68 person-day Critical Path Method schedule across Foundation, Coordination, and Intelligence sprints.",
-      timestamp: "11:15 AM",
-    },
-    {
-      id: "log-003",
-      actor: { name: "Param Shah", type: "user", role: "Transformation Consultant" },
-      action: "Executed AI Solution Studio Regeneration",
-      category: "schema",
-      details: "Extended candidate data schema with LinkedIn URL and Notice Period; incremented solution version to v1.1.",
-      timestamp: "Yesterday, 05:20 PM",
-    },
-    {
-      id: "log-004",
-      actor: { name: "Aarav Sharma", type: "user", role: "Solution Architect" },
-      action: "Resolved Technical Comment",
-      category: "collaboration",
-      details: "Marked comment regarding PostgreSQL GIN index on custom attributes as Resolved.",
-      timestamp: "Yesterday, 04:55 PM",
-    },
-    {
-      id: "log-005",
-      actor: { name: "BizzMitra AI Engine", type: "ai", role: "AI Architecture Builder" },
-      action: "Generated Technical Blueprints",
-      category: "ai_generation",
-      details: "Synthesized HLD/LLD diagrams, BPMN 2.0 4-tier swimlanes, and PostgreSQL 16 DDL schema with RLS.",
-      timestamp: "Yesterday, 03:40 PM",
-    },
-    {
-      id: "log-006",
-      actor: { name: "BizzMitra AI Engine", type: "ai", role: "AI Business Consultant" },
-      action: "Completed Discovery Interview",
-      category: "ai_generation",
-      details: "Detected missing candidate volume and tools; advanced Context Maturity to 96%.",
-      timestamp: "Sep 11, 2026, 09:30 AM",
-    },
-  ],
-};
+      {
+        role: "Security & Compliance Officer",
+        name: "Neha Sundaram",
+        email: "neha.s@legal-corp.com",
+        signed: true,
+        signedAt: "Sep 12, 2026 · 12:05 PM",
+        comments: "DPDP Act compliance 180-day resume retention policy added to Risk Register and approved.",
+      },
+    ],
+    comments: [
+      {
+        id: "c-101",
+        artifactId: "data",
+        artifactName: "Database Designer & REST APIs",
+        author: {
+          name: "Aarav Sharma",
+          role: "Lead Solution Architect",
+        },
+        content:
+          "Ensure the PostgreSQL candidate custom fields table uses GIN indexing for fast JSONB querying across custom attributes.",
+        timestamp: "Yesterday, 04:45 PM",
+        severity: "blocking",
+        resolved: true,
+        replies: [
+          {
+            id: "r-1",
+            authorName: "BizzMitra AI Engine",
+            authorRole: "AI Architect",
+            content: "GIN index `idx_candidates_custom_attributes` has been added to the generated PostgreSQL DDL schema.",
+            timestamp: "Yesterday, 04:50 PM",
+          },
+        ],
+      },
+      {
+        id: "c-102",
+        artifactId: "roadmap",
+        artifactName: "AI Implementation Planning Engine",
+        author: {
+          name: "Pooja Verma",
+          role: "HR Operations Lead",
+        },
+        content:
+          "Can we schedule recruiter training workshops before Phase 1 cutover instead of waiting for Phase 3?",
+        timestamp: "Today, 09:15 AM",
+        severity: "feedback",
+        resolved: false,
+        replies: [
+          {
+            id: "r-2",
+            authorName: "Param Shah",
+            authorRole: "Transformation Lead",
+            content: "Good point. We will run an initial 2-hour onboarding session during Week 2 of the Foundation Sprint.",
+            timestamp: "Today, 09:30 AM",
+          },
+        ],
+      },
+      {
+        id: "c-103",
+        artifactId: "roi",
+        artifactName: "Financial ROI & Transformation Cockpit",
+        author: {
+          name: "Marcus Vance",
+          role: "Product Delivery Lead",
+        },
+        content:
+          "The 2.4-month payback model looks solid. CFO confirmed the ₹280k annual software & setup budget is pre-approved.",
+        timestamp: "Today, 10:00 AM",
+        severity: "approved",
+        resolved: true,
+      },
+    ],
+    auditLogs: [
+      {
+        id: "log-001",
+        actor: { name: "Param Shah", type: "user", role: "Transformation Lead" },
+        action: "Approved Transformation Blueprint",
+        category: "governance",
+        details: `Transitioned ${name} governance state from Under Review to Approved for Implementation.`,
+        timestamp: "12:05 PM",
+      },
+      {
+        id: "log-002",
+        actor: { name: "BizzMitra AI Engine", type: "ai", role: "AI Planning Engine" },
+        action: "Synthesized 9-Week Delivery Plan",
+        category: "ai_generation",
+        details: "Calculated 68 person-day Critical Path Method schedule across Foundation, Coordination, and Intelligence sprints.",
+        timestamp: "11:15 AM",
+      },
+    ],
+  };
+}
+
+export const INITIAL_COLLABORATION_STATE: CollaborationWorkspaceState = getCollaborationStateForWorkspace();
 
 export const STORAGE_KEY_COLLABORATION = "bizzmitra.collaborationState";
 
-export function loadCollaborationState(): CollaborationWorkspaceState {
+export function loadCollaborationState(workspaceContext?: any): CollaborationWorkspaceState {
   if (typeof window === "undefined") return INITIAL_COLLABORATION_STATE;
   try {
     const raw = localStorage.getItem(STORAGE_KEY_COLLABORATION);
-    if (!raw) return INITIAL_COLLABORATION_STATE;
-    return JSON.parse(raw);
+    if (!raw) return getCollaborationStateForWorkspace(workspaceContext);
+    const parsed = JSON.parse(raw);
+    // If the saved state is from a different scenario, re-seed with current domain
+    if (workspaceContext?.businessName && parsed.scenarioName && parsed.scenarioName !== workspaceContext.businessName) {
+      return getCollaborationStateForWorkspace(workspaceContext);
+    }
+    return parsed;
   } catch {
-    return INITIAL_COLLABORATION_STATE;
+    return getCollaborationStateForWorkspace(workspaceContext);
   }
 }
 

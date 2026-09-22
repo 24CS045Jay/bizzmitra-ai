@@ -15,14 +15,14 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import { motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { GenerationSequence } from "@/components/GenerationSequence";
-import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
+import { CountUp, Reveal } from "@/components/motion/primitives";
 import { BlueprintConfidenceScore } from "@/components/BlueprintConfidenceScore";
 import { ScenarioComparisonModal, type ScenarioData } from "@/components/ScenarioComparisonModal";
 import { ShareBlueprintModal } from "@/components/ShareBlueprintModal";
@@ -51,20 +51,30 @@ export const Route = createFileRoute("/workspace/roadmap")({
 });
 
 export function RoadmapPage() {
-  // Read active workspace context
-  const workspaceContext = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    const raw = localStorage.getItem("bizzmitra.workspaceContext");
-    if (!raw) return null;
+  // Read active workspace context reactively
+  const [workspaceContext, setWorkspaceContext] = useState<{
+    id?: string;
+    name?: string;
+    businessName?: string;
+    industry?: string;
+    problemStatement?: string;
+    description?: string;
+    budget?: number;
+    scale?: string;
+  } | null>(null);
+
+  useEffect(() => {
     try {
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
+      const raw = localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) {
+        setWorkspaceContext(JSON.parse(raw));
+      }
+    } catch {}
   }, []);
 
   const blueprint = useMemo(() => getRoadmapForWorkspace(workspaceContext), [workspaceContext]);
   const [activePhaseIndex, setActivePhaseIndex] = useState(0);
+
   const [completedMilestones, setCompletedMilestones] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     blueprint.phases.forEach((p) => {
@@ -75,7 +85,19 @@ export function RoadmapPage() {
     return initial;
   });
 
-  const [riskFilter, setRiskFilter] = useState<"All" | "Technical" | "Adoption" | "Security">("All");
+  // Re-synchronize milestones state whenever the blueprint/scenario changes
+  useEffect(() => {
+    const initial: Record<string, boolean> = {};
+    blueprint.phases.forEach((p) => {
+      p.milestones.forEach((m) => {
+        initial[m.id] = m.completed;
+      });
+    });
+    setCompletedMilestones(initial);
+    setActivePhaseIndex(0);
+  }, [blueprint.workspaceId, blueprint.scenarioName]);
+
+  const [riskFilter, setRiskFilter] = useState<"All" | "Technical" | "Adoption" | "Security" | "Timeline">("All");
   const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
@@ -88,7 +110,7 @@ export function RoadmapPage() {
 
   const totalMilestones = blueprint.phases.reduce((acc, p) => acc + p.milestones.length, 0);
   const doneMilestones = Object.values(completedMilestones).filter(Boolean).length;
-  const progressPercent = Math.round((doneMilestones / totalMilestones) * 100);
+  const progressPercent = totalMilestones > 0 ? Math.round((doneMilestones / totalMilestones) * 100) : 0;
 
   const toggleMilestone = (id: string) => {
     setCompletedMilestones((prev) => {
@@ -99,16 +121,40 @@ export function RoadmapPage() {
   };
 
   const copyRoadmap = () => {
-    const text = `# ${blueprint.scenarioName} — Implementation Roadmap\n\nTimeline: ${blueprint.targetTimelineWeeks} Weeks | Effort: ${blueprint.totalPersonDays} Person-Days\n\n${blueprint.phases
+    const text = `# ${blueprint.scenarioName} — Implementation Roadmap\n\nTimeline: ${blueprint.targetTimelineWeeks} Weeks | Effort: ${blueprint.totalPersonDays} Person-Days | Go-Live: ${blueprint.estimatedGoLive}\nConfidence: ${blueprint.confidenceScore}%\n\nExecutive Summary:\n${blueprint.executiveSummary}\n\n${blueprint.phases
       .map(
         (p) =>
-          `## ${p.name} (${p.durationWeeks})\n${p.milestones
-            .map((m) => `- [${completedMilestones[m.id] ? "X" : " "}] ${m.title} (${m.effortDays}d): ${m.deliverable}`)
-            .join("\n")}`
+          `## Phase ${p.phaseNumber}: ${p.name} (${p.durationWeeks}) — ${p.codename}\nObjective: ${p.objective}\n\n### Milestones:\n${p.milestones
+            .map((m) => `- [${completedMilestones[m.id] ? "X" : " "}] ${m.title} (${m.effortDays}d, ${m.category}): ${m.deliverable}`)
+            .join("\n")}\n\n### Resourcing:\n${p.teamResourcing.map((r) => `- ${r.role} (${r.fte} FTE): ${r.responsibilities}`).join("\n")}\n\n### Key Deliverables:\n${p.criticalDeliverables.map((d) => `- ${d}`).join("\n")}`
+      )
+      .join("\n\n")}\n\n## Risk Register:\n${blueprint.riskRegister
+      .map(
+        (r) =>
+          `### ${r.title} [${r.category} | Likelihood: ${r.likelihood} | Impact: ${r.impact}]\n- Owner: ${r.owner}\n- Consequence: ${r.consequence}\n- Mitigation: ${r.mitigationStrategy}`
       )
       .join("\n\n")}`;
     navigator.clipboard.writeText(text);
     toast.success("Implementation plan copied as Markdown!");
+  };
+
+  const downloadRoadmap = () => {
+    const text = `# ${blueprint.scenarioName} — Implementation Roadmap\n\nTimeline: ${blueprint.targetTimelineWeeks} Weeks | Effort: ${blueprint.totalPersonDays} Person-Days | Go-Live: ${blueprint.estimatedGoLive}\nConfidence: ${blueprint.confidenceScore}%\n\nExecutive Summary:\n${blueprint.executiveSummary}\n\n${blueprint.phases
+      .map(
+        (p) =>
+          `## Phase ${p.phaseNumber}: ${p.name} (${p.durationWeeks}) — ${p.codename}\nObjective: ${p.objective}\n\n### Milestones:\n${p.milestones
+            .map((m) => `- [${completedMilestones[m.id] ? "X" : " "}] ${m.title} (${m.effortDays}d, ${m.category}): ${m.deliverable}`)
+            .join("\n")}`
+      )
+      .join("\n\n")}`;
+    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${blueprint.workspaceId}_delivery_plan.md`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("Delivery plan downloaded as Markdown!");
   };
 
   const filteredRisks = useMemo(() => {
@@ -123,6 +169,28 @@ export function RoadmapPage() {
         kicker="Implementation Engine · Step 08"
         title="Delivery Roadmap & Sprint Planning"
       />
+
+      {/* Blueprint Context Banner */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          <span className="text-muted-foreground">Delivery Planning Context:</span>
+          <span className="font-bold text-foreground">
+            {workspaceContext?.businessName || workspaceContext?.name || "Active Workspace"}
+          </span>
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+            {workspaceContext?.industry || "Custom Domain"}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link to="/workspace/architecture" className="font-medium text-muted-foreground hover:text-primary transition-colors">
+            Architecture →
+          </Link>
+          <Link to="/workspace/data" className="font-medium text-primary hover:underline">
+            Data & APIs →
+          </Link>
+        </div>
+      </div>
 
       <GenerationSequence steps={GENERATION_STEPS.roadmap} run={() => generateArtifact("roadmap")}>
         <div className="space-y-8 pb-16">
@@ -171,6 +239,14 @@ export function RoadmapPage() {
                 >
                   <Copy className="size-3.5" />
                   Copy Markdown
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadRoadmap}
+                  className="neu-sm neu-press flex items-center gap-2 px-3.5 py-2 text-xs font-semibold hover:text-primary"
+                >
+                  <Download className="size-3.5" />
+                  Download Plan
                 </button>
                 <Link
                   to="/workspace/insights"
@@ -258,7 +334,7 @@ export function RoadmapPage() {
               <div>
                 <h2 className="font-display text-base font-bold">Visual Sprint Timeline (Gantt Projection)</h2>
                 <p className="text-xs text-muted-foreground">
-                  Phased delivery sequence mapped over {blueprint.targetTimelineWeeks} calendar weeks.
+                  Phased delivery sequence mapped over {blueprint.targetTimelineWeeks} calendar weeks. Click any phase bar to inspect its sprints.
                 </p>
               </div>
               <div className="text-xs font-semibold text-primary">
@@ -266,9 +342,12 @@ export function RoadmapPage() {
               </div>
             </div>
 
-            {/* Week Axis Header */}
+            {/* Week Axis Header - Dynamically sized grid columns */}
             <div className="mt-6 border-b border-border/40 pb-2">
-              <div className="grid grid-cols-9 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <div
+                className="grid text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+                style={{ gridTemplateColumns: `repeat(${blueprint.targetTimelineWeeks}, minmax(0, 1fr))` }}
+              >
                 {Array.from({ length: blueprint.targetTimelineWeeks }).map((_, i) => (
                   <div key={i}>W{i + 1}</div>
                 ))}
@@ -305,7 +384,7 @@ export function RoadmapPage() {
                           Phase {phase.phaseNumber}: {phase.name}
                         </span>
                         <span className="text-[10px] rounded-full bg-accent px-2 py-0.5 text-muted-foreground">
-                          {phase.durationWeeks}
+                          {phase.durationWeeks} · {phase.codename}
                         </span>
                       </div>
                       <span className="text-[11px] font-medium text-muted-foreground">
@@ -336,114 +415,150 @@ export function RoadmapPage() {
             </div>
           </Reveal>
 
-          {/* Detailed Phase Inspection: Milestones & Resourcing */}
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Left 2 Cols: Milestone Checklist */}
-            <div className="lg:col-span-2 space-y-6">
-              <Reveal className="neu p-6">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-md bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
-                        Phase {activePhase.phaseNumber} · {activePhase.codename}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        ({activePhase.durationWeeks})
-                      </span>
-                    </div>
-                    <h3 className="mt-1 font-display text-lg font-bold">{activePhase.name}</h3>
-                    <p className="mt-1 text-xs text-muted-foreground">{activePhase.objective}</p>
-                  </div>
-                </div>
-
-                {/* Milestones List */}
-                <div className="mt-5 space-y-3">
-                  {activePhase.milestones.map((m) => {
-                    const isDone = !!completedMilestones[m.id];
-                    return (
-                      <div
-                        key={m.id}
-                        onClick={() => toggleMilestone(m.id)}
-                        className={`group flex cursor-pointer items-start gap-3 rounded-xl p-3.5 transition ${
-                          isDone ? "bg-emerald-500/5 border border-emerald-500/20" : "neu-inset hover:bg-muted/30"
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          className="mt-0.5 text-muted-foreground transition hover:text-primary"
-                        >
-                          <CheckCircle2
-                            className={`size-4.5 ${
-                              isDone ? "fill-emerald-500 text-background" : "text-border group-hover:text-primary"
-                            }`}
-                          />
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-baseline justify-between gap-2">
-                            <p
-                              className={`text-xs font-bold ${
-                                isDone ? "line-through text-muted-foreground" : "text-foreground"
-                              }`}
-                            >
-                              {m.title}
-                            </p>
-                            <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                              {m.effortDays} Days · {m.category}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                            <span className="font-semibold text-foreground/80">Deliverable: </span>
-                            {m.deliverable}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Reveal>
+          {/* Phase Navigation Tabs */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mr-1">
+                Active Phase:
+              </span>
+              {blueprint.phases.map((p, idx) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setActivePhaseIndex(idx)}
+                  className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
+                    activePhaseIndex === idx
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "neu hover:bg-accent/40 text-foreground"
+                  }`}
+                >
+                  <span>Phase {p.phaseNumber}</span>
+                  <span className="opacity-75 text-[10px]">({p.durationWeeks})</span>
+                </button>
+              ))}
             </div>
+            <span className="text-xs text-muted-foreground font-mono">
+              Phase {activePhase.phaseNumber} of {blueprint.phases.length}
+            </span>
+          </div>
 
-            {/* Right Col: Team Resourcing & Critical Deliverables */}
-            <div className="space-y-6">
-              <Reveal className="neu p-6">
-                <div className="flex items-center gap-2">
-                  <Users className="size-4 text-primary" />
-                  <h3 className="font-display text-sm font-bold">Team Resourcing (FTE)</h3>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Allocated engineering squad for Phase {activePhase.phaseNumber}.
-                </p>
-
-                <div className="mt-4 space-y-3">
-                  {activePhase.teamResourcing.map((res) => (
-                    <div key={res.role} className="neu-inset p-3">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span>{res.role}</span>
-                        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary text-[11px]">
-                          {res.fte} FTE
+          {/* Detailed Phase Inspection: Milestones & Resourcing */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activePhase.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="grid gap-6 lg:grid-cols-3"
+            >
+              {/* Left 2 Cols: Milestone Checklist */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="neu p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-md bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                          Phase {activePhase.phaseNumber} · {activePhase.codename}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({activePhase.durationWeeks})
                         </span>
                       </div>
-                      <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
-                        {res.responsibilities}
-                      </p>
+                      <h3 className="mt-1 font-display text-lg font-bold">{activePhase.name}</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">{activePhase.objective}</p>
                     </div>
-                  ))}
-                </div>
+                  </div>
 
-                <div className="mt-6 border-t border-border/40 pt-4">
-                  <h4 className="text-xs font-bold">Key Deliverables:</h4>
-                  <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
-                    {activePhase.criticalDeliverables.map((d, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="mt-1 size-1.5 rounded-full bg-primary" />
-                        <span>{d}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Milestones List */}
+                  <div className="mt-5 space-y-3">
+                    {activePhase.milestones.map((m) => {
+                      const isDone = !!completedMilestones[m.id];
+                      return (
+                        <div
+                          key={m.id}
+                          onClick={() => toggleMilestone(m.id)}
+                          className={`group flex cursor-pointer items-start gap-3 rounded-xl p-3.5 transition ${
+                            isDone ? "bg-emerald-500/5 border border-emerald-500/20" : "neu-inset hover:bg-muted/30"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            className="mt-0.5 text-muted-foreground transition hover:text-primary"
+                          >
+                            <CheckCircle2
+                              className={`size-4.5 ${
+                                isDone ? "fill-emerald-500 text-background" : "text-border group-hover:text-primary"
+                              }`}
+                            />
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-baseline justify-between gap-2">
+                              <p
+                                className={`text-xs font-bold ${
+                                  isDone ? "line-through text-muted-foreground" : "text-foreground"
+                                }`}
+                              >
+                                {m.title}
+                              </p>
+                              <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                {m.effortDays} Days · {m.category}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                              <span className="font-semibold text-foreground/80">Deliverable: </span>
+                              {m.deliverable}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </Reveal>
-            </div>
-          </div>
+              </div>
+
+              {/* Right Col: Team Resourcing & Critical Deliverables */}
+              <div className="space-y-6">
+                <div className="neu p-6">
+                  <div className="flex items-center gap-2">
+                    <Users className="size-4 text-primary" />
+                    <h3 className="font-display text-sm font-bold">Team Resourcing (FTE)</h3>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Allocated engineering squad for Phase {activePhase.phaseNumber}.
+                  </p>
+
+                  <div className="mt-4 space-y-3">
+                    {activePhase.teamResourcing.map((res) => (
+                      <div key={res.role} className="neu-inset p-3">
+                        <div className="flex items-center justify-between text-xs font-bold">
+                          <span>{res.role}</span>
+                          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary text-[11px]">
+                            {res.fte} FTE
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
+                          {res.responsibilities}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 border-t border-border/40 pt-4">
+                    <h4 className="text-xs font-bold">Key Deliverables:</h4>
+                    <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+                      {activePhase.criticalDeliverables.map((d, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="mt-1 size-1.5 rounded-full bg-primary" />
+                          <span>{d}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
 
           {/* Risk Mitigation Register */}
           <Reveal className="neu p-6 md:p-8">
@@ -460,7 +575,7 @@ export function RoadmapPage() {
 
               {/* Category Filter Pills */}
               <div className="flex flex-wrap gap-1.5">
-                {(["All", "Technical", "Adoption", "Security"] as const).map((cat) => (
+                {(["All", "Technical", "Adoption", "Security", "Timeline"] as const).map((cat) => (
                   <button
                     key={cat}
                     type="button"
