@@ -678,25 +678,6 @@ export function SolutionStudioDrawer({
               )}
             </div>
 
-            {/* Drawer Footer / AI Regeneration Trigger */}
-            <div className="p-4 border-t border-border bg-surface/90 flex flex-col gap-2">
-              <button
-                onClick={() => {
-                  if (onTriggerRegeneration) {
-                    onTriggerRegeneration();
-                  } else {
-                    setIsRegenerating(true);
-                  }
-                }}
-                className="neu-press w-full rounded-xl bg-primary py-3 px-4 text-xs font-bold text-primary-foreground shadow-md flex items-center justify-center gap-2 hover:brightness-105 transition-all"
-              >
-                <Wand2 className="size-4 animate-spin-slow" />
-                Regenerate Solution with AI (v{settings.version})
-              </button>
-              <p className="text-[10px] text-center text-muted-foreground">
-                Synthesizes schema customizations into CRM views in real time.
-              </p>
-            </div>
           </motion.aside>
 
           {/* AI Regeneration Modal */}
