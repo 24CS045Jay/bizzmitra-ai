@@ -41,23 +41,37 @@ export type SolutionGenerationResult = {
 export async function generateDynamicSolution(
   problemStatement: string,
   businessName = "Enterprise Business",
-  industry = "General"
+  industry = "General",
+  options?: { forceFresh?: boolean; customFields?: string[] }
 ): Promise<SolutionGenerationResult> {
   const cacheKey = `bizzmitra.solution_cache.${encodeURIComponent((problemStatement || "").slice(0, 50))}`;
 
-  try {
-    const cached = typeof window !== "undefined" ? window.sessionStorage.getItem(cacheKey) : null;
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      return parsed;
-    }
-  } catch {}
+  if (!options?.forceFresh) {
+    try {
+      const cached = typeof window !== "undefined" ? window.sessionStorage.getItem(cacheKey) : null;
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return parsed;
+      }
+    } catch {}
+  } else {
+    try {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(cacheKey);
+      }
+    } catch {}
+  }
 
   try {
     const res = await fetch("/api/ai/solution-framing", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ problemStatement, businessName, industry }),
+      body: JSON.stringify({
+        problemStatement,
+        businessName,
+        industry,
+        customFields: options?.customFields || [],
+      }),
     });
 
     if (res.ok) {

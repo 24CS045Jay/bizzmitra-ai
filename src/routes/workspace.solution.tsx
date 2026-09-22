@@ -183,10 +183,13 @@ function SolutionPage() {
     return () => window.removeEventListener("bizzmitra:studio-updated", handleStudioUpdate);
   }, []);
 
-  const handleRegenerate = async () => {
+  const handleRegenerate = async (force = true, customFields?: string[]) => {
+    const tId = toast.loading("Regenerating dynamic solution with Groq 120B AI...");
     try {
-      toast.loading("Regenerating dynamic solution with Groq 120B AI...");
-      const res = await generateDynamicSolution(problemText, businessName, industry);
+      const res = await generateDynamicSolution(problemText, businessName, industry, {
+        forceFresh: force,
+        customFields: customFields || studioSettings.customFields.map((f) => f.label),
+      });
       setFraming(res.framing);
       setSolution(res.solution);
       setModules(res.modules);
@@ -194,11 +197,9 @@ function SolutionPage() {
         setBuildBuyMatrix(res.buildBuyMatrix);
       }
       setAiModelLabel(res.source === "groq-llm" ? "Groq 120B AI" : "BizzMitra Strategic Engine");
-      toast.dismiss();
-      toast.success("Solution successfully regenerated!");
+      toast.success("Solution successfully regenerated with AI!", { id: tId });
     } catch {
-      toast.dismiss();
-      toast.error("Failed to regenerate solution");
+      toast.error("Failed to regenerate solution", { id: tId });
     }
   };
 
@@ -208,7 +209,7 @@ function SolutionPage() {
         id="solution"
         kicker="Step 03"
         title="Framing & solution"
-        onRegenerate={handleRegenerate}
+        onRegenerate={() => void handleRegenerate()}
       />
 
       {/* Dynamic Model Status Bar */}
@@ -253,7 +254,7 @@ function SolutionPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handleRegenerate}
+            onClick={() => void handleRegenerate()}
             className="neu-press flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3.5 py-2 text-xs font-bold text-primary hover:bg-primary/20"
           >
             <Wand2 className="size-3.5" />
@@ -615,8 +616,10 @@ function SolutionPage() {
       <SolutionStudioDrawer
         isOpen={isStudioOpen}
         onClose={() => setIsStudioOpen(false)}
-        onTriggerRegeneration={handleRegenerate}
-        onSettingsChange={(newSettings) => setStudioSettings(newSettings)}
+        onSettingsChange={async (newSettings) => {
+          setStudioSettings(newSettings);
+          await handleRegenerate(true, newSettings.customFields.map((f) => f.label));
+        }}
       />
     </AppShell>
   );

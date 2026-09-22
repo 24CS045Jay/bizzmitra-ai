@@ -50,7 +50,7 @@ const NAV = [
   { to: "/workspace/new", label: "New Intake", icon: Sparkles },
   { to: "/workspace/discovery", label: "AI Discovery", icon: MessageSquare },
   { to: "/workspace/solution", label: "Solution", icon: Boxes },
-  { to: "/workspace/solution/crm", label: "HR CRM", icon: Users },
+  { to: "/workspace/solution/crm", label: "Prototype CRM", icon: Users },
   { to: "/workspace/architecture", label: "Architecture", icon: Network },
   { to: "/workspace/process", label: "Process", icon: Workflow },
   { to: "/workspace/wireframes", label: "UX Designer", icon: PenTool },
