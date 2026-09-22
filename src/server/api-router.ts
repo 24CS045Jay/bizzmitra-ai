@@ -434,8 +434,14 @@ Return strictly valid JSON in this exact structure:
         problemStatement?: string;
         businessName?: string;
         industry?: string;
+        customFields?: string[];
       };
-      const { problemStatement = "", businessName = "Enterprise Business", industry = "General" } = body;
+      const {
+        problemStatement = "",
+        businessName = "Enterprise Business",
+        industry = "General",
+        customFields = [],
+      } = body;
       const groqKey =
         (env as any)?.GROQ_API_KEY ||
         process.env["GROQ_API_KEY"] ||
@@ -451,6 +457,7 @@ A client submitted this business problem statement:
 Business Name: ${businessName}
 Industry: ${industry}
 Problem Statement: ${problemStatement}
+${customFields && customFields.length > 0 ? `Configured Custom Schema Attributes (from Solution Studio): ${customFields.join(", ")}` : ""}
 ---
 
 Your task:
