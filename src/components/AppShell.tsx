@@ -170,19 +170,44 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               }),
             );
           } else {
+            // Check if user has local workspace context
+            const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw);
+                setActiveWs({
+                  name: parsed.businessName || "New Workspace",
+                  industry: parsed.industry || "Custom Workspace",
+                  mode: parsed.intakeMode || "consult",
+                  lang: storedLang,
+                });
+                return;
+              } catch {}
+            }
             setActiveWs({
-              name: "No Active Workspace",
+              name: "New Workspace",
               industry: "Create intake to begin",
               mode: "consult",
               lang: storedLang,
             });
-            window.localStorage.removeItem("bizzmitra.activeWorkspaceId");
-            window.localStorage.removeItem("bizzmitra.workspaceContext");
           }
         });
     } else {
+      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          setActiveWs({
+            name: parsed.businessName || "New Workspace",
+            industry: parsed.industry || "Custom Workspace",
+            mode: parsed.intakeMode || "consult",
+            lang: storedLang,
+          });
+          return;
+        } catch {}
+      }
       setActiveWs({
-        name: "No Active Workspace",
+        name: "New Workspace",
         industry: "Create intake to begin",
         mode: "consult",
         lang: storedLang,
@@ -353,24 +378,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [loading, session, navigate]);
 
-  // Route protection: If standard user attempts to view a workspace artifact page without any workspace created,
-  // redirect them to /workspace/new
-  useEffect(() => {
-    if (!loading && session?.user && !isTestAccount) {
-      if (pathname.startsWith("/workspace/") && pathname !== "/workspace/new") {
-        supabase
-          .from("workspaces")
-          .select("id", { count: "exact", head: true })
-          .eq("owner_id", session.user.id)
-          .then(({ count }) => {
-            if ((count ?? 0) === 0) {
-              toast.info("Please create your first workspace to generate your digital blueprint.");
-              navigate({ to: "/workspace/new" });
-            }
-          });
-      }
-    }
-  }, [pathname, loading, session, isTestAccount, navigate]);
+  // Standard user route access: all blueprint artifact routes remain accessible with active/fallback workspace
 
   useEffect(() => {
     setCurrentRole(loadCurrentRole());

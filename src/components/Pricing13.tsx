@@ -23,135 +23,110 @@ interface PlanTier {
 const PLANS: PlanTier[] = [
   {
     id: "starter",
-    name: "Starter",
+    name: "Free Starter",
     tagline: "For individual architects & solo founders validating new ventures.",
     monthlyPrice: 0,
     annualPrice: 0,
     features: [
-      "1 active transformation workspace",
-      "Full 11-module artifact pipeline",
-      "Markdown & Mermaid exports",
+      "Single workspace",
+      "Standard LLM intake",
+      "Basic HLD export",
       "Community support",
     ],
     specs: {
       workspaces: "1 active",
-      generations: "20 / month",
+      generations: "100 credits / mo",
       collaborators: "Solo (1 seat)",
       support: "Standard community",
     },
   },
   {
-    id: "squad",
-    name: "Squad",
+    id: "growth",
+    name: "Growth Pro",
     tagline: "For boutique consultancies & cross-functional enterprise squads.",
-    monthlyPrice: 49,
-    annualPrice: 39,
+    monthlyPrice: 3999,
+    annualPrice: 3199,
     featured: true,
     badge: "Most Popular",
     features: [
-      "5 concurrent active workspaces",
-      "Real-time team presence & comments",
-      "Interactive Solution Studio CRM",
-      "Full JSON data packs & API exports",
-      "Custom branding on deliverables",
+      "Unlimited workspaces",
+      "Solution Studio customizer",
+      "PostgreSQL DDL & REST APIs",
+      "Executive pitch deck export",
+      "Role-based access preview",
     ],
     specs: {
-      workspaces: "5 concurrent",
-      generations: "Unlimited blueprints",
+      workspaces: "Unlimited",
+      generations: "1,000 credits / mo",
       collaborators: "Up to 8 members",
       support: "Priority email (4h SLA)",
     },
   },
   {
-    id: "scale",
-    name: "Scale",
-    tagline: "For digital transformation practices running multiple enterprise streams.",
-    monthlyPrice: 129,
-    annualPrice: 99,
-    features: [
-      "25 concurrent active workspaces",
-      "Multi-squad permissions & RBAC",
-      "Version control diffs & branch merging",
-      "Custom AI prompts & private fine-tunes",
-      "Dedicated onboarding architect",
-    ],
-    specs: {
-      workspaces: "25 concurrent",
-      generations: "Unlimited blueprints",
-      collaborators: "Up to 30 members",
-      support: "Dedicated Slack channel",
-    },
-  },
-  {
     id: "enterprise",
-    name: "Enterprise",
-    tagline: "Custom governance, private tenant isolation, and VPC deployment.",
-    monthlyPrice: 299,
-    annualPrice: 239,
+    name: "Enterprise Scale",
+    tagline: "Custom governance, dedicated compute cluster, and VPC deployment.",
+    monthlyPrice: 15999,
+    annualPrice: 12799,
     features: [
-      "Unlimited enterprise workspaces",
-      "Self-hosted VPC or on-prem deployment",
-      "SSO, SAML & audit logging",
-      "Custom SLA & bespoke model fine-tuning",
-      "Executive transformation advisory",
+      "Dedicated compute cluster",
+      "Custom BPMN 2.0 pipelines",
+      "Full Git multi-tier versioning",
+      "99.99% SLA guarantee",
+      "SOC2 compliance attestation",
     ],
     specs: {
       workspaces: "Unlimited",
-      generations: "Custom throughput",
+      generations: "5,000 credits / mo",
       collaborators: "Unlimited members",
-      support: "24/7 dedicated lead",
+      support: "Dedicated Lead Architect",
     },
   },
 ];
 
 export function Pricing13({ className = "" }: { className?: string }) {
-  const [billingCycle, setBillingCycle] = React.useState<"monthly" | "annual">("annual");
-  const [selectedPlanId, setSelectedPlanId] = React.useState<string>("squad");
+  const [billingCycle, setBillingCycle] = React.useState<"monthly" | "annual">("monthly");
+  const [selectedPlanId, setSelectedPlanId] = React.useState<string>("growth");
 
   const selectedPlan = PLANS.find((p) => p.id === selectedPlanId) ?? PLANS[1]!;
 
   return (
-    <div className={`mx-auto max-w-6xl px-4 sm:px-6 ${className}`}>
-      {/* Billing Cycle Toggle */}
-      <div className="flex flex-col items-center mb-10">
-        <div className="neu-reflect relative flex items-center gap-1 rounded-full border border-border/80 bg-surface/90 p-1.5 shadow-sm">
+    <div className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${className}`}>
+      {/* Header & Cadence Toggle */}
+      <div className="flex flex-col items-center text-center mb-10">
+        <div className="neu-sm inline-flex items-center gap-1.5 p-1 rounded-full mb-4">
           <button
             type="button"
             onClick={() => setBillingCycle("monthly")}
-            className={`relative rounded-full px-5 py-2 text-xs font-semibold transition-colors duration-200 ${
-              billingCycle === "monthly"
-                ? "text-primary dark:text-primary-foreground font-bold"
-                : "text-muted-foreground hover:text-foreground"
+            className={`relative rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+              billingCycle === "monthly" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {billingCycle === "monthly" && (
               <motion.span
                 layoutId="pricing13-billing-pill"
-                className="absolute inset-0 rounded-full bg-surface shadow-sm border border-border/60 dark:bg-primary/20 dark:border-primary/40 -z-10"
+                className="absolute inset-0 rounded-full bg-primary shadow-sm"
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />
             )}
-            Monthly
+            <span className="relative z-10">Monthly Billing</span>
           </button>
-
           <button
             type="button"
             onClick={() => setBillingCycle("annual")}
-            className={`relative rounded-full px-5 py-2 text-xs font-semibold transition-colors duration-200 flex items-center gap-1.5 ${
-              billingCycle === "annual"
-                ? "text-primary dark:text-primary-foreground font-bold"
-                : "text-muted-foreground hover:text-foreground"
+            className={`relative rounded-full px-4 py-1.5 text-xs font-bold transition-colors ${
+              billingCycle === "annual" ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {billingCycle === "annual" && (
               <motion.span
                 layoutId="pricing13-billing-pill"
-                className="absolute inset-0 rounded-full bg-surface shadow-sm border border-border/60 dark:bg-primary/20 dark:border-primary/40 -z-10"
+                className="absolute inset-0 rounded-full bg-primary shadow-sm"
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
               />
             )}
-            <span>Annual</span>
-            <span className="rounded-full bg-primary/15 px-2 py-0.5 font-mono text-[10px] font-extrabold text-primary">
+            <span className="relative z-10">Annual Billing</span>
+            <span className="relative z-10 ml-1.5 rounded-full bg-sage/20 text-sage px-1.5 py-0.5 text-[9px] font-extrabold uppercase">
               Save 20%
             </span>
           </button>
@@ -159,7 +134,7 @@ export function Pricing13({ className = "" }: { className?: string }) {
       </div>
 
       {/* Plan Selector Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid gap-6 md:grid-cols-3 mb-8">
         {PLANS.map((plan) => {
           const isSelected = selectedPlanId === plan.id;
           const price = billingCycle === "annual" ? plan.annualPrice : plan.monthlyPrice;
@@ -194,11 +169,11 @@ export function Pricing13({ className = "" }: { className?: string }) {
 
                 <div className="mt-3 flex items-baseline gap-1">
                   <span className="font-display text-3xl font-black text-foreground">
-                    {price === 0 ? "Free" : `$${price}`}
+                    {price === 0 ? "₹0" : `₹${price.toLocaleString("en-IN")}`}
                   </span>
-                  {price > 0 && (
-                    <span className="text-xs text-muted-foreground font-medium">/ month</span>
-                  )}
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {price === 0 ? "forever free" : plan.id === "enterprise" ? "per org / month" : "per seat / month"}
+                  </span>
                 </div>
 
                 <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{plan.tagline}</p>
@@ -252,11 +227,17 @@ export function Pricing13({ className = "" }: { className?: string }) {
                   </span>
                   <div className="mt-0.5 font-display text-3xl font-extrabold text-foreground">
                     {billingCycle === "annual" && selectedPlan.annualPrice > 0
-                      ? `$${selectedPlan.annualPrice}`
+                      ? `₹${selectedPlan.annualPrice.toLocaleString("en-IN")}`
                       : selectedPlan.monthlyPrice === 0
-                        ? "Free"
-                        : `$${selectedPlan.monthlyPrice}`}
-                    <span className="text-xs font-normal text-muted-foreground ml-1">/ seat / mo</span>
+                        ? "₹0"
+                        : `₹${selectedPlan.monthlyPrice.toLocaleString("en-IN")}`}
+                    <span className="text-xs font-normal text-muted-foreground ml-1">
+                      {selectedPlan.id === "starter"
+                        ? "forever free"
+                        : selectedPlan.id === "enterprise"
+                          ? "per org / month"
+                          : "per seat / month"}
+                    </span>
                   </div>
                 </div>
                 {billingCycle === "annual" && selectedPlan.annualPrice > 0 && (

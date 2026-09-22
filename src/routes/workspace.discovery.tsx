@@ -88,7 +88,9 @@ function DiscoveryPage() {
     if (!loadedText) loadedText = HR_CONSULTANCY_PROBLEM;
     setProblemText(loadedText);
 
-    if (!user || !id) {
+    const isUuid = id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+    if (!user || !id || !isUuid) {
       // Local fallback mode
       setTurns([{ role: "user", text: loadedText }]);
       setThinking(true);
