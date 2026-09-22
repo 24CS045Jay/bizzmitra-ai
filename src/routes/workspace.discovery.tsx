@@ -147,6 +147,12 @@ function DiscoveryPage() {
           if (ws?.problem_statement) {
             loadedText = ws.problem_statement;
             setProblemText(loadedText);
+            void generateDynamicDiscovery(loadedText, bName, ind).then((res) => {
+              setDynamicScript(res.questions);
+              setDynamicSummary(res.summary);
+              setDynamicAnalysis(res.businessAnalysis);
+              setAiModelLabel(res.source === "groq-llm" ? "Groq 120B AI" : "BizzMitra NLP Engine");
+            });
           }
 
           await supabase.from("discovery_messages").insert({
