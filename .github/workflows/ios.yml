@@ -87,17 +87,23 @@ jobs:
           echo "Target: $BUILD_TARGET"
           
           # Archive strictly for device (generic/platform=iOS). Never target iphonesimulator for release.
+          set -o pipefail
           xcodebuild archive $BUILD_TARGET \
             -scheme App \
             -configuration Release \
             -destination "generic/platform=iOS" \
             -archivePath build/App.xcarchive \
             -skipPackagePluginValidation -skipMacroValidation \
+            -verbose \
             COMPILER_INDEX_STORE_ENABLE=NO \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            clean archive
+            clean archive 2>&1 | tee build/xcodebuild.log || {
+              echo "::error::xcodebuild archive failed. Printing error lines:"
+              grep -E "(^error:|^.*: error:)" build/xcodebuild.log | head -n 50 || true
+              exit 65
+            }
 
       - name: Package iOS IPA
         run: |
@@ -132,8 +138,17 @@ jobs:
           ls -lh release/BizzMitra-ios.ipa
 
       - name: Upload iOS IPA Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: BizzMitra-ios.ipa
           path: release/BizzMitra-ios.ipa
           if-no-files-found: error
+
+      - name: Upload Xcode Build Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: build/xcodebuild.log
+          if-no-files-found: ignore
