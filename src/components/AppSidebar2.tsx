@@ -114,14 +114,14 @@ const PORTAL_GROUPS: PortalNavGroup[] = [
       },
       {
         id: "crm",
-        label: "HR CRM",
+        label: "Prototype CRM",
         description: "Synthesized workforce & pipeline CRM",
         to: "/workspace/solution/crm",
         icon: Users,
         badge: "CRM",
         subItems: [
-          { label: "TalentCraft HR CRM", href: "/workspace/solution/crm" },
-          { label: "Candidate Funnel", href: "/workspace/solution/crm" },
+          { label: "Live Prototype CRM", href: "/workspace/solution/crm" },
+          { label: "Pipeline Funnel", href: "/workspace/solution/crm" },
           { label: "Entity Customizer", href: "/workspace/solution/crm" },
         ],
       },
