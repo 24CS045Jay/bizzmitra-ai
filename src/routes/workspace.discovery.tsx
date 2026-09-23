@@ -113,6 +113,8 @@ function DiscoveryPage() {
     let loadedText = "";
     let bName = "Enterprise Workspace";
     let ind = "Cross-Industry";
+    let goalsText = "";
+    let constraintsText = "";
     try {
       const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
       if (raw) {
@@ -120,6 +122,8 @@ function DiscoveryPage() {
         loadedText = parsed.problemStatement || parsed.summary || "";
         bName = parsed.businessName || parsed.name || bName;
         ind = parsed.industry || ind;
+        goalsText = parsed.goals || "";
+        constraintsText = parsed.constraints || "";
       }
     } catch {}
 
@@ -134,12 +138,33 @@ function DiscoveryPage() {
     setDynamicSummary(localSummary);
     setDynamicAnalysis(localAnalysis);
 
-    // Dynamically generate discovery questions & analysis via Groq 120B LLM
-    void generateDynamicDiscovery(loadedText, bName, ind).then((res) => {
+    // Dynamically generate discovery questions & analysis via Groq Llama 3.3 70B LLM
+    void generateDynamicDiscovery(loadedText, bName, ind, {
+      goals: goalsText,
+      constraints: constraintsText,
+    }).then((res) => {
       setDynamicScript(res.questions);
       setDynamicSummary(res.summary);
       setDynamicAnalysis(res.businessAnalysis);
-      setAiModelLabel(res.source === "groq-llm" ? "Groq 120B AI" : "BizzMitra NLP Engine");
+      setAiModelLabel(res.modelUsed || (res.source === "groq-llm" ? "Groq Llama 3.3 70B" : "BizzMitra Strategic Engine"));
+
+      // If user hasn't answered yet, update the active question to the newly generated Groq question
+      setTurns((prev) => {
+        if (prev.length <= 2 && res.questions[0]) {
+          const userTurn = prev.find((t) => t.role === "user") || { role: "user", text: loadedText };
+          return [
+            userTurn,
+            {
+              role: "ai",
+              text: res.questions[0].question,
+              hint: res.questions[0].hint,
+              whyWeAsk: res.questions[0].whyWeAsk,
+              missingEntity: res.questions[0].missingEntity,
+            },
+          ];
+        }
+        return prev;
+      });
     });
 
     const isUuid = id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);

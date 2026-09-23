@@ -38,6 +38,7 @@ keys/
 *.p12
 *.mobileprovision
 .env*
+!.env.example
 !public/manifest.json
 
 # Mobile build artifacts

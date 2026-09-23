@@ -343,8 +343,8 @@ function SettingsPage() {
         <h1 className="mt-2 font-display text-4xl font-extrabold sm:text-5xl">{t("settings.title", "Settings & Monetization")}</h1>
       </Reveal>
 
-      <Stagger className="mt-8 grid gap-4 lg:grid-cols-2">
-        <StaggerItem className="neu p-6 min-w-0 overflow-hidden">
+      <Stagger className="mt-8 grid gap-4 lg:grid-cols-2 w-full max-w-full">
+        <StaggerItem className="neu p-4 sm:p-6 min-w-0 overflow-hidden w-full">
           <h2 className="font-display text-lg font-bold">{t("settings.profile", "Profile")}</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4">
@@ -373,7 +373,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6 min-w-0 overflow-hidden space-y-4">
+        <StaggerItem className="neu p-4 sm:p-6 min-w-0 overflow-hidden space-y-4 w-full">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Building2 className="size-4 text-primary" />
@@ -388,7 +388,7 @@ function SettingsPage() {
             Configure the active business problem statement. All solution blueprints (Architecture, BPMN, Wireframes, Database, Roadmap, ROI, Collaboration, and Exports) dynamically calibrate to this definition.
           </p>
 
-          <dl className="grid grid-cols-2 gap-3 text-xs neu-inset p-3">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs neu-inset p-3">
             <div>
               <dt className="text-muted-foreground">Domain Schema</dt>
               <dd className="font-semibold text-foreground">{(dbBlueprint.tables || []).length} Tables · {(dbBlueprint.apiSpecifications || dbBlueprint.apiEndpoints || []).length} APIs</dd>
@@ -477,7 +477,7 @@ function SettingsPage() {
         </StaggerItem>
 
         {/* AI Credit Wallet Section */}
-        <StaggerItem className="neu p-6 lg:col-span-2 min-w-0 overflow-hidden">
+        <StaggerItem className="neu p-4 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden w-full">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/80 pb-4">
             <div className="flex items-center gap-3">
               <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -559,7 +559,7 @@ function SettingsPage() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-3">
             <div className="rounded-xl border border-border bg-background/50 p-4">
               <p className="text-xs text-muted-foreground">Available Credits</p>
               <p className="mt-1 font-display text-3xl font-extrabold text-primary">{wallet.balance}</p>
@@ -610,7 +610,7 @@ function SettingsPage() {
         </StaggerItem>
 
         {/* Pricing Tiers & Upgrade Engine */}
-        <StaggerItem className="neu p-6 lg:col-span-2 min-w-0 overflow-hidden">
+        <StaggerItem className="neu p-4 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden w-full">
           <div className="text-center max-w-xl mx-auto mb-6">
             <h2 className="font-display text-2xl font-extrabold">{t("settings.plans", "Subscription Plans & SaaS Tiers")}</h2>
             <p className="text-xs text-muted-foreground mt-1 mb-4">
@@ -704,7 +704,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6 lg:col-span-2 min-w-0 overflow-hidden">
+        <StaggerItem className="neu p-4 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden w-full">
           <h2 className="font-display text-lg font-bold">{t("settings.appearance", "Appearance & Theme")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Switch between Warm Graphite (light) and Ambient Ray (dark) modes.
@@ -737,7 +737,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6 lg:col-span-2 min-w-0 overflow-hidden">
+        <StaggerItem className="neu p-4 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden w-full">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-lg font-bold">{t("settings.language", "Language & Multilingual Support")}</h2>
@@ -771,7 +771,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6 lg:col-span-2 min-w-0 overflow-hidden">
+        <StaggerItem className="neu p-4 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden w-full">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg font-bold">Export Defaults & Deliverables Bundle</h2>
             <span className="rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">

@@ -190,10 +190,10 @@ export function AiModelPaymentModal({
           initial={{ opacity: 0, scale: 0.97, y: 40 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.97, y: 40 }}
-          className="relative w-full max-w-xl overflow-hidden rounded-t-3xl sm:rounded-3xl border border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl"
+          className="relative w-full max-w-xl overflow-hidden rounded-t-3xl sm:rounded-3xl border border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl flex flex-col max-h-[92vh] sm:max-h-[85vh]"
         >
           {/* Header Strip */}
-          <div className="flex items-center justify-between border-b border-border/60 p-5">
+          <div className="flex items-center justify-between border-b border-border/60 p-4 sm:p-5 shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
                 <Sparkles className="size-5" />
@@ -224,7 +224,7 @@ export function AiModelPaymentModal({
             )}
           </div>
 
-          <div className="p-6 space-y-5 max-h-[85vh] overflow-y-auto">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1 overflow-y-auto min-h-0">
             {/* Model Target Details */}
             <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
               <div className="flex items-start justify-between">
@@ -514,36 +514,37 @@ export function AiModelPaymentModal({
               </div>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-3 pt-2 pb-[env(safe-area-inset-bottom,0px)]">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={processingState !== "idle"}
-                className="neu-sm neu-press flex-1 rounded-2xl py-3 text-xs font-semibold text-muted-foreground disabled:opacity-50"
-              >
-                Cancel
-              </button>
+          </div>
 
-              <button
-                type="button"
-                onClick={handleExecutePayment}
-                disabled={processingState !== "idle"}
-                className="neu-press flex-1 flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 py-3 text-xs font-bold text-white shadow-lg glow-primary disabled:opacity-50 transition-colors"
-              >
-                {processingState === "idle" ? (
-                  <>
-                    <Lock className="size-3.5" />
-                    Pay {priceFormatted} & Unlock
-                  </>
-                ) : (
-                  <>
-                    <Loader2 className="size-3.5 animate-spin" />
-                    Processing...
-                  </>
-                )}
-              </button>
-            </div>
+          {/* Pinned Sticky Bottom Action Buttons */}
+          <div className="shrink-0 border-t border-border/60 bg-card/95 p-4 flex items-center gap-3 pb-[max(1rem,env(safe-area-inset-bottom,1rem))]">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={processingState !== "idle"}
+              className="neu-sm neu-press flex-1 rounded-2xl py-3 text-xs font-semibold text-muted-foreground disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExecutePayment}
+              disabled={processingState !== "idle"}
+              className="neu-press flex-1 flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 py-3 text-xs font-bold text-white shadow-lg glow-primary disabled:opacity-50 transition-colors"
+            >
+              {processingState === "idle" ? (
+                <>
+                  <Lock className="size-3.5" />
+                  Pay {priceFormatted} & Unlock
+                </>
+              ) : (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  Processing...
+                </>
+              )}
+            </button>
           </div>
         </motion.div>
       </div>

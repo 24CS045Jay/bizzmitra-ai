@@ -391,7 +391,7 @@ Return strictly valid JSON in this exact structure:
           Authorization: `Bearer ${groqKey}`,
         },
         body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
+          model: "llama-3.3-70b-versatile",
           messages: [
             { role: "system", content: "You are an enterprise business analysis AI. Output strictly valid JSON." },
             { role: "user", content: prompt },
@@ -416,7 +416,7 @@ Return strictly valid JSON in this exact structure:
       const parsed = JSON.parse(contentStr);
       return jsonResponse({
         success: true,
-        modelUsed: "Groq 120B AI (openai/gpt-oss-120b)",
+        modelUsed: "Groq Llama 3.3 70B (High-Speed Inference)",
         questions: parsed.questions,
         summary: parsed.summary,
         businessAnalysis: parsed.businessAnalysis,
@@ -580,7 +580,7 @@ Return strictly valid JSON with this exact structure:
           Authorization: `Bearer ${groqKey}`,
         },
         body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
+          model: "llama-3.3-70b-versatile",
           messages: [
             { role: "system", content: "You are an enterprise systems architect and strategy consultant. Output strictly valid JSON." },
             { role: "user", content: prompt },
@@ -605,7 +605,7 @@ Return strictly valid JSON with this exact structure:
       const parsed = JSON.parse(contentStr);
       return jsonResponse({
         success: true,
-        modelUsed: "Groq 120B AI (openai/gpt-oss-120b)",
+        modelUsed: "Groq Llama 3.3 70B (High-Speed Inference)",
         framing: parsed.framing,
         solution: parsed.solution,
         modules: parsed.modules,
