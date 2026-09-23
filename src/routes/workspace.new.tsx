@@ -380,32 +380,34 @@ function IntakePage() {
 
   return (
     <AppShell>
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
-        <div className="min-w-0 flex-1">
-          <ArtifactHeader id="intake" kicker={strings.kicker} title={strings.title} />
+      <div className="border-b border-border pb-4">
+        <div className="flex items-center justify-end mb-2">
+          {/* Multilingual Selector */}
+          <div className="shrink-0 neu-sm flex items-center gap-1.5 p-1 text-xs">
+            <Languages className="ml-1 size-3.5 text-muted-foreground" />
+            <button
+              type="button"
+              onClick={() => setLang("en")}
+              className={`rounded-md px-2.5 py-1 font-semibold transition-colors ${
+                lang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              onClick={() => setLang("hi")}
+              className={`rounded-md px-2.5 py-1 font-semibold transition-colors ${
+                lang === "hi" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              हिन्दी
+            </button>
+          </div>
         </div>
 
-        {/* Multilingual Selector */}
-        <div className="shrink-0 neu-sm flex items-center gap-1.5 p-1 text-xs">
-          <Languages className="ml-1 size-3.5 text-muted-foreground" />
-          <button
-            type="button"
-            onClick={() => setLang("en")}
-            className={`rounded-md px-2.5 py-1 font-semibold transition-colors ${
-              lang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            English
-          </button>
-          <button
-            type="button"
-            onClick={() => setLang("hi")}
-            className={`rounded-md px-2.5 py-1 font-semibold transition-colors ${
-              lang === "hi" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            हिन्दी
-          </button>
+        <div className="min-w-0 w-full">
+          <ArtifactHeader id="intake" kicker={strings.kicker} title={strings.title} />
         </div>
       </div>
 

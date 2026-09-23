@@ -9,6 +9,7 @@ import {
   saveCreditWallet,
   INITIAL_FREE_WALLET,
 } from "@/lib/admin-rbac-data";
+import { restoreUserActiveWorkspace } from "@/lib/workspace-persistence";
 
 type AuthValue = {
   session: Session | null;
@@ -44,6 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const parsed = JSON.parse(storedDemo) as Session;
           setSession(parsed);
           syncUserRoleAndWallet(parsed.user?.email);
+          if (parsed.user?.id) {
+            void restoreUserActiveWorkspace(parsed.user.id);
+          }
           setLoading(false);
         } catch {}
       }
@@ -74,6 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase.auth.verifyOtp({ token_hash, type }).then(({ data, error }) => {
           if (!error && data.session) {
             setSession(data.session);
+            if (data.session.user?.id) {
+              void restoreUserActiveWorkspace(data.session.user.id);
+            }
             toast.success("Email verified successfully! Welcome to your workspace.");
             window.history.replaceState({}, document.title, window.location.pathname);
           } else if (error) {
@@ -87,6 +94,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
           if (!error && data.session) {
             setSession(data.session);
+            if (data.session.user?.id) {
+              void restoreUserActiveWorkspace(data.session.user.id);
+            }
             toast.success("Email verified successfully! Welcome to your workspace.");
             window.history.replaceState({}, document.title, window.location.pathname);
           } else if (error) {
@@ -102,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(s);
         syncUserRoleAndWallet(s.user?.email);
         if (s.user) {
+          void restoreUserActiveWorkspace(s.user.id);
           void supabase.from("profiles").upsert({
             id: s.user.id,
             full_name:
@@ -122,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(data.session);
         syncUserRoleAndWallet(data.session.user?.email);
         if (data.session.user) {
+          void restoreUserActiveWorkspace(data.session.user.id);
           void supabase.from("profiles").upsert({
             id: data.session.user.id,
             full_name:

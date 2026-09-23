@@ -87,7 +87,7 @@ export async function generateDynamicSolution(
 
         const result: SolutionGenerationResult = {
           source: "groq-llm",
-          modelUsed: data.modelUsed || "Groq 120B AI (openai/gpt-oss-120b)",
+          modelUsed: data.modelUsed || "Groq Llama 3.3 70B",
           framing: data.framing,
           solution: { ...rawSolution, stack },
           modules: data.modules,
@@ -104,7 +104,79 @@ export async function generateDynamicSolution(
       }
     }
   } catch (err) {
-    console.warn("[generateDynamicSolution] Groq LLM unavailable, using domain heuristic:", err);
+    console.warn("[generateDynamicSolution] Server Groq API unavailable, checking client key:", err);
+  }
+
+  // Client-side Direct Groq API Fallback
+  const clientGroqKey =
+    typeof import.meta !== "undefined" && import.meta.env
+      ? (import.meta.env.VITE_GROQ_API_KEY as string | undefined)
+      : undefined;
+
+  if (clientGroqKey && clientGroqKey.trim().length > 10) {
+    try {
+      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${clientGroqKey.trim()}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            {
+              role: "system",
+              content: "You are an enterprise systems architect and strategy consultant. Output strictly valid JSON.",
+            },
+            {
+              role: "user",
+              content: `Analyze this business and generate architectural framing, solution pillars, dynamic modules, and build/buy options:
+Business: ${businessName}
+Industry: ${industry}
+Problem: ${problemStatement}`,
+            },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+        }),
+      });
+
+      if (groqRes.ok) {
+        const groqData = await groqRes.json();
+        const contentStr = groqData.choices?.[0]?.message?.content;
+        if (contentStr) {
+          const parsed = JSON.parse(contentStr);
+          if (parsed && parsed.framing && parsed.solution && parsed.modules) {
+            const rawSolution = parsed.solution;
+            const stack = rawSolution.stack || [
+              { layer: "Presentation & Workable Layer", choice: "React 19 + TypeScript + Tailwind CSS", why: "Rapid workflow responsiveness and zero-latency client interactions." },
+              { layer: "API Gateway & Orchestration", choice: "Cloud-Native Node / Edge Workers", why: "Low-latency webhook ingestion and event-driven automation." },
+              { layer: "Data Layer & Persistence", choice: "Supabase (PostgreSQL 15)", why: "Row-level security, encrypted audit trails, and automatic REST/GraphQL endpoints." },
+              { layer: "AI Reasoning & Copilots", choice: "Groq Llama 3.3 70B Engine", why: "Sub-second semantic intelligence and deterministic structured JSON processing." },
+            ];
+
+            const result: SolutionGenerationResult = {
+              source: "groq-llm",
+              modelUsed: "Groq Llama 3.3 70B (Client Direct)",
+              framing: parsed.framing,
+              solution: { ...rawSolution, stack },
+              modules: parsed.modules,
+              buildBuyMatrix: parsed.buildBuyMatrix || getDomainBuildBuy(industry),
+            };
+
+            try {
+              if (typeof window !== "undefined") {
+                window.sessionStorage.setItem(cacheKey, JSON.stringify(result));
+              }
+            } catch {}
+
+            return result;
+          }
+        }
+      }
+    } catch (clientErr) {
+      console.warn("[generateDynamicSolution] Client Groq call failed:", clientErr);
+    }
   }
 
   // Domain Heuristic Fallback
