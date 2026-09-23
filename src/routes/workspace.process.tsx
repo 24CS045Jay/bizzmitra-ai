@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import {
   Activity,
   AlertTriangle,
+  ArrowDown,
   ArrowRight,
   CheckCircle2,
   Clock,
@@ -29,6 +30,15 @@ import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import { getProcessBlueprint } from "@/lib/process-data";
 import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
 
+function ensureVerticalDiagram(chartStr: string): string {
+  if (!chartStr || typeof chartStr !== "string") return chartStr;
+  return chartStr
+    .replace(/^graph\s+LR\b/im, "graph TD")
+    .replace(/^flowchart\s+LR\b/im, "flowchart TD")
+    .replace(/\bgraph\s+LR\b/g, "graph TD")
+    .replace(/\bflowchart\s+LR\b/g, "flowchart TD");
+}
+
 export const Route = createFileRoute("/workspace/process")({
   head: () => ({
     meta: [
@@ -48,7 +58,7 @@ export const Route = createFileRoute("/workspace/process")({
 });
 
 type TabView = "comparison" | "swimlane" | "bottlenecks" | "decisionTree";
-type DiffViewMode = "split" | "before" | "after";
+type DiffViewMode = "vertical" | "split" | "before" | "after";
 
 function ProcessPage() {
   useStageGate("process");
@@ -333,10 +343,19 @@ function ProcessPage() {
                     type="button"
                     onClick={() => setDiffMode("split")}
                     className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
-                      diffMode === "split" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                      diffMode === "split" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     Side-by-Side
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDiffMode("vertical")}
+                    className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
+                      diffMode === "vertical" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Vertical Stack
                   </button>
                   <button
                     type="button"
@@ -374,7 +393,7 @@ function ProcessPage() {
                   diffMode === "split" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
                 }`}
               >
-                {(diffMode === "split" || diffMode === "before") && (
+                {(diffMode === "vertical" || diffMode === "split" || diffMode === "before") && (
                   <div className="neu flex flex-col rounded-xl p-5 border-l-4 border-l-rose-500">
                     <div className="flex items-center justify-between border-b border-border/30 pb-3">
                       <div>
@@ -392,13 +411,25 @@ function ProcessPage() {
                         High Friction
                       </span>
                     </div>
-                    <div className="mt-4 flex-1 overflow-x-auto rounded-lg bg-background/50 p-2">
-                      <Mermaid key="before" chart={blueprint.asIsDiagram} />
+                    <div className="mt-4 flex-1 overflow-x-auto rounded-lg bg-background/50 p-3">
+                      <Mermaid key="before" chart={ensureVerticalDiagram(blueprint.asIsDiagram)} />
                     </div>
                   </div>
                 )}
 
-                {(diffMode === "split" || diffMode === "after") && (
+                {diffMode === "vertical" && (
+                  <div className="flex items-center justify-center -my-2">
+                    <div className="flex items-center gap-3 rounded-full border border-primary/20 bg-background/90 px-4 py-1.5 shadow-sm backdrop-blur-sm">
+                      <span className="text-[11px] font-semibold text-rose-500">As-Is Manual Bottlenecks</span>
+                      <ArrowDown className="h-3.5 w-3.5 text-primary animate-bounce" />
+                      <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        To-Be Automated Flow (80%+ Faster)
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {(diffMode === "vertical" || diffMode === "split" || diffMode === "after") && (
                   <div className="neu flex flex-col rounded-xl p-5 border-l-4 border-l-emerald-500">
                     <div className="flex items-center justify-between border-b border-border/30 pb-3">
                       <div>
@@ -417,8 +448,8 @@ function ProcessPage() {
                         80%+ Faster
                       </span>
                     </div>
-                    <div className="mt-4 flex-1 overflow-x-auto rounded-lg bg-background/50 p-2">
-                      <Mermaid key="after" chart={blueprint.toBeDiagram} />
+                    <div className="mt-4 flex-1 overflow-x-auto rounded-lg bg-background/50 p-3">
+                      <Mermaid key="after" chart={ensureVerticalDiagram(blueprint.toBeDiagram)} />
                     </div>
                   </div>
                 )}
