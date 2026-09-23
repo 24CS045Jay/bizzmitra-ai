@@ -389,12 +389,12 @@ function ProcessPage() {
               transition={{ duration: 0.2 }}
             >
               <div
-                className={`grid gap-6 ${
-                  diffMode === "split" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+                className={`grid gap-6 items-stretch ${
+                  diffMode === "split" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
                 }`}
               >
                 {(diffMode === "vertical" || diffMode === "split" || diffMode === "before") && (
-                  <div className="neu flex flex-col rounded-xl p-5 border-l-4 border-l-rose-500">
+                  <div className="neu flex flex-col rounded-xl p-5 border-l-4 border-l-rose-500 min-w-0 shadow-sm">
                     <div className="flex items-center justify-between border-b border-border/30 pb-3">
                       <div>
                         <div className="flex items-center gap-2">
@@ -407,11 +407,11 @@ function ProcessPage() {
                           Fragmented manual handoffs, phone tag, spreadsheets · High Latency Cycle
                         </p>
                       </div>
-                      <span className="rounded-full bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                      <span className="shrink-0 rounded-full bg-rose-500/10 px-2.5 py-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
                         High Friction
                       </span>
                     </div>
-                    <div className="mt-4 flex-1 overflow-x-auto rounded-lg bg-background/50 p-3">
+                    <div className="mt-4 flex-1 overflow-x-auto rounded-lg bg-background/50 p-3 min-w-0">
                       <Mermaid key="before" chart={ensureVerticalDiagram(blueprint.asIsDiagram)} />
                     </div>
                   </div>
@@ -430,7 +430,7 @@ function ProcessPage() {
                 )}
 
                 {(diffMode === "vertical" || diffMode === "split" || diffMode === "after") && (
-                  <div className="neu flex flex-col rounded-xl p-5 border-l-4 border-l-emerald-500">
+                  <div className="neu flex flex-col rounded-xl p-5 border-l-4 border-l-emerald-500 min-w-0 shadow-sm">
                     <div className="flex items-center justify-between border-b border-border/30 pb-3">
                       <div>
                         <div className="flex items-center gap-2">
@@ -443,12 +443,12 @@ function ProcessPage() {
                           AI Parsing, Real-time Validation & Automated Pipeline · Streamlined Cycle
                         </p>
                       </div>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                         <Sparkles className="h-3 w-3" />
                         80%+ Faster
                       </span>
                     </div>
-                    <div className="mt-4 flex-1 overflow-x-auto rounded-lg bg-background/50 p-3">
+                    <div className="mt-4 flex-1 overflow-x-auto rounded-lg bg-background/50 p-3 min-w-0">
                       <Mermaid key="after" chart={ensureVerticalDiagram(blueprint.toBeDiagram)} />
                     </div>
                   </div>
