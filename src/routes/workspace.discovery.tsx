@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  AlertCircle,
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
@@ -100,6 +101,7 @@ function DiscoveryPage() {
     getActiveBusinessAnalysis(initialContext.problem, initialContext.businessName, initialContext.industry)
   );
   const [aiModelLabel, setAiModelLabel] = useState<string>("BizzMitra NLP Engine");
+  const [isAiFallback, setIsAiFallback] = useState<boolean>(false);
 
   const script = dynamicScript;
   const summaryText = dynamicSummary;
@@ -109,12 +111,17 @@ function DiscoveryPage() {
     const id = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
     setWorkspaceId(id);
 
-    // Read problem text from local context or Supabase
+    // Read full problem context from local storage or Supabase
     let loadedText = "";
     let bName = "Enterprise Workspace";
     let ind = "Cross-Industry";
     let goalsText = "";
     let constraintsText = "";
+    let intakeMode = "";
+    let intakeMethod = "";
+    let documentSummary = "";
+    let legacyTools = "";
+
     try {
       const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
       if (raw) {
@@ -124,6 +131,10 @@ function DiscoveryPage() {
         ind = parsed.industry || ind;
         goalsText = parsed.goals || "";
         constraintsText = parsed.constraints || "";
+        intakeMode = parsed.intakeMode || "";
+        intakeMethod = parsed.intakeMethod || "";
+        documentSummary = parsed.sourceDetails?.document || "";
+        legacyTools = parsed.sourceDetails?.legacyTools || "";
       }
     } catch {}
 
@@ -138,17 +149,22 @@ function DiscoveryPage() {
     setDynamicSummary(localSummary);
     setDynamicAnalysis(localAnalysis);
 
-    // Dynamically generate discovery questions & analysis via Groq Llama 3.3 70B LLM
+    // Dynamically generate discovery questions & analysis via server LLM
     void generateDynamicDiscovery(loadedText, bName, ind, {
       goals: goalsText,
       constraints: constraintsText,
+      intakeMode,
+      intakeMethod,
+      documentSummary,
+      legacyTools,
     }).then((res) => {
       setDynamicScript(res.questions);
       setDynamicSummary(res.summary);
       setDynamicAnalysis(res.businessAnalysis);
-      setAiModelLabel(res.modelUsed || (res.source === "groq-llm" ? "Groq Llama 3.3 70B" : "BizzMitra Strategic Engine"));
+      setAiModelLabel(res.modelUsed || (res.source === "groq-llm" ? "Groq Llama 3.3 70B" : "Google Gemini"));
+      setIsAiFallback(res.source === "local-heuristics");
 
-      // If user hasn't answered yet, update the active question to the newly generated Groq question
+      // If user hasn't answered yet, update the active question to the newly generated AI question
       setTurns((prev) => {
         if (prev.length <= 2 && res.questions[0]) {
           const userTurn = prev.find((t) => t.role === "user") || { role: "user", text: loadedText };
@@ -329,21 +345,31 @@ function DiscoveryPage() {
         title="AI Discovery & Business Analysis"
       />
 
-      {/* Dynamic Model Status Bar */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-            <Sparkles className="size-3 animate-pulse text-primary" />
-            {aiModelLabel}
-          </span>
-          <span className="text-[11px] text-muted-foreground">
-            Adaptive diagnostic interview generated in real-time based on your problem intake
+      {/* Fallback Warning Notice if Live LLM Inference is Unavailable */}
+      {isAiFallback ? (
+        <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-700 dark:text-amber-300">
+          <AlertCircle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="flex-1">
+            <span className="font-semibold">AI inference unavailable:</span> Showing a dynamic heuristic starter interview based on multi-domain analysis.
+          </div>
+        </div>
+      ) : (
+        /* Dynamic Model Status Bar */
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+              <Sparkles className="size-3 animate-pulse text-primary" />
+              {aiModelLabel}
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              Adaptive diagnostic interview generated in real-time based on your problem intake
+            </span>
+          </div>
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+            Live Server LLM Inference
           </span>
         </div>
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-          Groq High-Throughput Inference
-        </span>
-      </div>
+      )}
 
       {/* Business Document Upload Fast-Track Banner */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-card/60 p-3.5 shadow-xs backdrop-blur-md">

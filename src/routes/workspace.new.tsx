@@ -30,7 +30,7 @@ import {
   URL_ANALYZER_SAMPLES,
   VOICE_SAMPLE_TRANSCRIPT,
 } from "@/lib/demo-data";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, isTestingAccount } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentIngestionModal } from "@/components/DocumentIngestionModal";
 import { resetWorkspaceStages } from "@/lib/workspace-stage-gate";
@@ -62,7 +62,7 @@ const INDUSTRIES = [
 ];
 
 function IntakePage() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const navigate = useNavigate();
 
   // Workspace Metadata State
@@ -307,72 +307,134 @@ function IntakePage() {
       createdAt: new Date().toISOString(),
     };
 
+    const isTest = isTestingAccount(user?.email) || user?.id === "demo-admin-id";
     const isValidUuid =
       user?.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(user.id);
 
+    if (!user) {
+      toast.error("Please sign in or create an account to create and persist workspaces.");
+      navigate({ to: "/login" });
+      setBusy(false);
+      return;
+    }
+
     try {
-      if (isValidUuid && user) {
-        const { data, error } = await supabase
-          .from("workspaces")
-          .insert({
-            owner_id: user.id,
-            name: businessName.trim() || `${problemStatement.trim().slice(0, 40)}…`,
-            problem_statement: problemStatement.trim(),
-            industry,
-            goals: goals.trim() || null,
-            constraints_text: constraints.trim() || null,
-            intake_mode: mode,
-            intake_method: activeTab,
-            language_code: lang,
-            workspace_context: contextPayload,
-            maturity_score: 54,
-            ai_readiness_score: 81,
-            status: "active",
-          })
-          .select("id")
-          .single();
+      let createdWorkspaceId: string | null = null;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const activeToken = sessionData?.session?.access_token || session?.access_token;
+      const authBearer = activeToken
+        ? `Bearer ${activeToken}`
+        : isTest
+          ? "Bearer demo-token-bypass"
+          : "";
 
-        if (!error && data?.id) {
-          if (uploadedDoc) {
-            try {
-              await supabase.from("uploaded_documents").insert({
-                workspace_id: data.id,
-                file_name: uploadedDoc.name,
-                file_type: uploadedDoc.type,
-                storage_path: `simulated/${uploadedDoc.name}`,
-              });
-            } catch {}
+      // 1. Try Server API first (Bypasses client-side RLS quirks and guarantees owner_id = user.id)
+      if (authBearer) {
+        try {
+          const apiRes = await fetch("/api/workspaces", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: authBearer,
+            },
+            body: JSON.stringify({
+              name: safeBusinessName,
+              problemStatement: problemStatement.trim(),
+              industry,
+              goals: goals.trim() || null,
+              constraints: constraints.trim() || null,
+              intakeMode: mode,
+              intakeMethod: activeTab,
+              language: lang,
+              workspaceContext: contextPayload,
+            }),
+          });
+
+          if (apiRes.ok) {
+            const apiData = await apiRes.json();
+            if (apiData.success && apiData.workspace?.id) {
+              createdWorkspaceId = apiData.workspace.id;
+            }
+          } else {
+            const errJson = await apiRes.json().catch(() => ({}));
+            console.warn("[Server /api/workspaces notice]:", errJson);
           }
-
-          window.localStorage.setItem("bizzmitra.activeWorkspaceId", data.id);
-          window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
-          window.localStorage.setItem("bizzmitra.language", lang);
-          resetWorkspaceStages(data.id);
-          window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
-          toast.success("Workspace created successfully!");
-          navigate({ to: "/workspace/discovery" });
-          return;
+        } catch (apiErr) {
+          console.warn("[Server /api/workspaces fetch error]:", apiErr);
         }
       }
 
-      // Seamless offline / local fallback for 100% demo reliability
-      const localId = `ws-${Date.now()}`;
-      window.localStorage.setItem("bizzmitra.activeWorkspaceId", localId);
-      window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
-      window.localStorage.setItem("bizzmitra.language", lang);
-      resetWorkspaceStages(localId);
-      window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
-      toast.success("Workspace created successfully!");
-      navigate({ to: "/workspace/discovery" });
-    } catch {
-      const localId = `ws-${Date.now()}`;
-      window.localStorage.setItem("bizzmitra.activeWorkspaceId", localId);
-      window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
-      window.localStorage.setItem("bizzmitra.language", lang);
-      resetWorkspaceStages(localId);
-      window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
-      toast.success("Workspace created successfully!");
-      navigate({ to: "/workspace/discovery" });
+      // 2. Client Supabase Insert fallback
+      if (!createdWorkspaceId && isValidUuid && user) {
+        try {
+          const { data, error } = await supabase
+            .from("workspaces")
+            .insert({
+              owner_id: user.id,
+              name: safeBusinessName,
+              problem_statement: problemStatement.trim(),
+              industry,
+              goals: goals.trim() || null,
+              constraints_text: constraints.trim() || null,
+              intake_mode: mode,
+              intake_method: activeTab,
+              language_code: lang,
+              workspace_context: contextPayload,
+              maturity_score: 54,
+              ai_readiness_score: 81,
+              status: "active",
+            })
+            .select("id")
+            .single();
+
+          if (!error && data?.id) {
+            createdWorkspaceId = data.id;
+          }
+        } catch (clientErr) {
+          console.warn("[Client Supabase Insert fallback error]:", clientErr);
+        }
+      }
+
+      if (createdWorkspaceId) {
+        if (uploadedDoc) {
+          try {
+            await supabase.from("uploaded_documents").insert({
+              workspace_id: createdWorkspaceId,
+              file_name: uploadedDoc.name,
+              file_type: uploadedDoc.type,
+              storage_path: `simulated/${uploadedDoc.name}`,
+            });
+          } catch {}
+        }
+
+        window.localStorage.setItem("bizzmitra.activeWorkspaceId", createdWorkspaceId);
+        window.localStorage.setItem("bizzmitra.activeWorkspaceName", safeBusinessName);
+        window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
+        window.localStorage.setItem("bizzmitra.language", lang);
+        resetWorkspaceStages(createdWorkspaceId);
+        window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
+        toast.success("Workspace created successfully!");
+        navigate({ to: "/workspace/discovery" });
+        return;
+      }
+
+      if (isTest) {
+        const testWsId = `ws-admin-${Date.now()}`;
+        window.localStorage.setItem("bizzmitra.activeWorkspaceId", testWsId);
+        window.localStorage.setItem("bizzmitra.activeWorkspaceName", safeBusinessName);
+        window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
+        window.localStorage.setItem("bizzmitra.language", lang);
+        resetWorkspaceStages(testWsId);
+        window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
+        toast.success("Testing workspace created!");
+        navigate({ to: "/workspace/discovery" });
+        return;
+      }
+
+      toast.error("Failed to persist workspace to database. Please check your login session and try again.");
+    } catch (err: any) {
+      console.error("[createWorkspace error]:", err);
+      toast.error(err?.message || "An unexpected error occurred while creating your workspace.");
     } finally {
       setBusy(false);
     }

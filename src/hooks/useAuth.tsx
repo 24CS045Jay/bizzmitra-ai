@@ -43,13 +43,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (storedDemo) {
         try {
           const parsed = JSON.parse(storedDemo) as Session;
-          setSession(parsed);
-          syncUserRoleAndWallet(parsed.user?.email);
-          if (parsed.user?.id) {
-            void restoreUserActiveWorkspace(parsed.user.id);
+          if (parsed?.user?.email && isTestingAccount(parsed.user.email)) {
+            setSession(parsed);
+            syncUserRoleAndWallet(parsed.user.email);
+            if (parsed.user?.id) {
+              void restoreUserActiveWorkspace(parsed.user.id);
+            }
+            setLoading(false);
+          } else {
+            localStorage.removeItem("bizzmitra.demoSession");
           }
-          setLoading(false);
-        } catch {}
+        } catch {
+          localStorage.removeItem("bizzmitra.demoSession");
+        }
       }
 
       // Handle email confirmation link redirect (token_hash or PKCE auth code)
@@ -176,28 +182,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(demoSession);
   };
 
-  const signInWithCustomUser = (email: string, fullName?: string) => {
-    const customSession = {
-      access_token: `custom-token-${Date.now()}`,
-      token_type: "bearer",
-      expires_in: 86400,
-      refresh_token: "custom-refresh",
-      user: {
-        id: `user-${Date.now()}`,
-        email,
-        aud: "authenticated",
-        role: "authenticated",
-        user_metadata: { full_name: fullName || email.split("@")[0] },
-        app_metadata: { provider: "email" },
-        created_at: new Date().toISOString(),
-      },
-    } as unknown as Session;
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem("bizzmitra.demoSession", JSON.stringify(customSession));
-    }
-    syncUserRoleAndWallet(email, false);
-    setSession(customSession);
+  const signInWithCustomUser = (_email: string, _fullName?: string) => {
+    console.warn("[useAuth] signInWithCustomUser is deprecated and disabled to enforce real database persistence.");
   };
 
   const value = useMemo<AuthValue>(
