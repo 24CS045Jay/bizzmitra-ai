@@ -112,6 +112,7 @@ function DiscoveryPage() {
     // Read problem text from local context or Supabase
     let loadedText = "";
     let bName = "Enterprise Workspace";
+    let ind = "Cross-Industry";
     let goalsText = "";
     let constraintsText = "";
     try {

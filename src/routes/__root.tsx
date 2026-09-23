@@ -215,7 +215,7 @@ function RootShell({ children }: { children: ReactNode }) {
         />
         <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <div
           id="google_translate_element"
           className="fixed -left-[9999px] -top-[9999px] size-px opacity-0 pointer-events-none overflow-hidden"
