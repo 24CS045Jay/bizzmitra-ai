@@ -23,7 +23,12 @@ export function WireframeVisualizer({
   blueprint?: WireframeBlueprint;
 }) {
   const [activeScreen, setActiveScreen] = useState<ScreenConceptId>("dashboard");
-  const [viewport, setViewport] = useState<ViewportMode>("desktop");
+  const [viewport, setViewport] = useState<ViewportMode>(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 640) {
+      return "mobile";
+    }
+    return "desktop";
+  });
   const [showAnnotations, setShowAnnotations] = useState<boolean>(true);
   const [kanbanFilter, setKanbanFilter] = useState<string>("");
   const [workspaceContext, setWorkspaceContext] = useState<{

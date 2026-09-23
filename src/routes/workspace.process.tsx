@@ -286,11 +286,11 @@ function ProcessPage() {
           {/* Navigation Controls */}
           <div>
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-4">
-              <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none sm:flex-wrap w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setActiveTab("comparison")}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
+                  className={`shrink-0 inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
                     activeTab === "comparison"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "neu hover:bg-accent/40"
@@ -302,7 +302,7 @@ function ProcessPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("swimlane")}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
+                  className={`shrink-0 inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
                     activeTab === "swimlane"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "neu hover:bg-accent/40"
@@ -314,7 +314,7 @@ function ProcessPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("bottlenecks")}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
+                  className={`shrink-0 inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
                     activeTab === "bottlenecks"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "neu hover:bg-accent/40"
@@ -326,7 +326,7 @@ function ProcessPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("decisionTree")}
-                  className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all ${
+                  className={`shrink-0 inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all ${
                     activeTab === "decisionTree"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "neu hover:bg-accent/40"
@@ -338,7 +338,7 @@ function ProcessPage() {
               </div>
 
               {activeTab === "comparison" && (
-                <div className="inline-flex items-center rounded-lg border border-border/50 bg-background/50 p-1 text-xs">
+                <div className="inline-flex items-center rounded-lg border border-border/50 bg-background/50 p-1 text-xs overflow-x-auto max-w-full">
                   <button
                     type="button"
                     onClick={() => setDiffMode("split")}
