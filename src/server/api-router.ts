@@ -1569,16 +1569,31 @@ Return strictly valid JSON with this exact structure:
   ]
 }`;
 
-      const llmResult = await callLlmJson(prompt);
-      return jsonResponse({
-        success: true,
-        modelUsed: llmResult.modelUsed,
-        source: llmResult.source,
-        framing: llmResult.data.framing,
-        solution: llmResult.data.solution,
-        modules: llmResult.data.modules,
-        buildBuyMatrix: llmResult.data.buildBuyMatrix,
-      });
+      let llmResult: any;
+      try {
+        llmResult = await callLlmJson(
+          prompt,
+          "You are an Elite Enterprise Business Architect. Return strictly valid JSON containing deeply customized impact metrics, problem framing, and solution modules tailored to the business.",
+          1500,
+          8000
+        );
+      } catch (llmErr) {
+        console.warn("[api/ai/solution-framing] LLM provider error/rate-limited, using domain fallback:", llmErr);
+      }
+
+      if (llmResult?.success && llmResult.data?.framing) {
+        return jsonResponse({
+          success: true,
+          modelUsed: llmResult.modelUsed,
+          source: llmResult.source,
+          framing: llmResult.data.framing,
+          solution: llmResult.data.solution,
+          modules: llmResult.data.modules,
+          buildBuyMatrix: llmResult.data.buildBuyMatrix,
+        });
+      }
+
+      return jsonResponse({ error: "AI inference rate-limited or unavailable" }, 503);
     } catch (err: any) {
       console.error("[api/ai/solution-framing error]:", err);
       return jsonResponse({ error: err?.message || "Internal error" }, 500);
