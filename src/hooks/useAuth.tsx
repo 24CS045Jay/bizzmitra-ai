@@ -9,6 +9,7 @@ import {
   saveCreditWallet,
   INITIAL_FREE_WALLET,
 } from "@/lib/admin-rbac-data";
+import { restoreUserActiveWorkspace } from "@/lib/workspace-persistence";
 
 type AuthValue = {
   session: Session | null;
@@ -42,10 +43,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (storedDemo) {
         try {
           const parsed = JSON.parse(storedDemo) as Session;
-          setSession(parsed);
-          syncUserRoleAndWallet(parsed.user?.email);
-          setLoading(false);
-        } catch {}
+          if (parsed?.user?.email && isTestingAccount(parsed.user.email)) {
+            setSession(parsed);
+            syncUserRoleAndWallet(parsed.user.email);
+            if (parsed.user?.id) {
+              void restoreUserActiveWorkspace(parsed.user.id);
+            }
+            setLoading(false);
+          } else {
+            localStorage.removeItem("bizzmitra.demoSession");
+          }
+        } catch {
+          localStorage.removeItem("bizzmitra.demoSession");
+        }
       }
 
       // Handle email confirmation link redirect (token_hash or PKCE auth code)
@@ -74,6 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase.auth.verifyOtp({ token_hash, type }).then(({ data, error }) => {
           if (!error && data.session) {
             setSession(data.session);
+            if (data.session.user?.id) {
+              void restoreUserActiveWorkspace(data.session.user.id);
+            }
             toast.success("Email verified successfully! Welcome to your workspace.");
             window.history.replaceState({}, document.title, window.location.pathname);
           } else if (error) {
@@ -87,6 +100,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
           if (!error && data.session) {
             setSession(data.session);
+            if (data.session.user?.id) {
+              void restoreUserActiveWorkspace(data.session.user.id);
+            }
             toast.success("Email verified successfully! Welcome to your workspace.");
             window.history.replaceState({}, document.title, window.location.pathname);
           } else if (error) {
@@ -101,6 +117,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (s) {
         setSession(s);
         syncUserRoleAndWallet(s.user?.email);
+        if (s.user) {
+          void restoreUserActiveWorkspace(s.user.id);
+          void supabase.from("profiles").upsert({
+            id: s.user.id,
+            full_name:
+              s.user.user_metadata?.full_name ||
+              s.user.user_metadata?.name ||
+              s.user.email?.split("@")[0] ||
+              "User",
+          });
+        }
       }
       if (!hasUrlAction) {
         setLoading(false);
@@ -111,6 +138,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.session) {
         setSession(data.session);
         syncUserRoleAndWallet(data.session.user?.email);
+        if (data.session.user) {
+          void restoreUserActiveWorkspace(data.session.user.id);
+          void supabase.from("profiles").upsert({
+            id: data.session.user.id,
+            full_name:
+              data.session.user.user_metadata?.full_name ||
+              data.session.user.user_metadata?.name ||
+              data.session.user.email?.split("@")[0] ||
+              "User",
+          });
+        }
       }
       if (!hasUrlAction) {
         setLoading(false);
@@ -144,28 +182,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(demoSession);
   };
 
-  const signInWithCustomUser = (email: string, fullName?: string) => {
-    const customSession = {
-      access_token: `custom-token-${Date.now()}`,
-      token_type: "bearer",
-      expires_in: 86400,
-      refresh_token: "custom-refresh",
-      user: {
-        id: `user-${Date.now()}`,
-        email,
-        aud: "authenticated",
-        role: "authenticated",
-        user_metadata: { full_name: fullName || email.split("@")[0] },
-        app_metadata: { provider: "email" },
-        created_at: new Date().toISOString(),
-      },
-    } as unknown as Session;
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem("bizzmitra.demoSession", JSON.stringify(customSession));
-    }
-    syncUserRoleAndWallet(email, false);
-    setSession(customSession);
+  const signInWithCustomUser = (_email: string, _fullName?: string) => {
+    console.warn("[useAuth] signInWithCustomUser is deprecated and disabled to enforce real database persistence.");
   };
 
   const value = useMemo<AuthValue>(

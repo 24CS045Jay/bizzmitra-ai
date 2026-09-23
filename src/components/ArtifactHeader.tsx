@@ -133,12 +133,12 @@ export function ArtifactHeader({
         </ol>
       </nav>
 
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{kicker}</p>
-          <h1 className="mt-2 font-display text-4xl font-extrabold sm:text-5xl">{title}</h1>
+          <h1 className="mt-1 font-display text-2xl font-extrabold sm:text-3xl lg:text-4xl break-words leading-tight text-foreground">{title}</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => setVersionDrawerOpen(true)}

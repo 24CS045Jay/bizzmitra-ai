@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Reveal } from "@/components/motion/primitives";
@@ -12,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { syncUserRoleAndWallet } from "@/lib/admin-rbac-data";
 import { gridMotionItems } from "@/lib/login-background";
 import { useTranslation } from "@/lib/i18n";
+import { restoreUserActiveWorkspace } from "@/lib/workspace-persistence";
 
 
 export const Route = createFileRoute("/login")({
@@ -30,8 +32,9 @@ function LoginPage() {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
-  const { session, signInAsDemoAdmin, signInWithCustomUser } = useAuth();
+  const { session, signInAsDemoAdmin } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
 
@@ -60,13 +63,21 @@ function LoginPage() {
     }
 
     // 2. Normal user login via Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
     setBusy(false);
     if (error) {
       if (error.message.toLowerCase().includes("email not confirmed")) {
-        signInWithCustomUser(email, email.split("@")[0]);
-        toast.info(`Welcome, ${email}! Check out your workspaces.`);
-        navigate({ to: "/dashboard" });
+        toast.error("Your email is not verified yet. Please check your inbox or click Resend.", {
+          action: {
+            label: "Resend Verification",
+            onClick: async () => {
+              const { error: resendErr } = await supabase.auth.resend({ type: "signup", email: cleanEmail });
+              if (resendErr) toast.error(resendErr.message);
+              else toast.success("Verification email resent! Please check your inbox.");
+            },
+          },
+          duration: 8000,
+        });
         return;
       }
       toast.error(error.message);
@@ -75,53 +86,72 @@ function LoginPage() {
         syncUserRoleAndWallet(data.session.user.email, false);
       }
 
-      // Check if user has existing workspaces in Supabase
+      // Check and restore user's existing workspaces from Supabase
       const userId = data?.session?.user?.id;
       if (userId) {
-        try {
-          const { data: wsList } = await supabase
-            .from("workspaces")
-            .select("id, name, problem_statement")
-            .eq("owner_id", userId)
-            .order("updated_at", { ascending: false });
-
-          if (wsList && wsList.length > 0 && wsList[0]) {
-            localStorage.setItem("bizzmitra.activeWorkspaceId", wsList[0].id);
-            localStorage.setItem(
-              "bizzmitra.workspaceContext",
-              JSON.stringify({
-                businessName: wsList[0].name,
-                problemStatement: wsList[0].problem_statement || "",
-                industry: "Custom Workspace",
-              }),
-            );
-            navigate({ to: "/dashboard" });
-            return;
-          }
-        } catch {}
+        const restored = await restoreUserActiveWorkspace(userId);
+        if (restored) {
+          toast.success("Welcome back! Workspace loaded.");
+          navigate({ to: "/dashboard" });
+          return;
+        }
       }
 
-      // Check if user already created a custom workspace locally
-      const localWsId = localStorage.getItem("bizzmitra.activeWorkspaceId");
-      const localCtx = localStorage.getItem("bizzmitra.workspaceContext");
-      if (localWsId && localWsId !== "ws-talentcraft-default" && localCtx) {
-        navigate({ to: "/dashboard" });
-      } else {
-        // First-time user: Route to Workspaces hub where they can click Create Workspace!
-        localStorage.removeItem("bizzmitra.activeWorkspaceId");
-        localStorage.removeItem("bizzmitra.workspaceContext");
-        toast.info("Welcome! Here is your workspace hub.");
-        navigate({ to: "/dashboard" });
-      }
+      // First-time user with no workspaces yet: Route to Workspaces hub
+      localStorage.removeItem("bizzmitra.activeWorkspaceId");
+      localStorage.removeItem("bizzmitra.activeWorkspaceName");
+      localStorage.removeItem("bizzmitra.workspaceContext");
+      toast.info("Welcome! Here is your workspace hub.");
+      navigate({ to: "/dashboard" });
     }
   }
 
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className || "size-4 shrink-0"} viewBox="0 0 24 24">
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+      />
+    </svg>
+  );
+}
+
   async function google() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/dashboard` },
-    });
-    if (error) toast.error(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/dashboard` },
+      });
+      if (error) {
+        if (
+          error.message.toLowerCase().includes("unsupported provider") ||
+          error.message.toLowerCase().includes("not enabled")
+        ) {
+          toast.error(
+            "Google provider is not enabled in Supabase yet. Please enable Google in Supabase Dashboard -> Authentication -> Providers with your Google Client ID & Secret.",
+            { duration: 8000 }
+          );
+        } else {
+          toast.error(error.message);
+        }
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to initiate Google authentication.";
+      toast.error(msg);
+    }
   }
 
   async function resetPassword() {
@@ -168,9 +198,11 @@ function LoginPage() {
 
             <button
               onClick={google}
-              className="neu-sm neu-press mt-5 flex w-full items-center justify-center gap-2 px-4 py-2.5 text-xs font-medium"
+              type="button"
+              className="neu-sm neu-press mt-5 flex w-full items-center justify-center gap-2.5 px-4 py-2.5 text-xs font-semibold hover:border-primary/40 transition-all"
             >
-              {t("auth.google", "Continue with Google")}
+              <GoogleIcon className="size-4 shrink-0" />
+              <span>{t("auth.google", "Continue with Google")}</span>
             </button>
 
             <div className="my-4 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
@@ -195,14 +227,25 @@ function LoginPage() {
                 <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   {t("auth.password", "Password")}
                 </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-0.5 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
-                  placeholder="••••••••"
-                />
+                <div className="mt-0.5 flex items-center gap-2">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
               </div>
               <button
                 type="submit"

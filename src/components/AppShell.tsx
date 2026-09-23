@@ -152,28 +152,43 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     if (user?.id) {
       supabase
         .from("workspaces")
-        .select("id, name, problem_statement")
+        .select("id, name, problem_statement, industry, goals, constraints_text, intake_mode, intake_method, language_code, workspace_context")
         .eq("owner_id", user.id)
         .order("updated_at", { ascending: false })
         .then(({ data: wsList }) => {
           if (wsList && wsList.length > 0 && wsList[0]) {
             const wsId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
             const currentWs = wsList.find((w) => w.id === wsId) || wsList[0];
+
+            const storedCtx =
+              currentWs.workspace_context && typeof currentWs.workspace_context === "object"
+                ? (currentWs.workspace_context as Record<string, unknown>)
+                : null;
+
+            const fullContext = {
+              businessName: (storedCtx?.["businessName"] as string) || currentWs.name || "Enterprise Workspace",
+              problemStatement: (storedCtx?.["problemStatement"] as string) || currentWs.problem_statement || "",
+              industry: (storedCtx?.["industry"] as string) || currentWs.industry || "Cross-Industry Transformation",
+              goals: (storedCtx?.["goals"] as string) || currentWs.goals || "",
+              constraints: (storedCtx?.["constraints"] as string) || currentWs.constraints_text || "",
+              intakeMode: (storedCtx?.["intakeMode"] as string) || currentWs.intake_mode || "consult",
+              intakeMethod: (storedCtx?.["intakeMethod"] as string) || currentWs.intake_method || "prompt",
+              language: (storedCtx?.["language"] as string) || currentWs.language_code || storedLang,
+            };
+
             setActiveWs({
-              name: currentWs.name,
-              industry: "Custom Workspace",
-              mode: "consult",
-              lang: storedLang,
+              name: fullContext.businessName,
+              industry: fullContext.industry,
+              mode: (fullContext.intakeMode as any) || "consult",
+              lang: fullContext.language,
             });
+
             window.localStorage.setItem("bizzmitra.activeWorkspaceId", currentWs.id);
-            window.localStorage.setItem(
-              "bizzmitra.workspaceContext",
-              JSON.stringify({
-                businessName: currentWs.name,
-                problemStatement: currentWs.problem_statement || "",
-                industry: "Custom Workspace",
-              }),
-            );
+            window.localStorage.setItem("bizzmitra.activeWorkspaceName", fullContext.businessName);
+            window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(fullContext));
+            if (fullContext.language) {
+              window.localStorage.setItem("bizzmitra.language", fullContext.language);
+            }
           } else {
             // Check if user has local workspace context
             const raw = window.localStorage.getItem("bizzmitra.workspaceContext");

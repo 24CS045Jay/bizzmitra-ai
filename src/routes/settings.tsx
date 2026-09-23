@@ -307,7 +307,27 @@ function SettingsPage() {
     }
   }
 
-  function handleUpgradeTier(tierName: "Free Starter" | "Growth Pro" | "Enterprise Scale") {
+  async function handleTestRazorpay() {
+    try {
+      await initiateRazorpayPayment({
+        amountInRupees: 1,
+        planName: "Gateway Verification (₹1 Test)",
+        creditsGranted: 10,
+        customerName: (user?.user_metadata as Record<string, any> | undefined)?.["full_name"] || fullName || "Test Customer",
+        customerEmail: user?.email || "test@bizzmitra.ai",
+        onSuccess: (resp) => {
+          toast.success(`🎉 Test Payment Verified! Payment ID: ${resp.razorpay_payment_id}`);
+        },
+        onDismiss: () => {
+          toast.info("Test payment window closed.");
+        },
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to initialize Razorpay checkout.");
+    }
+  }
+
+  async function handleUpgradeTier(tierName: "Free Starter" | "Growth Pro" | "Enterprise Scale") {
     if (tierName === "Free Starter") {
       const updated: CreditWallet = {
         ...wallet,
@@ -318,22 +338,62 @@ function SettingsPage() {
       toast.success("Account switched to Free Starter plan");
       return;
     }
-    if (!isSuperAdmin) {
-      const targetModel =
-        tierName === "Enterprise Scale"
-          ? AI_MODELS.find((m) => m.id === "deepseek-v3") || null
-          : AI_MODELS.find((m) => m.id === "gpt-4o") || null;
-      setSelectedModelForPayment(targetModel);
-      setIsPaymentModalOpen(true);
+
+    const priceRupees =
+      tierName === "Enterprise Scale"
+        ? billingCycle === "annual" ? 153590 : 15999
+        : billingCycle === "annual" ? 38390 : 3999;
+
+    const creditsGranted =
+      tierName === "Enterprise Scale"
+        ? billingCycle === "annual" ? 60000 : 5000
+        : billingCycle === "annual" ? 12000 : 1000;
+
+    const priceFormatted = `₹${priceRupees.toLocaleString("en-IN")}`;
+
+    if (!razorpayKey && !getRazorpayKeyId()) {
+      setIsEditingKey(true);
+      toast.warning("Please configure your Razorpay Key ID (rzp_test_... or rzp_live_...) to initiate payment.");
       return;
     }
-    const updated: CreditWallet = {
-      ...wallet,
-      tier: tierName,
-    };
-    setWallet(updated);
-    saveCreditWallet(updated);
-    toast.success(`Admin bypass: Switched to ${tierName}!`);
+
+    try {
+      await initiateRazorpayPayment({
+        amountInRupees: priceRupees,
+        planName: `${tierName} (${billingCycle === "annual" ? "Annual" : "Monthly"})`,
+        creditsGranted,
+        customerName: (user?.user_metadata as Record<string, any> | undefined)?.["full_name"] || fullName || "Enterprise Customer",
+        customerEmail: user?.email || undefined,
+        onSuccess: (resp) => {
+          const newBalance = wallet.balance + creditsGranted;
+          const updated: CreditWallet = {
+            ...wallet,
+            tier: tierName,
+            balance: newBalance,
+            monthlyQuota: wallet.monthlyQuota + creditsGranted,
+            transactions: [
+              {
+                id: `tx-plan-${Date.now().toString().slice(-6)}`,
+                description: `Razorpay Plan Upgrade (${resp.razorpay_payment_id}): ${tierName} (${priceFormatted}) — +${creditsGranted.toLocaleString("en-IN")} Credits`,
+                type: "credit",
+                amount: creditsGranted,
+                timestamp: "Just now",
+                balanceAfter: newBalance,
+              },
+              ...wallet.transactions,
+            ],
+          };
+          setWallet(updated);
+          saveCreditWallet(updated);
+          toast.success(`🎉 Payment of ${priceFormatted} confirmed (Ref: ${resp.razorpay_payment_id})! Upgraded to ${tierName}.`);
+        },
+        onDismiss: () => {
+          toast.info("Payment window closed.");
+        },
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to initialize Razorpay checkout.");
+    }
   }
 
   return (
@@ -343,13 +403,13 @@ function SettingsPage() {
         <h1 className="mt-2 font-display text-4xl font-extrabold sm:text-5xl">{t("settings.title", "Settings & Monetization")}</h1>
       </Reveal>
 
-      <Stagger className="mt-8 grid gap-4 lg:grid-cols-2">
-        <StaggerItem className="neu p-6">
+      <Stagger className="mt-8 grid gap-4 lg:grid-cols-2 w-full max-w-full">
+        <StaggerItem className="neu p-4 sm:p-6 min-w-0 overflow-hidden w-full">
           <h2 className="font-display text-lg font-bold">{t("settings.profile", "Profile")}</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Email</dt>
-              <dd className="truncate font-medium">{user?.email ?? "—"}</dd>
+              <dt className="shrink-0 text-muted-foreground">Email</dt>
+              <dd className="truncate font-medium min-w-0 text-right">{user?.email ?? "—"}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Current Plan</dt>
@@ -373,7 +433,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6 space-y-4">
+        <StaggerItem className="neu p-4 sm:p-6 min-w-0 overflow-hidden space-y-4 w-full">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Building2 className="size-4 text-primary" />
@@ -388,7 +448,7 @@ function SettingsPage() {
             Configure the active business problem statement. All solution blueprints (Architecture, BPMN, Wireframes, Database, Roadmap, ROI, Collaboration, and Exports) dynamically calibrate to this definition.
           </p>
 
-          <dl className="grid grid-cols-2 gap-3 text-xs neu-inset p-3">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs neu-inset p-3">
             <div>
               <dt className="text-muted-foreground">Domain Schema</dt>
               <dd className="font-semibold text-foreground">{(dbBlueprint.tables || []).length} Tables · {(dbBlueprint.apiSpecifications || dbBlueprint.apiEndpoints || []).length} APIs</dd>
@@ -477,7 +537,7 @@ function SettingsPage() {
         </StaggerItem>
 
         {/* AI Credit Wallet Section */}
-        <StaggerItem className="neu p-6 lg:col-span-2">
+        <StaggerItem className="neu p-4 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden w-full">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/80 pb-4">
             <div className="flex items-center gap-3">
               <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -524,42 +584,51 @@ function SettingsPage() {
                 </p>
               </div>
             </div>
-            <div>
-              {isEditingKey ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={razorpayKey}
-                    onChange={(e) => {
-                      setRazorpayKey(e.target.value);
-                      saveRazorpayKeyId(e.target.value);
-                    }}
-                    placeholder="rzp_test_... or rzp_live_..."
-                    className="neu-inset px-2.5 py-1 text-xs font-mono outline-none w-56"
-                  />
-                  <button
-                    onClick={() => {
-                      saveRazorpayKeyId(razorpayKey);
-                      setIsEditingKey(false);
-                      toast.success("Razorpay Key ID saved!");
-                    }}
-                    className="neu-sm neu-press px-2.5 py-1 text-xs font-bold text-primary"
-                  >
-                    Save
-                  </button>
-                </div>
-              ) : (
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setIsEditingKey(true)}
-                  className="neu-sm neu-press px-3 py-1 text-xs font-semibold text-primary hover:underline"
+                  type="button"
+                  onClick={handleTestRazorpay}
+                  className="neu-sm neu-press px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 hover:bg-emerald-500/10"
+                  title="Verify Razorpay Gateway with a test prompt"
                 >
-                  Configure Key
+                  <Sparkles className="size-3" /> Test Gateway
                 </button>
-              )}
-            </div>
+
+                {isEditingKey ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={razorpayKey}
+                      onChange={(e) => {
+                        setRazorpayKey(e.target.value);
+                        saveRazorpayKeyId(e.target.value);
+                      }}
+                      placeholder="rzp_test_... or rzp_live_..."
+                      className="neu-inset px-2.5 py-1 text-xs font-mono outline-none w-56"
+                    />
+                    <button
+                      onClick={() => {
+                        saveRazorpayKeyId(razorpayKey);
+                        setIsEditingKey(false);
+                        toast.success("Razorpay Key ID saved!");
+                      }}
+                      className="neu-sm neu-press px-2.5 py-1 text-xs font-bold text-primary"
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsEditingKey(true)}
+                    className="neu-sm neu-press px-3 py-1 text-xs font-semibold text-primary hover:underline"
+                  >
+                    Configure Key
+                  </button>
+                )}
+              </div>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-3">
             <div className="rounded-xl border border-border bg-background/50 p-4">
               <p className="text-xs text-muted-foreground">Available Credits</p>
               <p className="mt-1 font-display text-3xl font-extrabold text-primary">{wallet.balance}</p>
@@ -587,13 +656,13 @@ function SettingsPage() {
             </div>
             <div className="rounded-xl border border-border bg-background/40 divide-y divide-border/60 overflow-hidden">
               {wallet.transactions.slice(0, 4).map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between p-3 text-xs">
-                  <div className="flex items-center gap-2.5">
-                    <span className={tx.type === "credit" ? "text-emerald-500 font-bold" : "text-amber-500 font-bold"}>
+                <div key={tx.id} className="flex items-center justify-between gap-3 p-3 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={tx.type === "credit" ? "text-emerald-500 font-bold shrink-0" : "text-amber-500 font-bold shrink-0"}>
                       {tx.type === "credit" ? "+" : "—"}
                     </span>
-                    <div>
-                      <p className="font-semibold">{tx.description}</p>
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{tx.description}</p>
                       <p className="text-[11px] text-muted-foreground">{tx.timestamp}</p>
                     </div>
                   </div>
@@ -610,7 +679,7 @@ function SettingsPage() {
         </StaggerItem>
 
         {/* Pricing Tiers & Upgrade Engine */}
-        <StaggerItem className="neu p-6 lg:col-span-2">
+        <StaggerItem className="neu p-4 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden w-full">
           <div className="text-center max-w-xl mx-auto mb-6">
             <h2 className="font-display text-2xl font-extrabold">{t("settings.plans", "Subscription Plans & SaaS Tiers")}</h2>
             <p className="text-xs text-muted-foreground mt-1 mb-4">
@@ -704,7 +773,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6 lg:col-span-2">
+        <StaggerItem className="neu p-4 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden w-full">
           <h2 className="font-display text-lg font-bold">{t("settings.appearance", "Appearance & Theme")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Switch between Warm Graphite (light) and Ambient Ray (dark) modes.
@@ -737,7 +806,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6 lg:col-span-2">
+        <StaggerItem className="neu p-4 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden w-full">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-lg font-bold">{t("settings.language", "Language & Multilingual Support")}</h2>
@@ -771,7 +840,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6 lg:col-span-2">
+        <StaggerItem className="neu p-4 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden w-full">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg font-bold">Export Defaults & Deliverables Bundle</h2>
             <span className="rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">

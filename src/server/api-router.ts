@@ -195,7 +195,17 @@ export async function handleApiRoute(
     if (request.method === "POST") {
       try {
         const body = await request.json();
-        const { name, problemStatement } = body;
+        const {
+          name,
+          problemStatement,
+          industry,
+          goals,
+          constraints,
+          intakeMode,
+          intakeMethod,
+          language,
+          workspaceContext,
+        } = body;
         if (!name?.trim()) {
           return jsonResponse({ error: "Workspace name is required" }, 400);
         }
@@ -234,10 +244,17 @@ export async function handleApiRoute(
           .insert({
             name: name.trim(),
             problem_statement: problemStatement || null,
+            industry: industry || "Cross-Industry Transformation",
+            goals: goals || null,
+            constraints_text: constraints || null,
+            intake_mode: intakeMode || "consult",
+            intake_method: intakeMethod || "prompt",
+            language_code: language || "en",
+            workspace_context: workspaceContext || null,
             owner_id: user.id,
             status: "active",
-            maturity_score: 25,
-            ai_readiness_score: 72,
+            maturity_score: 54,
+            ai_readiness_score: 81,
           })
           .select()
           .single();
@@ -367,89 +384,200 @@ export async function handleApiRoute(
         problemStatement?: string;
         businessName?: string;
         industry?: string;
+        goals?: string;
+        constraints?: string;
+        intakeMode?: string;
+        intakeMethod?: string;
+        documentSummary?: string;
+        legacyTools?: string;
       };
-      const { problemStatement = "", businessName = "Enterprise Business", industry = "General" } = body;
+      const {
+        problemStatement = "",
+        businessName = "Enterprise Business",
+        industry = "General",
+        goals = "",
+        constraints = "",
+        intakeMode = "",
+        intakeMethod = "",
+        documentSummary = "",
+        legacyTools = "",
+      } = body;
+
       const groqKey =
         (env as any)?.GROQ_API_KEY ||
         process.env["GROQ_API_KEY"] ||
+        (env as any)?.VITE_GROQ_API_KEY ||
         process.env["VITE_GROQ_API_KEY"];
 
-      if (!groqKey) {
-        return jsonResponse({ error: "No GROQ_API_KEY configured" }, 503);
+      const geminiKey =
+        (env as any)?.GEMINI_API_KEY ||
+        process.env["GEMINI_API_KEY"] ||
+        (env as any)?.VITE_GEMINI_API_KEY ||
+        process.env["VITE_GEMINI_API_KEY"];
+
+      if (!groqKey && !geminiKey) {
+        console.error("[api/ai/discovery-interview] No AI keys configured: neither GROQ_API_KEY nor GEMINI_API_KEY found in server environment.");
+        return jsonResponse({ error: "No AI keys configured on server", details: "Neither GROQ_API_KEY nor GEMINI_API_KEY available." }, 503);
       }
 
-      const prompt = `You are an elite Enterprise Systems Architect and McKinsey/BCG Business Analyst for BizzMitra AI.
-A client submitted this business problem statement:
+      const prompt = `You are an elite Principal Enterprise Systems Architect and McKinsey/BCG Senior Business Analyst for BizzMitra AI.
+A client submitted this business problem statement and intake context:
 ---
 Business Name: ${businessName}
 Industry: ${industry}
 Problem Statement: ${problemStatement}
+${goals ? `Stated Goals: ${goals}` : ""}
+${constraints ? `Stated Constraints: ${constraints}` : ""}
+${intakeMode ? `Operating Mode: ${intakeMode}` : ""}
+${intakeMethod ? `Intake Channel: ${intakeMethod}` : ""}
+${documentSummary ? `Uploaded SOP/Document Context: ${documentSummary}` : ""}
+${legacyTools ? `Current Tools & Systems: ${legacyTools}` : ""}
 ---
 
 Your task:
-1. Generate exactly 3 progressive, deeply contextual diagnostic discovery interview questions for this specific business.
+1. Generate exactly 3 progressive, deeply contextual diagnostic discovery interview questions tailored specifically to "${businessName}" and their problem.
    - Question 1: Operational Scale, Volume & existing technical interface bottlenecks.
    - Question 2: Operational drop-off, manual errors, and friction points in their daily workflow.
    - Question 3: Governance, regulatory compliance, integrations (e.g. WhatsApp, APIs, ERP, Government portals), and self-serve access.
 2. For each question, provide:
-   - "question": string
+   - "question": string (Direct, insightful question tailored to this business)
    - "hint": string (brief 1-sentence technical design consequence)
    - "whyWeAsk": string (1-sentence justification for system sizing/architecture)
    - "missingEntity": string (short tag, e.g. "Daily test volume & analyzer protocol")
-   - "options": 3 realistic, specific, mutually exclusive choices.
+   - "options": array of exactly 3 realistic, specific, mutually exclusive choices.
    - "answer": the first recommended option string.
-3. Provide a concise 2-sentence "summary" synthesizing what was captured.
+3. Provide a concise 2-sentence "summary" synthesizing what was captured and the transformation scope for ${businessName}.
 4. Provide a structured "businessAnalysis" report:
    - "currentState": { "summary": string, "tools": string[], "bottlenecks": string[], "efficiencyScore": number between 25 and 45 }
-   - "stakeholders": array of 4 items { "role": string, "count": string, "needs": string, "impact": "Critical" or "High" or "Medium" }
-   - "gapAnalysis": array of 4 items { "area": string, "current": string, "future": string, "severity": "Critical" or "High" or "Medium" }
+   - "stakeholders": array of 4 items { "role": string, "count": string, "needs": string, "impact": "Critical" | "High" | "Medium" }
+   - "gapAnalysis": array of 4 items { "area": string, "current": string, "future": string, "severity": "Critical" | "High" | "Medium" }
    - "futureState": { "summary": string, "recommendedModules": string[], "automationOpportunities": string[] }
    - "businessImpact": array of 4 items { "metric": string, "current": string, "projected": string, "improvement": string }
 
-Return strictly valid JSON in this exact structure:
+Return strictly valid JSON in this exact structure with no markdown code fences and no preamble:
 {
-  "questions": [ ... ],
+  "questions": [
+    {
+      "question": "...",
+      "hint": "...",
+      "whyWeAsk": "...",
+      "missingEntity": "...",
+      "options": ["...", "...", "..."],
+      "answer": "..."
+    }
+  ],
   "summary": "...",
-  "businessAnalysis": { ... }
+  "businessAnalysis": {
+    "currentState": { "summary": "...", "tools": ["..."], "bottlenecks": ["..."], "efficiencyScore": 32 },
+    "stakeholders": [
+      { "role": "...", "count": "...", "needs": "...", "impact": "Critical" }
+    ],
+    "gapAnalysis": [
+      { "area": "...", "current": "...", "future": "...", "severity": "Critical" }
+    ],
+    "futureState": { "summary": "...", "recommendedModules": ["..."], "automationOpportunities": ["..."] },
+    "businessImpact": [
+      { "metric": "...", "current": "...", "projected": "...", "improvement": "..." }
+    ]
+  }
 }`;
 
-      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${groqKey}`,
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
-          messages: [
-            { role: "system", content: "You are an enterprise business analysis AI. Output strictly valid JSON." },
-            { role: "user", content: prompt },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.2,
-        }),
-      });
+      // 1. Try Groq Primary (Fast Llama 3.3 70B inference)
+      if (groqKey) {
+        try {
+          const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${groqKey}`,
+            },
+            body: JSON.stringify({
+              model: "llama-3.3-70b-versatile",
+              messages: [
+                { role: "system", content: "You are an enterprise business analysis AI. Output strictly valid JSON." },
+                { role: "user", content: prompt },
+              ],
+              response_format: { type: "json_object" },
+              temperature: 0.2,
+            }),
+          });
 
-      if (!groqRes.ok) {
-        const errText = await groqRes.text();
-        console.warn("[Groq API error]:", errText);
-        return jsonResponse({ error: "Groq LLM call failed", details: errText }, 502);
+          if (groqRes.ok) {
+            const groqData = await groqRes.json();
+            const contentStr = groqData.choices?.[0]?.message?.content;
+            if (contentStr) {
+              const cleanContent = contentStr.replace(/```json/g, "").replace(/```/g, "").trim();
+              const parsed = JSON.parse(cleanContent);
+              if (parsed && Array.isArray(parsed.questions) && parsed.questions.length >= 3) {
+                console.log("[api/ai/discovery-interview] Generated dynamic discovery via Groq Llama 3.3 70B");
+                return jsonResponse({
+                  success: true,
+                  modelUsed: "Groq Llama 3.3 70B",
+                  source: "groq-llm",
+                  questions: parsed.questions,
+                  summary: parsed.summary,
+                  businessAnalysis: parsed.businessAnalysis,
+                });
+              }
+            }
+          } else {
+            const errText = await groqRes.text();
+            console.warn(`[api/ai/discovery-interview] Groq API returned status ${groqRes.status}: ${errText}`);
+          }
+        } catch (groqErr: any) {
+          console.warn("[api/ai/discovery-interview] Groq call error:", groqErr?.message || groqErr);
+        }
       }
 
-      const groqData = await groqRes.json();
-      const contentStr = groqData.choices?.[0]?.message?.content;
-      if (!contentStr) {
-        return jsonResponse({ error: "Empty response from Groq" }, 502);
+      // 2. Fallback to Google Gemini
+      if (geminiKey) {
+        try {
+          const geminiModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
+          for (const model of geminiModels) {
+            const geminiRes = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contents: [
+                    { parts: [{ text: `You are an enterprise business analysis AI. Output strictly valid JSON.\n\n${prompt}` }] },
+                  ],
+                  generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
+                }),
+              },
+            );
+
+            if (geminiRes.ok) {
+              const gData = await geminiRes.json();
+              const textResponse = gData.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (textResponse) {
+                const cleanText = textResponse.replace(/```json/g, "").replace(/```/g, "").trim();
+                const parsed = JSON.parse(cleanText);
+                if (parsed && Array.isArray(parsed.questions) && parsed.questions.length >= 3) {
+                  console.log(`[api/ai/discovery-interview] Generated dynamic discovery via Google Gemini (${model})`);
+                  return jsonResponse({
+                    success: true,
+                    modelUsed: `Google Gemini (${model})`,
+                    source: "gemini-llm",
+                    questions: parsed.questions,
+                    summary: parsed.summary,
+                    businessAnalysis: parsed.businessAnalysis,
+                  });
+                }
+              }
+            } else {
+              const geminiErrText = await geminiRes.text();
+              console.warn(`[api/ai/discovery-interview] Gemini model ${model} returned status ${geminiRes.status}: ${geminiErrText}`);
+            }
+          }
+        } catch (geminiErr: any) {
+          console.warn("[api/ai/discovery-interview] Gemini call error:", geminiErr?.message || geminiErr);
+        }
       }
 
-      const parsed = JSON.parse(contentStr);
-      return jsonResponse({
-        success: true,
-        modelUsed: "Groq 120B AI (openai/gpt-oss-120b)",
-        questions: parsed.questions,
-        summary: parsed.summary,
-        businessAnalysis: parsed.businessAnalysis,
-      });
+      console.error("[api/ai/discovery-interview] Both Groq and Gemini AI providers failed.");
+      return jsonResponse({ error: "AI inference failed across providers", details: "Groq and Gemini both failed or returned invalid outputs." }, 502);
     } catch (err: any) {
       console.error("[api/ai/discovery-interview error]:", err);
       return jsonResponse({ error: err?.message || "Internal error" }, 500);
@@ -609,7 +737,7 @@ Return strictly valid JSON with this exact structure:
           Authorization: `Bearer ${groqKey}`,
         },
         body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
+          model: "llama-3.3-70b-versatile",
           messages: [
             { role: "system", content: "You are an enterprise systems architect and strategy consultant. Output strictly valid JSON." },
             { role: "user", content: prompt },
@@ -634,7 +762,7 @@ Return strictly valid JSON with this exact structure:
       const parsed = JSON.parse(contentStr);
       return jsonResponse({
         success: true,
-        modelUsed: "Groq 120B AI (openai/gpt-oss-120b)",
+        modelUsed: "Groq Llama 3.3 70B (High-Speed Inference)",
         framing: parsed.framing,
         solution: parsed.solution,
         modules: parsed.modules,
