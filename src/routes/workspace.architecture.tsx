@@ -33,6 +33,7 @@ import {
   type ArchitectureComponent,
 } from "@/lib/architecture-data";
 import { cn } from "@/lib/utils";
+import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/architecture")({
   head: () => ({
@@ -62,6 +63,7 @@ const LAYER_COLORS: Record<string, string> = {
 };
 
 function ArchitecturePage() {
+  useStageGate("architecture");
   const [tab, setTab] = useState<"hld" | "lld" | "components" | "sla">("hld");
   const [selectedComponent, setSelectedComponent] = useState<ArchitectureComponent | null>(null);
   const [copied, setCopied] = useState(false);
@@ -491,6 +493,8 @@ function ArchitecturePage() {
               ))}
             </div>
           </div>
+
+          <StageNextButton currentStageId="architecture" label="Proceed to Process Intelligence" />
         </div>
       </GenerationSequence>
 

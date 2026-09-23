@@ -33,6 +33,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentIngestionModal } from "@/components/DocumentIngestionModal";
+import { resetWorkspaceStages } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/new")({
   head: () => ({
@@ -286,10 +287,13 @@ function IntakePage() {
     }
     setBusy(true);
 
+    const safeBusinessName = businessName.trim() || "Enterprise Modernization Blueprint";
     const contextPayload = {
-      businessName: businessName.trim() || "TalentCraft HR Consultancy",
-      industry,
+      name: safeBusinessName,
+      businessName: safeBusinessName,
+      industry: industry || "Cross-Industry Transformation",
       problemStatement: problemStatement.trim(),
+      description: problemStatement.trim(),
       goals: goals.trim(),
       constraints: constraints.trim(),
       intakeMode: mode,
@@ -343,6 +347,7 @@ function IntakePage() {
           window.localStorage.setItem("bizzmitra.activeWorkspaceId", data.id);
           window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
           window.localStorage.setItem("bizzmitra.language", lang);
+          resetWorkspaceStages(data.id);
           window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
           toast.success("Workspace created successfully!");
           navigate({ to: "/workspace/discovery" });
@@ -355,6 +360,7 @@ function IntakePage() {
       window.localStorage.setItem("bizzmitra.activeWorkspaceId", localId);
       window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
       window.localStorage.setItem("bizzmitra.language", lang);
+      resetWorkspaceStages(localId);
       window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
       toast.success("Workspace created successfully!");
       navigate({ to: "/workspace/discovery" });
@@ -363,6 +369,7 @@ function IntakePage() {
       window.localStorage.setItem("bizzmitra.activeWorkspaceId", localId);
       window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
       window.localStorage.setItem("bizzmitra.language", lang);
+      resetWorkspaceStages(localId);
       window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
       toast.success("Workspace created successfully!");
       navigate({ to: "/workspace/discovery" });

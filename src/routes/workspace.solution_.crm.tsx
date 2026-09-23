@@ -43,6 +43,7 @@ import {
 } from "@/lib/solution-studio";
 import { cn } from "@/lib/utils";
 import { saveAndShareFile } from "@/lib/native-bridge";
+import { useStageGate } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/solution_/crm")({
   head: () => ({
@@ -181,6 +182,7 @@ const STATUS_COLORS: Record<string, string> = {
 /* ───────────── Main CRM Page Component ───────────── */
 
 function CRMPage() {
+  useStageGate("crm");
   const [workspaceContext, setWorkspaceContext] = useState<{
     businessName?: string;
     industry?: string;

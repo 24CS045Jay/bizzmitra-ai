@@ -24,13 +24,14 @@ export function WireframeVisualizer({
   const [activeScreen, setActiveScreen] = useState<ScreenConceptId>("dashboard");
   const [viewport, setViewport] = useState<ViewportMode>("desktop");
   const [showAnnotations, setShowAnnotations] = useState<boolean>(true);
+  const [kanbanFilter, setKanbanFilter] = useState<string>("");
   const [workspaceContext, setWorkspaceContext] = useState<{
     businessName: string;
     industry: string;
     problemStatement?: string;
   }>({
-    businessName: "TalentCraft HR Consultancy",
-    industry: "HR & Recruitment Services",
+    businessName: "Enterprise Workspace",
+    industry: "Digital Operations",
     problemStatement: "",
   });
 
@@ -40,8 +41,8 @@ export function WireframeVisualizer({
       if (raw) {
         const parsed = JSON.parse(raw);
         setWorkspaceContext({
-          businessName: parsed.businessName || "TalentCraft HR Consultancy",
-          industry: parsed.industry || "HR & Recruitment Services",
+          businessName: parsed.businessName || "Enterprise Workspace",
+          industry: parsed.industry || "Digital Operations",
           problemStatement: parsed.problemStatement || "",
         });
       }
@@ -257,47 +258,64 @@ export function WireframeVisualizer({
                     <input
                       type="text"
                       placeholder="Filter records..."
-                      className="w-24 sm:w-36 bg-transparent text-[11px] outline-none"
+                      value={kanbanFilter}
+                      onChange={(e) => setKanbanFilter(e.target.value)}
+                      className="w-24 sm:w-36 bg-transparent text-[11px] outline-none text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
                 </div>
 
                 {/* Multi-Column Kanban Board */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-                  {mock.kanbanColumns.map((col, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-xl border border-border/70 bg-surface/50 p-3 space-y-2.5"
-                    >
-                      <div className="flex items-center justify-between pb-1 border-b border-border/40">
-                        <span className="text-[11px] font-bold text-foreground truncate">
-                          {col.title}
-                        </span>
-                        <span className="size-2 rounded-full bg-primary" />
-                      </div>
-                      <div className="space-y-2">
-                        {col.items.map((item, ci) => (
-                          <div
-                            key={ci}
-                            className="rounded-lg border border-border/70 bg-card p-2.5 shadow-2xs text-[11px] space-y-1.5 hover:border-primary/50 transition-colors"
-                          >
-                            <p className="font-bold text-foreground leading-tight">
-                              {item.name}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground leading-snug">
-                              {item.meta}
-                            </p>
-                            <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[9px]">
-                              <span className="font-semibold text-primary">{item.tag}</span>
-                              <span className="rounded bg-muted/80 px-1.5 py-0.2 font-mono text-muted-foreground">
-                                {item.urgency}
-                              </span>
+                  {mock.kanbanColumns.map((col, idx) => {
+                    const filteredItems = kanbanFilter.trim()
+                      ? col.items.filter(
+                          (item) =>
+                            item.name.toLowerCase().includes(kanbanFilter.toLowerCase()) ||
+                            item.meta.toLowerCase().includes(kanbanFilter.toLowerCase()) ||
+                            item.tag.toLowerCase().includes(kanbanFilter.toLowerCase())
+                        )
+                      : col.items;
+                    return (
+                      <div
+                        key={idx}
+                        className="rounded-xl border border-border/70 bg-surface/50 p-3 space-y-2.5"
+                      >
+                        <div className="flex items-center justify-between pb-1 border-b border-border/40">
+                          <span className="text-[11px] font-bold text-foreground truncate">
+                            {col.title}
+                          </span>
+                          <span className="size-2 rounded-full bg-primary" />
+                        </div>
+                        <div className="space-y-2">
+                          {filteredItems.map((item, ci) => (
+                            <div
+                              key={ci}
+                              className="rounded-lg border border-border/70 bg-card p-2.5 shadow-2xs text-[11px] space-y-1.5 hover:border-primary/50 transition-colors"
+                            >
+                              <p className="font-bold text-foreground leading-tight">
+                                {item.name}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground leading-snug">
+                                {item.meta}
+                              </p>
+                              <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[9px]">
+                                <span className="font-semibold text-primary">{item.tag}</span>
+                                <span className="rounded bg-muted/80 px-1.5 py-0.2 font-mono text-muted-foreground">
+                                  {item.urgency}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                          {filteredItems.length === 0 && (
+                            <div className="py-4 text-center text-[10px] text-muted-foreground italic">
+                              No matching records
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ) : (

@@ -3,6 +3,9 @@
  * Generates standard-compliant Office XML/HTML documents that open natively in MS Office, Google Workspace, and LibreOffice.
  */
 import { saveAndShareFile } from "./native-bridge";
+import { getDatabaseBlueprint } from "./database-data";
+import { getRoadmapForWorkspace } from "./planning-data";
+import { getRoiModelForWorkspace } from "./roi-data";
 
 /**
  * Downloads a binary or text blob in the browser, or opens system share sheet on native mobile.
@@ -12,15 +15,51 @@ export function triggerFileDownload(filename: string, content: string, mimeType:
 }
 
 /**
- * Generates Word HTML string.
+ * Generates Word HTML string adapted to the active problem statement and workspace context.
  */
-export function exportToWordDocHtml(projectName: string): string {
+export function exportToWordDocHtml(projectName: string, workspaceContext?: any): string {
   const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  
+  // Resolve context from arg or fallback to localStorage
+  let ctx = workspaceContext;
+  if (!ctx && typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) ctx = JSON.parse(raw);
+    } catch {}
+  }
+
+  const title = ctx?.name || projectName || "Enterprise Solution Blueprint";
+  const industry = ctx?.industry || "Enterprise Cloud & Software";
+  const problemStatement = ctx?.problemStatement || ctx?.description || "Fragmented manual operations, legacy data silos, and turnaround latency requiring modern cloud automation.";
+
+  const dbBlueprint = getDatabaseBlueprint(ctx);
+  const roadmap = getRoadmapForWorkspace(ctx);
+  const roi = getRoiModelForWorkspace(ctx);
+
+  const apiRows = (dbBlueprint.apiSpecifications || dbBlueprint.apiEndpoints || []).slice(0, 5).map((api: any) => `
+    <tr>
+      <td><code>${api.method}</code></td>
+      <td><code>${api.path}</code></td>
+      <td>${api.summary}</td>
+      <td>Bearer JWT (${api.authRequired ? "Authenticated" : "Public"})</td>
+    </tr>
+  `).join("");
+
+  const phaseRows = (roadmap.phases || []).map((ph: any) => `
+    <tr>
+      <td>${ph.name}</td>
+      <td>${ph.title}</td>
+      <td>${ph.focus} (${ph.storyPoints} Story Pts)</td>
+      <td>Weeks ${ph.weeks}</td>
+    </tr>
+  `).join("");
+
   return `
 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
 <head>
   <meta charset="utf-8">
-  <title>${projectName} — Solution Architecture & Blueprint</title>
+  <title>${title} — Solution Architecture & Blueprint</title>
   <style>
     body { font-family: 'Calibri', 'Arial', sans-serif; line-height: 1.6; color: #1f2937; padding: 40px; }
     h1 { color: #111827; font-size: 26pt; border-bottom: 3px solid #10b981; padding-bottom: 8px; margin-bottom: 4px; }
@@ -36,7 +75,7 @@ export function exportToWordDocHtml(projectName: string): string {
   </style>
 </head>
 <body>
-  <h1>${projectName}</h1>
+  <h1>${title}</h1>
   <p style="font-size: 13pt; color: #059669; font-weight: bold;">Implementation-Ready Solution Blueprint & Architecture Specification</p>
   
   <table class="header-table">
@@ -45,25 +84,30 @@ export function exportToWordDocHtml(projectName: string): string {
       <td><strong>Date:</strong> ${dateStr}</td>
       <td><strong>Status:</strong> Approved for Execution</td>
     </tr>
+    <tr>
+      <td><strong>Industry:</strong> ${industry}</td>
+      <td><strong>Domain Engine:</strong> ${dbBlueprint.domainId.toUpperCase()}</td>
+      <td><strong>Governance:</strong> 100% Sign-Off Verified</td>
+    </tr>
   </table>
 
   <div class="callout">
-    <strong>Executive Summary:</strong> This document outlines the end-to-end digital transformation, cloud architecture, data models, and delivery milestones synthesized by the AI Solution Builder.
+    <strong>Executive Summary:</strong> This document outlines the end-to-end digital transformation, cloud architecture, domain data models, and delivery milestones synthesized for <strong>${title}</strong>.
   </div>
 
   <h2>1. Problem Statement & Transformation Scope</h2>
-  <p>The client currently relies on manual spreadsheet-driven workflows and fragmented legacy communications, creating significant operational turnaround lag (28 days average cycle) and candidate leakage (28% drop-off). The objective is to replace these isolated silos with an intelligent, cloud-native automated platform.</p>
+  <p>${problemStatement}</p>
 
   <h2>2. Solution Architecture (HLD & LLD)</h2>
   <h3>2.1 High-Level Topology</h3>
   <ul>
-    <li><strong>Client Tier:</strong> Single-page application built on React 19, TanStack Router, and Tailwind CSS v4.</li>
+    <li><strong>Client Tier:</strong> Single-page application built on React 19, TanStack Router, and responsive design.</li>
     <li><strong>API & Edge Gateway:</strong> Cloudflare Edge Workers handling JWT authentication, rate limiting, and request routing.</li>
     <li><strong>Application Services:</strong> Event-driven asynchronous microservices managed via Redis 7 and BullMQ queues.</li>
-    <li><strong>Data Persistence:</strong> PostgreSQL 16 with Row-Level Security (RLS) ensuring strict tenant isolation.</li>
+    <li><strong>Data Persistence:</strong> PostgreSQL 16 with Row-Level Security (RLS) ensuring strict tenant isolation across ${dbBlueprint.tables.length} domain tables.</li>
   </ul>
 
-  <h3>2.2 Core API Specifications</h3>
+  <h3>2.2 Core Domain API Specifications</h3>
   <table class="data-table">
     <thead>
       <tr>
@@ -74,24 +118,7 @@ export function exportToWordDocHtml(projectName: string): string {
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td><code>POST</code></td>
-        <td><code>/api/v1/candidates/ingest</code></td>
-        <td>Parses resume document and extracts profile metadata</td>
-        <td>Bearer JWT (Editor+)</td>
-      </tr>
-      <tr>
-        <td><code>GET</code></td>
-        <td><code>/api/v1/pipeline/stages</code></td>
-        <td>Returns real-time Kanban stage telemetry</td>
-        <td>Bearer JWT (Viewer+)</td>
-      </tr>
-      <tr>
-        <td><code>POST</code></td>
-        <td><code>/api/v1/interviews/schedule</code></td>
-        <td>Triggers automated candidate calendar invitations</td>
-        <td>Bearer JWT (Editor+)</td>
-      </tr>
+      ${apiRows}
     </tbody>
   </table>
 
@@ -99,40 +126,23 @@ export function exportToWordDocHtml(projectName: string): string {
   <table class="data-table">
     <thead>
       <tr>
-        <th>Sprint</th>
+        <th>Sprint Phase</th>
         <th>Deliverable Name</th>
         <th>Scope Highlights</th>
         <th>Timeline</th>
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td>Sprint 1-2</td>
-        <td>Foundation & Data Ingestion</td>
-        <td>PostgreSQL 16 RLS schema, Supabase Auth setup, document parser</td>
-        <td>Weeks 1 - 2</td>
-      </tr>
-      <tr>
-        <td>Sprint 3-4</td>
-        <td>Workflow Automation</td>
-        <td>BullMQ async workers, AI resume extractor, candidate stage triggers</td>
-        <td>Weeks 3 - 4</td>
-      </tr>
-      <tr>
-        <td>Sprint 5-6</td>
-        <td>Executive Analytics & Launch</td>
-        <td>Real-time telemetry, Razorpay billing, and end-to-end UAT</td>
-        <td>Weeks 5 - 6</td>
-      </tr>
+      ${phaseRows}
     </tbody>
   </table>
 
   <h2>4. Financial Model & Projected ROI</h2>
   <ul>
-    <li><strong>Implementation CapEx:</strong> ~₹18.5 Lakhs (6-week agile rollout)</li>
-    <li><strong>Projected Annual Labor Savings:</strong> ~₹68,400+ per recruiter annually</li>
-    <li><strong>Net Payback Horizon:</strong> 4.2 months post deployment</li>
-    <li><strong>3-Year Cumulative ROI:</strong> 340% multiple</li>
+    <li><strong>Implementation CapEx:</strong> ~${roi.summary.implementationCost} (${roadmap.targetTimelineWeeks || roadmap.totalWeeks || 8}-week rollout)</li>
+    <li><strong>Projected Annual Operational Savings:</strong> ~${roi.summary.annualSavings} per year</li>
+    <li><strong>Net Payback Horizon:</strong> ${roi.summary.paybackMonths} months post-deployment</li>
+    <li><strong>3-Year Cumulative ROI Multiple:</strong> ${roi.summary.threeYearRoi}%</li>
   </ul>
 </body>
 </html>`;
@@ -141,31 +151,61 @@ export function exportToWordDocHtml(projectName: string): string {
 /**
  * Generates CSV string for data exports.
  */
-export function generateExcelCsvContent(): string {
+export function generateExcelCsvContent(workspaceContext?: any): string {
+  const roi = getRoiModelForWorkspace(workspaceContext);
   return `Category,Metric Name,Value,Unit,Benchmark
-Operational Efficiency,Average Hiring Cycle Time,9,Days,28 Days
-Cost Optimization,Recruiter Labor Reclaimed,3240,Hours / Year,0
-Financial Return,Net Payback Horizon,2.4,Months,12 Months
-Quality & Accuracy,Candidate Drop-Off Rate,6,%,28%
-Platform Architecture,Database Engine,PostgreSQL 16,Engine,Excel Sheets
+Operational Efficiency,Average Cycle / TAT,${roi.paybackBreakdown.laborHoursSaved},Hours Reclaimed,Baseline
+Cost Optimization,Annual Net Savings,${roi.summary.annualSavings},INR,0
+Financial Return,Net Payback Horizon,${roi.summary.paybackMonths},Months,12 Months
+Financial Return,3-Year Cumulative ROI,${roi.summary.threeYearRoi},%,100%
+Platform Architecture,Database Engine,PostgreSQL 16 RLS,Engine,Legacy Silos
 Architecture Scale,Target SLA Uptime,99.9,%,95%
-Security Compliance,Tenant Isolation,RLS Multi-Tenant,Standard,Unsecured
+Security Compliance,Tenant Isolation,Multi-Tenant RLS,Standard,Unsecured
 `;
 }
 
 /**
  * Generates a full Microsoft Word Document (.doc / .docx compatible).
  */
-export function exportToWordDoc(projectName: string): void {
-  const wordHtml = exportToWordDocHtml(projectName);
+export function exportToWordDoc(projectName: string, workspaceContext?: any): void {
+  const wordHtml = exportToWordDocHtml(projectName, workspaceContext);
   triggerFileDownload(`${projectName.replace(/\s+/g, "_")}_Blueprint_Report.doc`, wordHtml, "application/msword");
 }
 
-
 /**
- * Generates a full Microsoft Excel Workbook (.xls / multi-sheet XML compatible).
+ * Generates a full Microsoft Excel Workbook (.xls / multi-sheet XML compatible) adapted to the domain.
  */
-export function exportToExcelWorkbook(projectName: string): void {
+export function exportToExcelWorkbook(projectName: string, workspaceContext?: any): void {
+  let ctx = workspaceContext;
+  if (!ctx && typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) ctx = JSON.parse(raw);
+    } catch {}
+  }
+
+  const roadmap = getRoadmapForWorkspace(ctx);
+  const roi = getRoiModelForWorkspace(ctx);
+  const dbBlueprint = getDatabaseBlueprint(ctx);
+
+  const taskXmlRows = (roadmap.tasks || []).map((t: any) => `
+   <Row>
+    <Cell><Data ss:Type="String">${t.id}</Data></Cell>
+    <Cell><Data ss:Type="String">${t.title.replace(/&/g, "&amp;")}</Data></Cell>
+    <Cell><Data ss:Type="String">${t.ownerRole.replace(/&/g, "&amp;")}</Data></Cell>
+    <Cell><Data ss:Type="Number">${t.estimateDays}</Data></Cell>
+    <Cell><Data ss:Type="String">${t.phase.toUpperCase()}</Data></Cell>
+    <Cell><Data ss:Type="String">${t.status}</Data></Cell>
+   </Row>`).join("");
+
+  const financialXmlRows = (roi.annualSavingsBreakdown || []).map((item: any) => `
+   <Row>
+    <Cell><Data ss:Type="String">${item.category.replace(/&/g, "&amp;")}</Data></Cell>
+    <Cell><Data ss:Type="String">Annual Optimization</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${item.amount}</Data></Cell>
+    <Cell><Data ss:Type="String">${item.description.replace(/&/g, "&amp;")}</Data></Cell>
+   </Row>`).join("");
+
   const excelXml = `<?xml version="1.0"?>
 <?mso-application progid="Excel.Sheet"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
@@ -198,46 +238,7 @@ export function exportToExcelWorkbook(projectName: string): void {
     <Cell><Data ss:Type="String">Sprint Phase</Data></Cell>
     <Cell><Data ss:Type="String">Status</Data></Cell>
    </Row>
-   <Row>
-    <Cell><Data ss:Type="String">TSK-101</Data></Cell>
-    <Cell><Data ss:Type="String">PostgreSQL Multi-Tenant Schema & RLS Setup</Data></Cell>
-    <Cell><Data ss:Type="String">Lead Database Architect</Data></Cell>
-    <Cell><Data ss:Type="Number">6</Data></Cell>
-    <Cell><Data ss:Type="String">Sprint 1</Data></Cell>
-    <Cell><Data ss:Type="String">Ready</Data></Cell>
-   </Row>
-   <Row>
-    <Cell><Data ss:Type="String">TSK-102</Data></Cell>
-    <Cell><Data ss:Type="String">Edge Worker API Gateway & JWT Authentication</Data></Cell>
-    <Cell><Data ss:Type="String">Backend Engineer</Data></Cell>
-    <Cell><Data ss:Type="Number">5</Data></Cell>
-    <Cell><Data ss:Type="String">Sprint 1</Data></Cell>
-    <Cell><Data ss:Type="String">Ready</Data></Cell>
-   </Row>
-   <Row>
-    <Cell><Data ss:Type="String">TSK-103</Data></Cell>
-    <Cell><Data ss:Type="String">Redis BullMQ Async Background Worker Pipeline</Data></Cell>
-    <Cell><Data ss:Type="String">DevOps / Cloud Specialist</Data></Cell>
-    <Cell><Data ss:Type="Number">8</Data></Cell>
-    <Cell><Data ss:Type="String">Sprint 2</Data></Cell>
-    <Cell><Data ss:Type="String">Planned</Data></Cell>
-   </Row>
-   <Row>
-    <Cell><Data ss:Type="String">TSK-104</Data></Cell>
-    <Cell><Data ss:Type="String">React 19 Interactive Kanban & Analytics UI</Data></Cell>
-    <Cell><Data ss:Type="String">Frontend Lead</Data></Cell>
-    <Cell><Data ss:Type="Number">9</Data></Cell>
-    <Cell><Data ss:Type="String">Sprint 2</Data></Cell>
-    <Cell><Data ss:Type="String">Planned</Data></Cell>
-   </Row>
-   <Row>
-    <Cell><Data ss:Type="String">TSK-105</Data></Cell>
-    <Cell><Data ss:Type="String">Razorpay INR Real-time Checkout Integration</Data></Cell>
-    <Cell><Data ss:Type="String">Fullstack Engineer</Data></Cell>
-    <Cell><Data ss:Type="Number">4</Data></Cell>
-    <Cell><Data ss:Type="String">Sprint 3</Data></Cell>
-    <Cell><Data ss:Type="String">Planned</Data></Cell>
-   </Row>
+   ${taskXmlRows}
   </Table>
  </Worksheet>
 
@@ -247,33 +248,22 @@ export function exportToExcelWorkbook(projectName: string): void {
    <Row ss:StyleID="Header">
     <Cell><Data ss:Type="String">Cost Element</Data></Cell>
     <Cell><Data ss:Type="String">Category</Data></Cell>
-    <Cell><Data ss:Type="String">Budget (INR)</Data></Cell>
-    <Cell><Data ss:Type="String">Expected Annual Benefit</Data></Cell>
+    <Cell><Data ss:Type="String">Budget / Impact (INR)</Data></Cell>
+    <Cell><Data ss:Type="String">Business Description</Data></Cell>
    </Row>
    <Row>
-    <Cell><Data ss:Type="String">Software Engineering & Architecture</Data></Cell>
+    <Cell><Data ss:Type="String">Total Implementation CapEx</Data></Cell>
     <Cell><Data ss:Type="String">CapEx</Data></Cell>
-    <Cell ss:StyleID="Currency"><Data ss:Type="Number">1250000</Data></Cell>
-    <Cell><Data ss:Type="String">Core Automation Engine</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${roi.summary.implementationCostNumeric}</Data></Cell>
+    <Cell><Data ss:Type="String">${dbBlueprint.domainId.toUpperCase()} Core Architecture &amp; Delivery</Data></Cell>
    </Row>
    <Row>
-    <Cell><Data ss:Type="String">Cloud Infrastructure & Edge Hosting</Data></Cell>
+    <Cell><Data ss:Type="String">Cloud Infrastructure &amp; Edge SLA</Data></Cell>
     <Cell><Data ss:Type="String">OpEx (Annual)</Data></Cell>
-    <Cell ss:StyleID="Currency"><Data ss:Type="Number">180000</Data></Cell>
-    <Cell><Data ss:Type="String">99.9% High Availability SLA</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${roi.summary.annualCloudCostNumeric}</Data></Cell>
+    <Cell><Data ss:Type="String">99.9% High Availability SLA &amp; RLS Multi-Tenant</Data></Cell>
    </Row>
-   <Row>
-    <Cell><Data ss:Type="String">Recruiter Time Waste Deflected</Data></Cell>
-    <Cell><Data ss:Type="String">ROI Benefit</Data></Cell>
-    <Cell ss:StyleID="Currency"><Data ss:Type="Number">0</Data></Cell>
-    <Cell ss:StyleID="Currency"><Data ss:Type="Number">684000</Data></Cell>
-   </Row>
-   <Row>
-    <Cell><Data ss:Type="String">Candidate Leakage Prevented</Data></Cell>
-    <Cell><Data ss:Type="String">ROI Benefit</Data></Cell>
-    <Cell ss:StyleID="Currency"><Data ss:Type="Number">0</Data></Cell>
-    <Cell ss:StyleID="Currency"><Data ss:Type="Number">450000</Data></Cell>
-   </Row>
+   ${financialXmlRows}
   </Table>
  </Worksheet>
 </Workbook>`;
@@ -282,14 +272,34 @@ export function exportToExcelWorkbook(projectName: string): void {
 }
 
 /**
- * Generates a full Microsoft PowerPoint Presentation Deck (.ppt / HTML slide deck).
+ * Generates a full Microsoft PowerPoint Presentation Deck (.ppt / HTML slide deck) adapted to the domain.
  */
-export function exportToPowerPointDeck(projectName: string): void {
+export function exportToPowerPointDeck(projectName: string, workspaceContext?: any): void {
+  let ctx = workspaceContext;
+  if (!ctx && typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) ctx = JSON.parse(raw);
+    } catch {}
+  }
+
+  const title = ctx?.name || projectName || "Enterprise Solution Blueprint";
+  const industry = ctx?.industry || "Enterprise Cloud & Software";
+  const problemStatement = ctx?.problemStatement || ctx?.description || "Fragmented manual operations, legacy data silos, and turnaround latency requiring modern cloud automation.";
+
+  const dbBlueprint = getDatabaseBlueprint(ctx);
+  const roadmap = getRoadmapForWorkspace(ctx);
+  const roi = getRoiModelForWorkspace(ctx);
+
+  const phaseBulletList = (roadmap.phases || []).map((ph: any) => `
+    <li><strong>${ph.name} (Weeks ${ph.weeks}):</strong> ${ph.title} — ${ph.focus} (${ph.storyPoints} Story Pts)</li>
+  `).join("");
+
   const pptHtml = `
 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:p='urn:schemas-microsoft-com:office:powerpoint' xmlns='http://www.w3.org/TR/REC-html40'>
 <head>
   <meta charset="utf-8">
-  <title>${projectName} — Solution Architecture Deck</title>
+  <title>${title} — Solution Architecture Deck</title>
   <style>
     body { font-family: 'Arial', sans-serif; background-color: #0f172a; color: #f8fafc; padding: 20px; }
     .slide { background-color: #1e293b; border: 2px solid #334155; border-radius: 12px; padding: 36px 44px; margin-bottom: 30px; min-height: 480px; page-break-after: always; position: relative; }
@@ -307,12 +317,12 @@ export function exportToPowerPointDeck(projectName: string): void {
 <body>
   <!-- Slide 1: Title -->
   <div class="slide">
-    <div class="badge">AI Solution Builder • Digital Transformation</div>
-    <h1>${projectName}</h1>
+    <div class="badge">AI Solution Builder • ${industry.toUpperCase()}</div>
+    <h1>${title}</h1>
     <p style="font-size: 15pt; color: #94a3b8;">Implementation-Ready Solution Architecture & Enterprise Blueprint</p>
     <div style="margin-top: 140px;">
       <p><strong>Generated By:</strong> BizzMitra-AI Transformation Platform</p>
-      <p><strong>Target Architecture:</strong> Cloud-Native, Event-Driven, Multi-Tenant</p>
+      <p><strong>Target Architecture:</strong> Cloud-Native, Event-Driven, Multi-Tenant (${dbBlueprint.domainId.toUpperCase()})</p>
     </div>
     <div class="footer-note">Confidential • For Client Review & Board Governance</div>
   </div>
@@ -320,16 +330,12 @@ export function exportToPowerPointDeck(projectName: string): void {
   <!-- Slide 2: Problem Definition -->
   <div class="slide">
     <h2>1. Current State & Legacy Bottlenecks</h2>
-    <h3>As-Is Manual Operations</h3>
-    <ul>
-      <li>High turn-around time (28 days average cycle) due to spreadsheet data fragmentation.</li>
-      <li>28% candidate drop-off rate caused by uncoordinated interview scheduling.</li>
-      <li>Lack of real-time telemetry across recruiters and client hiring leads.</li>
-    </ul>
+    <h3>Problem Statement & Transformation Scope</h3>
+    <p>${problemStatement}</p>
     <div class="metric-grid">
-      <div class="metric-card"><span>Current TAT</span><p>28 Days</p></div>
-      <div class="metric-card"><span>Candidate Drop-off</span><p>28%</p></div>
-      <div class="metric-card"><span>Manual Overhead</span><p>65%</p></div>
+      <div class="metric-card"><span>Baseline Cycle</span><p>${roi.operationalMetrics.avgProcessTime.baseline}</p></div>
+      <div class="metric-card"><span>Manual Defect Rate</span><p>${roi.operationalMetrics.errorRate.baseline}</p></div>
+      <div class="metric-card"><span>Labor Hours Spent</span><p>${roi.operationalMetrics.recruiterHoursPerWeek.baseline}</p></div>
     </div>
     <div class="footer-note">Slide 2 of 5 • BizzMitra-AI Executive Deck</div>
   </div>
@@ -339,10 +345,10 @@ export function exportToPowerPointDeck(projectName: string): void {
     <h2>2. High-Level Solution Architecture (HLD)</h2>
     <h3>Cloud-Native Microservices Topology</h3>
     <ul>
-      <li><strong>Frontend Web & Mobile:</strong> Sub-80ms client latency built on React 19 and TanStack Router.</li>
-      <li><strong>Edge Gateway:</strong> Cloudflare Worker with zero-trust JWT authentication and automated rate limiting.</li>
-      <li><strong>Async AI Workers:</strong> Redis 7 and BullMQ handling non-blocking resume intelligence.</li>
-      <li><strong>Data Layer:</strong> PostgreSQL 16 with Row-Level Security (RLS) enforcing strict tenant boundaries.</li>
+      <li><strong>Frontend Web & Mobile:</strong> Sub-80ms client latency built on React 19, Vite, and TanStack Router.</li>
+      <li><strong>Edge Gateway:</strong> Cloudflare Edge Worker with zero-trust JWT authentication and automated rate limiting.</li>
+      <li><strong>Async Workers:</strong> Redis 7 and BullMQ handling non-blocking domain intelligence & event queues.</li>
+      <li><strong>Data Layer:</strong> PostgreSQL 16 with Row-Level Security (RLS) across ${dbBlueprint.tables.length} domain tables.</li>
     </ul>
     <div class="footer-note">Slide 3 of 5 • BizzMitra-AI Executive Deck</div>
   </div>
@@ -351,14 +357,12 @@ export function exportToPowerPointDeck(projectName: string): void {
   <div class="slide">
     <h2>3. Execution Roadmap & Milestones</h2>
     <ul>
-      <li><strong>Phase 1 (Weeks 1-2):</strong> Database Schema, Row-Level Security, Core Auth & Workspace Initialization.</li>
-      <li><strong>Phase 2 (Weeks 3-4):</strong> Event-driven asynchronous worker queue and automated resume parsing engine.</li>
-      <li><strong>Phase 3 (Weeks 5-6):</strong> Executive analytics dashboard, Razorpay payment gateway, and pilot release.</li>
+      ${phaseBulletList}
     </ul>
     <div class="metric-grid">
-      <div class="metric-card"><span>Target Go-Live</span><p>6 Weeks</p></div>
-      <div class="metric-card"><span>Sprint Velocity</span><p>32 Pts/Sprint</p></div>
-      <div class="metric-card"><span>Total Effort</span><p>42 Person-Days</p></div>
+      <div class="metric-card"><span>Target Go-Live</span><p>${roadmap.targetTimelineWeeks || roadmap.totalWeeks || 8} Weeks</p></div>
+      <div class="metric-card"><span>Person-Days</span><p>${roadmap.totalPersonDays || 70} Days</p></div>
+      <div class="metric-card"><span>Confidence Score</span><p>${roadmap.confidenceScore || 92}%</p></div>
     </div>
     <div class="footer-note">Slide 4 of 5 • BizzMitra-AI Executive Deck</div>
   </div>
@@ -367,15 +371,15 @@ export function exportToPowerPointDeck(projectName: string): void {
   <div class="slide">
     <h2>4. Financial Model & Payback Velocity</h2>
     <ul>
-      <li>Total Implementation CapEx: ~₹18.5 Lakhs.</li>
-      <li>Direct Labor Waste Deflected: ~₹68,400+ per recruiter per year.</li>
-      <li>Candidate Leakage Recaptured: ~₹4.5 Lakhs in otherwise lost consultancy placement fees.</li>
-      <li>Net Payback Horizon: <strong>4.2 Months Post-Deployment</strong> (340% 3-Year ROI).</li>
+      <li>Total Implementation CapEx: ~${roi.summary.implementationCost}.</li>
+      <li>Direct Annual Operational Savings: ~${roi.summary.annualSavings} per year.</li>
+      <li>Net Payback Horizon: <strong>${roi.summary.paybackMonths} Months Post-Deployment</strong>.</li>
+      <li>3-Year Cumulative Return: <strong>${roi.summary.threeYearRoi}% ROI Multiple</strong>.</li>
     </ul>
     <div class="metric-grid">
-      <div class="metric-card"><span>Net Payback</span><p>4.2 Mos</p></div>
-      <div class="metric-card"><span>3-Year Cumulative ROI</span><p>340%</p></div>
-      <div class="metric-card"><span>First-Year Savings</span><p>₹11.3 Lakhs</p></div>
+      <div class="metric-card"><span>Net Payback</span><p>${roi.summary.paybackMonths} Mos</p></div>
+      <div class="metric-card"><span>3-Year Cumulative ROI</span><p>${roi.summary.threeYearRoi}%</p></div>
+      <div class="metric-card"><span>Annual Savings</span><p>${roi.summary.annualSavings}</p></div>
     </div>
     <div class="footer-note">Slide 5 of 5 • BizzMitra-AI Executive Deck</div>
   </div>

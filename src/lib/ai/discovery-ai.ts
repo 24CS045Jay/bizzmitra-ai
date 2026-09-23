@@ -1,14 +1,8 @@
 import type { BusinessAnalysisReport, DiscoveryQuestionItem } from "@/lib/demo-data";
 import {
-  HEALTHCARE_BUSINESS_ANALYSIS,
-  HEALTHCARE_DISCOVERY_SCRIPT,
-  HEALTHCARE_AI_SUMMARY,
-  HR_BUSINESS_ANALYSIS,
-  HR_DISCOVERY_SCRIPT,
-  HR_AI_SUMMARY,
-  NEXA_BUSINESS_ANALYSIS,
-  DISCOVERY_SCRIPT,
-  AI_SUMMARY,
+  getActiveDiscoveryScript,
+  getActiveAiSummary,
+  getActiveBusinessAnalysis,
 } from "@/lib/demo-data";
 
 export type DiscoveryInterviewPayload = {
@@ -57,40 +51,12 @@ export async function generateDynamicDiscovery(
     console.warn("[AI Discovery] Server LLM fetch warning:", apiErr);
   }
 
-  // Graceful Local Domain Heuristic Fallback
-  const lower = cleanPrompt.toLowerCase();
-  if (
-    lower.includes("pathology") ||
-    lower.includes("clinic") ||
-    lower.includes("health") ||
-    lower.includes("lims") ||
-    lower.includes("diagnostic") ||
-    lower.includes("patient") ||
-    lower.includes("biopsy") ||
-    lower.includes("apexcare") ||
-    lower.includes("hospital")
-  ) {
-    return {
-      questions: HEALTHCARE_DISCOVERY_SCRIPT,
-      summary: HEALTHCARE_AI_SUMMARY,
-      businessAnalysis: HEALTHCARE_BUSINESS_ANALYSIS,
-      source: "local-heuristics",
-    };
-  }
-
-  if (lower.includes("support") || lower.includes("ticket") || lower.includes("shopify")) {
-    return {
-      questions: DISCOVERY_SCRIPT,
-      summary: AI_SUMMARY,
-      businessAnalysis: NEXA_BUSINESS_ANALYSIS,
-      source: "local-heuristics",
-    };
-  }
-
+  // Graceful Multi-Domain Engine Fallback
   return {
-    questions: HR_DISCOVERY_SCRIPT,
-    summary: HR_AI_SUMMARY,
-    businessAnalysis: HR_BUSINESS_ANALYSIS,
+    questions: getActiveDiscoveryScript(cleanPrompt, businessName, industry),
+    summary: getActiveAiSummary(cleanPrompt, businessName, industry),
+    businessAnalysis: getActiveBusinessAnalysis(cleanPrompt, businessName, industry),
     source: "local-heuristics",
   };
 }
+

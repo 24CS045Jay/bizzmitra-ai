@@ -17,19 +17,19 @@ import {
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
-import { CountUp, Reveal, Stagger, StaggerItem } from "@/components/motion/primitives";
+import { CountUp, Reveal } from "@/components/motion/primitives";
 import {
-  ARTIFACT_MAP_EDGES,
-  ARTIFACT_MAP_NODES,
   ArtifactLayer,
+  ArtifactMapBlueprint,
   ArtifactNode,
-  TRACEABILITY_METRICS,
+  getArtifactMapForWorkspace,
 } from "@/lib/artifact-map-data";
+import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/map")({
   head: () => ({
@@ -47,42 +47,60 @@ export const Route = createFileRoute("/workspace/map")({
 });
 
 export function ArtifactMapPage() {
+  useStageGate("map");
   const [selectedNodeId, setSelectedNodeId] = useState<string>("hr-crm");
   const [activeLayerFilter, setActiveLayerFilter] = useState<ArtifactLayer | "all">("all");
 
-  // Read workspace context
-  const workspaceContext = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    const raw = localStorage.getItem("bizzmitra.workspaceContext");
-    if (!raw) return null;
+  // Read workspace context reactively
+  const [workspaceContext, setWorkspaceContext] = useState<{
+    id?: string;
+    name?: string;
+    businessName?: string;
+    industry?: string;
+    problemStatement?: string;
+    description?: string;
+  } | null>(null);
+
+  useEffect(() => {
     try {
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
+      const raw = localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) {
+        setWorkspaceContext(JSON.parse(raw));
+      }
+    } catch {}
   }, []);
 
-  const scenarioName = workspaceContext?.name ?? "TalentCraft HR Consultancy";
+  const mapBlueprint: ArtifactMapBlueprint = useMemo(
+    () => getArtifactMapForWorkspace(workspaceContext),
+    [workspaceContext]
+  );
 
   const byId = useMemo(() => {
-    return Object.fromEntries(ARTIFACT_MAP_NODES.map((n) => [n.id, n])) as Record<string, ArtifactNode>;
-  }, []);
+    return Object.fromEntries(mapBlueprint.nodes.map((n) => [n.id, n])) as Record<string, ArtifactNode>;
+  }, [mapBlueprint.nodes]);
 
-  const selectedNode = (byId[selectedNodeId] ?? ARTIFACT_MAP_NODES[0])!;
+  // Ensure selectedNode is always valid in the active blueprint
+  const selectedNode = byId[selectedNodeId] ?? mapBlueprint.nodes[0]!;
+
+  useEffect(() => {
+    if (!byId[selectedNodeId]) {
+      setSelectedNodeId(mapBlueprint.nodes[4]?.id ?? mapBlueprint.nodes[0]!.id);
+    }
+  }, [byId, selectedNodeId, mapBlueprint.nodes]);
 
   // Upstream parents & Downstream children for selected node
   const parentNodeIds = useMemo(() => {
-    return ARTIFACT_MAP_EDGES.filter((e) => e.to === selectedNodeId).map((e) => e.from);
-  }, [selectedNodeId]);
+    return mapBlueprint.edges.filter((e) => e.to === selectedNode.id).map((e) => e.from);
+  }, [selectedNode.id, mapBlueprint.edges]);
 
   const childNodeIds = useMemo(() => {
-    return ARTIFACT_MAP_EDGES.filter((e) => e.from === selectedNodeId).map((e) => e.to);
-  }, [selectedNodeId]);
+    return mapBlueprint.edges.filter((e) => e.from === selectedNode.id).map((e) => e.to);
+  }, [selectedNode.id, mapBlueprint.edges]);
 
   const filteredNodes = useMemo(() => {
-    if (activeLayerFilter === "all") return ARTIFACT_MAP_NODES;
-    return ARTIFACT_MAP_NODES.filter((n) => n.layer === activeLayerFilter);
-  }, [activeLayerFilter]);
+    if (activeLayerFilter === "all") return mapBlueprint.nodes;
+    return mapBlueprint.nodes.filter((n) => n.layer === activeLayerFilter);
+  }, [activeLayerFilter, mapBlueprint.nodes]);
 
   const layerColors: Record<ArtifactLayer, { border: string; bg: string; text: string }> = {
     foundation: { border: "border-purple-500/40", bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400" },
@@ -93,7 +111,7 @@ export function ArtifactMapPage() {
   };
 
   const copyLineage = () => {
-    navigator.clipboard.writeText(TRACEABILITY_METRICS.provenanceChain);
+    navigator.clipboard.writeText(mapBlueprint.metrics.provenanceChain);
     toast.success("Transformation provenance chain copied to clipboard!");
   };
 
@@ -104,6 +122,28 @@ export function ArtifactMapPage() {
         kicker="Signature USP #3 · Step 11"
         title="Connected Artifact Dependency Map"
       />
+
+      {/* Blueprint Context Banner */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          <span className="text-muted-foreground">Lineage Topology Context:</span>
+          <span className="font-bold text-foreground">
+            {workspaceContext?.businessName || workspaceContext?.name || mapBlueprint.scenarioName}
+          </span>
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+            {mapBlueprint.domainTitle}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link to="/workspace/insights" className="font-medium text-muted-foreground hover:text-primary transition-colors">
+            Financial ROI →
+          </Link>
+          <Link to="/workspace/solution/crm" className="font-medium text-primary hover:underline">
+            Workable App →
+          </Link>
+        </div>
+      </div>
 
       <div className="space-y-8 pb-16">
         {/* Top Hero Banner */}
@@ -155,7 +195,7 @@ export function ArtifactMapPage() {
                 Traceability Score
               </div>
               <p className="mt-1 font-display text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                {TRACEABILITY_METRICS.traceabilityScore}%
+                {mapBlueprint.metrics.traceabilityScore}%
               </p>
               <p className="text-[11px] text-muted-foreground">Zero orphaned artifacts</p>
             </div>
@@ -166,7 +206,7 @@ export function ArtifactMapPage() {
                 Connected Artifacts
               </div>
               <p className="mt-1 font-display text-xl font-bold">
-                {ARTIFACT_MAP_NODES.length} Modules
+                {mapBlueprint.nodes.length} Modules
               </p>
               <p className="text-[11px] text-muted-foreground">Across 5 transformation layers</p>
             </div>
@@ -177,7 +217,7 @@ export function ArtifactMapPage() {
                 Verified Pathways
               </div>
               <p className="mt-1 font-display text-xl font-bold">
-                {TRACEABILITY_METRICS.verifiedPathways} Directed Edges
+                {mapBlueprint.metrics.verifiedPathways} Directed Edges
               </p>
               <p className="text-[11px] text-muted-foreground">Bidirectional lineage</p>
             </div>
@@ -188,9 +228,9 @@ export function ArtifactMapPage() {
                 Active Version
               </div>
               <p className="mt-1 font-display text-xl font-bold">
-                v1.1 (Regenerated)
+                v1.1 (Synchronized)
               </p>
-              <p className="text-[11px] text-muted-foreground">Synchronized schema</p>
+              <p className="text-[11px] text-muted-foreground">Tailored to problem domain</p>
             </div>
           </div>
         </Reveal>
@@ -236,298 +276,204 @@ export function ArtifactMapPage() {
           {/* Interactive Graph Canvas (Scrollable on Mobile) */}
           <div className="w-full overflow-x-auto touch-pan-x rounded-2xl">
             <div className="relative h-[560px] min-w-[940px] rounded-2xl bg-card/60 p-4 border border-border/40">
-            {/* SVG Edges Layer */}
-            <svg className="absolute inset-0 size-full pointer-events-none" aria-hidden>
-              <defs>
-                <marker
-                  id="arrow"
-                  viewBox="0 0 10 10"
-                  refX="16"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-border)" />
-                </marker>
-                <marker
-                  id="arrow-active"
-                  viewBox="0 0 10 10"
-                  refX="16"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-primary)" />
-                </marker>
-              </defs>
+              {/* SVG Edges Layer */}
+              <svg className="absolute inset-0 size-full pointer-events-none" aria-hidden>
+                <defs>
+                  <marker
+                    id="arrow"
+                    viewBox="0 0 10 10"
+                    refX="16"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-border)" />
+                  </marker>
+                  <marker
+                    id="arrow-active"
+                    viewBox="0 0 10 10"
+                    refX="16"
+                    refY="5"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto-start-reverse"
+                  >
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-primary)" />
+                  </marker>
+                </defs>
 
-              {ARTIFACT_MAP_EDGES.map((edge) => {
-                const from = byId[edge.from];
-                const to = byId[edge.to];
-                if (!from || !to) return null;
+                {mapBlueprint.edges.map((edge) => {
+                  const from = byId[edge.from];
+                  const to = byId[edge.to];
+                  if (!from || !to) return null;
 
-                const isConnectedToSelected =
-                  edge.from === selectedNodeId || edge.to === selectedNodeId;
+                  const isConnectedToSelected =
+                    edge.from === selectedNode.id || edge.to === selectedNode.id;
 
-                const isParentEdge = edge.to === selectedNodeId;
-                const isChildEdge = edge.from === selectedNodeId;
+                  const isParentEdge = edge.to === selectedNode.id;
 
-                const strokeColor = isConnectedToSelected
-                  ? isParentEdge
-                    ? "#f59e0b" // Amber for input
-                    : "#10b981" // Emerald for output
-                  : edge.isUspFlow
-                    ? "var(--color-primary)"
-                    : "var(--color-border)";
+                  const strokeColor = isConnectedToSelected
+                    ? isParentEdge
+                      ? "#f59e0b" // Amber for input
+                      : "#10b981" // Emerald for output
+                    : edge.isUspFlow
+                      ? "var(--color-primary)"
+                      : "var(--color-border)";
+
+                  return (
+                    <g key={`${edge.from}-${edge.to}`}>
+                      <motion.line
+                        x1={`${from.x}%`}
+                        y1={`${from.y}%`}
+                        x2={`${to.x}%`}
+                        y2={`${to.y}%`}
+                        stroke={strokeColor}
+                        strokeWidth={isConnectedToSelected ? 2.5 : edge.isUspFlow ? 2 : 1.2}
+                        strokeDasharray={edge.isUspFlow ? "4 4" : undefined}
+                        opacity={
+                          selectedNode.id && !isConnectedToSelected && activeLayerFilter === "all"
+                            ? 0.25
+                            : 0.8
+                        }
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        markerEnd={isConnectedToSelected ? "url(#arrow-active)" : "url(#arrow)"}
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+
+              {/* Nodes Layer */}
+              {mapBlueprint.nodes.map((node) => {
+                const isSelected = node.id === selectedNode.id;
+                const isParent = parentNodeIds.includes(node.id);
+                const isChild = childNodeIds.includes(node.id);
+                const isDimmed =
+                  selectedNode.id &&
+                  !isSelected &&
+                  !isParent &&
+                  !isChild &&
+                  activeLayerFilter === "all";
+
+                const layerStyle = layerColors[node.layer];
 
                 return (
-                  <g key={`${edge.from}-${edge.to}`}>
-                    <motion.line
-                      x1={`${from.x}%`}
-                      y1={`${from.y}%`}
-                      x2={`${to.x}%`}
-                      y2={`${to.y}%`}
-                      stroke={strokeColor}
-                      strokeWidth={isConnectedToSelected ? 2.5 : edge.isUspFlow ? 2 : 1.2}
-                      strokeDasharray={edge.isUspFlow ? "4 4" : undefined}
-                      opacity={
-                        selectedNodeId && !isConnectedToSelected && activeLayerFilter === "all"
-                          ? 0.25
-                          : 0.8
-                      }
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ duration: 0.8, ease: "easeOut" }}
-                      markerEnd={isConnectedToSelected ? "url(#arrow-active)" : "url(#arrow)"}
-                    />
-                  </g>
+                  <motion.div
+                    key={node.id}
+                    onClick={() => setSelectedNodeId(node.id)}
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 ${
+                      isDimmed ? "opacity-30 scale-95" : "opacity-100 scale-100"
+                    }`}
+                    style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div
+                      className={`rounded-xl p-3.5 min-w-[170px] shadow-sm transition-all ${
+                        isSelected
+                          ? "neu-inset ring-2 ring-primary border-primary bg-background"
+                          : isParent
+                            ? "ring-2 ring-amber-500/80 bg-background border-amber-500/50"
+                            : isChild
+                              ? "ring-2 ring-emerald-500/80 bg-background border-emerald-500/50"
+                              : "neu hover:border-primary/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1 text-[10px]">
+                        <span className={`font-bold ${layerStyle.text}`}>{node.kicker}</span>
+                        <span className="rounded bg-accent px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground">
+                          {node.version}
+                        </span>
+                      </div>
+
+                      <p className="mt-1 text-xs font-bold leading-snug line-clamp-1">{node.name}</p>
+
+                      <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground border-t border-border/40 pt-1.5">
+                        <span>{node.layerLabel}</span>
+                        {node.isUsp && (
+                          <span className="rounded-full bg-primary/10 px-1.5 py-0.2 text-[9px] font-bold text-primary">
+                            ★ USP
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
                 );
               })}
-            </svg>
-
-            {/* Nodes Layer */}
-            {ARTIFACT_MAP_NODES.map((node) => {
-              const isSelected = node.id === selectedNodeId;
-              const isParent = parentNodeIds.includes(node.id);
-              const isChild = childNodeIds.includes(node.id);
-              const isDimmed =
-                selectedNodeId &&
-                !isSelected &&
-                !isParent &&
-                !isChild &&
-                activeLayerFilter === "all";
-
-              const layerStyle = layerColors[node.layer];
-
-              return (
-                <motion.div
-                  key={node.id}
-                  onClick={() => setSelectedNodeId(node.id)}
-                  className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 ${
-                    isDimmed ? "opacity-30 scale-95" : "opacity-100 scale-100"
-                  }`}
-                  style={{ left: `${node.x}%`, top: `${node.y}%` }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <div
-                    className={`rounded-xl p-3.5 min-w-[170px] shadow-sm transition-all ${
-                      isSelected
-                        ? "neu-inset ring-2 ring-primary border-primary bg-background"
-                        : isParent
-                          ? "ring-2 ring-amber-500/80 bg-background border-amber-500/50"
-                          : isChild
-                            ? "ring-2 ring-emerald-500/80 bg-background border-emerald-500/50"
-                            : "neu hover:border-primary/50"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-1 text-[10px]">
-                      <span className={`font-bold ${layerStyle.text}`}>{node.kicker}</span>
-                      <span className="rounded bg-accent px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground">
-                        {node.version}
-                      </span>
-                    </div>
-
-                    <h4 className="mt-1 text-xs font-bold leading-snug">{node.name}</h4>
-
-                    {node.isUsp && (
-                      <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold text-primary">
-                        <Zap className="size-2.5" />
-                        {node.uspLabel}
-                      </span>
-                    )}
-
-                    <div className="mt-2 flex items-center justify-between border-t border-border/30 pt-1.5 text-[10px] text-muted-foreground">
-                      <span>{node.layerLabel}</span>
-                      <span
-                        className={`size-1.5 rounded-full ${
-                          node.status === "regenerated"
-                            ? "bg-primary animate-pulse"
-                            : "bg-emerald-500"
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
             </div>
           </div>
 
-          {/* Canvas Legend */}
-          <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground border-t border-border/40 pt-4">
-            <div className="flex flex-wrap items-center gap-4">
-              <span className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-full bg-primary" />
-                Active Selection
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-full bg-amber-500" />
-                Upstream Dependency (Inputs Consumed)
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="size-2.5 rounded-full bg-emerald-500" />
-                Downstream Derivative (Outputs Produced)
-              </span>
-            </div>
-            <div>
-              <span className="font-semibold text-foreground">Click any node</span> to trace its transformation path.
-            </div>
-          </div>
-        </Reveal>
-
-        {/* Selected Node Deep Inspector Panel */}
-        <Reveal className="neu p-6 md:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            {/* Left Col: Node Summary & Metrics */}
-            <div className="max-w-2xl space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="rounded-md bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
-                  {selectedNode.kicker} · {selectedNode.layerLabel}
-                </span>
-                <span className="rounded bg-muted px-2 py-0.5 text-xs font-mono font-medium text-muted-foreground">
-                  Version: {selectedNode.version}
-                </span>
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  Status: {selectedNode.status.toUpperCase()}
-                </span>
-              </div>
-
+          {/* Node Inspector Card */}
+          <div className="neu-inset p-5 rounded-xl border border-border/40 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-3">
               <div>
-                <h3 className="font-display text-2xl font-bold">{selectedNode.name}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {selectedNode.summary}
-                </p>
-              </div>
-
-              {/* Metrics Pills */}
-              <div className="flex flex-wrap gap-3 pt-2">
-                {selectedNode.metrics.map((m) => (
-                  <div key={m.label} className="neu-inset px-3 py-2 text-xs">
-                    <span className="text-muted-foreground">{m.label}: </span>
-                    <strong className="text-foreground">{m.value}</strong>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right Col: Navigation CTA */}
-            <div className="flex flex-col items-start gap-3 lg:items-end">
-              <Link
-                to={selectedNode.route}
-                className="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs font-bold text-primary-foreground shadow-sm transition hover:opacity-90"
-              >
-                Inspect Live Artifact
-                <ArrowRight className="size-4" />
-              </Link>
-              <span className="text-[11px] text-muted-foreground">
-                Path: <code className="font-mono text-foreground">{selectedNode.route}</code>
-              </span>
-            </div>
-          </div>
-
-          {/* Lineage Breakdown: Inputs Consumed vs Outputs Produced */}
-          <div className="mt-8 grid gap-6 md:grid-cols-2 border-t border-border/40 pt-6">
-            {/* Upstream Inputs */}
-            <div className="neu-inset p-4 space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-amber-500">
-                <ArrowUpRight className="size-4" />
-                Inputs Consumed From Upstream ({selectedNode.inputsConsumed.length})
-              </div>
-              <ul className="space-y-1.5 text-xs text-muted-foreground">
-                {selectedNode.inputsConsumed.map((inp, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="mt-1 size-1.5 rounded-full bg-amber-500" />
-                    <span>{inp}</span>
-                  </li>
-                ))}
-              </ul>
-              {parentNodeIds.length > 0 && (
-                <div className="mt-3 border-t border-border/30 pt-2 text-[11px]">
-                  <span className="text-muted-foreground">Parent Nodes: </span>
-                  {parentNodeIds.map((pId) => (
-                    <button
-                      key={pId}
-                      type="button"
-                      onClick={() => setSelectedNodeId(pId)}
-                      className="ml-1 text-primary hover:underline font-semibold"
-                    >
-                      {byId[pId]?.name ?? pId},
-                    </button>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-primary">{selectedNode.kicker}</span>
+                  <span className="text-xs text-muted-foreground">·</span>
+                  <span className="text-xs font-medium text-muted-foreground">{selectedNode.layerLabel}</span>
+                  {selectedNode.isUsp && (
+                    <span className="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                      {selectedNode.uspLabel}
+                    </span>
+                  )}
                 </div>
-              )}
-            </div>
-
-            {/* Downstream Outputs */}
-            <div className="neu-inset p-4 space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-emerald-500">
-                <ArrowDownRight className="size-4" />
-                Outputs Delivered to Downstream ({selectedNode.outputsProduced.length})
+                <h3 className="font-display text-lg font-bold mt-0.5">{selectedNode.name}</h3>
               </div>
-              <ul className="space-y-1.5 text-xs text-muted-foreground">
-                {selectedNode.outputsProduced.map((out, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="mt-1 size-1.5 rounded-full bg-emerald-500" />
-                    <span>{out}</span>
-                  </li>
-                ))}
-              </ul>
-              {childNodeIds.length > 0 && (
-                <div className="mt-3 border-t border-border/30 pt-2 text-[11px]">
-                  <span className="text-muted-foreground">Derivative Nodes: </span>
-                  {childNodeIds.map((cId) => (
-                    <button
-                      key={cId}
-                      type="button"
-                      onClick={() => setSelectedNodeId(cId)}
-                      className="ml-1 text-primary hover:underline font-semibold"
-                    >
-                      {byId[cId]?.name ?? cId},
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </Reveal>
 
-        {/* Provenance Assurance Banner */}
-        <Reveal className="neu p-6 border-l-4 border-l-primary flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
-              Enterprise Provenance & Change Propagation Guard
-            </h4>
-            <p className="text-xs text-muted-foreground">
-              {TRACEABILITY_METRICS.provenanceChain}
+              <div className="flex items-center gap-2">
+                <Link
+                  to={selectedNode.route}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90 transition"
+                >
+                  <span>Open Step</span>
+                  <ArrowRight className="size-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {selectedNode.summary}
             </p>
-          </div>
-          <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
-            ✓ 100% Traceable to Business Problem
+
+            {/* Upstream Inputs & Downstream Outputs */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg bg-background/50 p-3 space-y-2 border border-border/30">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+                  <ArrowDownRight className="size-3.5" />
+                  <span>Consumed Inputs (Upstream Lineage)</span>
+                </div>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  {selectedNode.inputsConsumed.map((inp, idx) => (
+                    <li key={idx} className="flex items-start gap-1.5">
+                      <span className="mt-1 size-1.5 rounded-full bg-amber-500 shrink-0" />
+                      <span>{inp}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="rounded-lg bg-background/50 p-3 space-y-2 border border-border/30">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  <ArrowUpRight className="size-3.5" />
+                  <span>Produced Outputs (Downstream Impact)</span>
+                </div>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  {selectedNode.outputsProduced.map((out, idx) => (
+                    <li key={idx} className="flex items-start gap-1.5">
+                      <span className="mt-1 size-1.5 rounded-full bg-emerald-500 shrink-0" />
+                      <span>{out}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
         </Reveal>
+
+        <StageNextButton currentStageId="map" label="Proceed to Governance & Collaboration" />
       </div>
     </AppShell>
   );
