@@ -134,9 +134,9 @@ export function ArtifactHeader({
       </nav>
 
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{kicker}</p>
-          <h1 className="mt-2 font-display text-4xl font-extrabold sm:text-5xl">{title}</h1>
+          <h1 className="mt-2 font-display text-3xl font-extrabold sm:text-4xl lg:text-5xl break-words leading-tight">{title}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button

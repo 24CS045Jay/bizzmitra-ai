@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -36,6 +36,7 @@ function SignupPage() {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState<"form" | "otp">("form");
@@ -350,15 +351,26 @@ function GoogleIcon({ className }: { className?: string }) {
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         {t("auth.password", "Password")}
                       </label>
-                      <input
-                        type="password"
-                        required
-                        minLength={6}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="mt-0.5 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
-                        placeholder="At least 6 characters"
-                      />
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          required
+                          minLength={6}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
+                          placeholder="At least 6 characters"
+                        />
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        </button>
+                      </div>
                     </div>
 
                     <button

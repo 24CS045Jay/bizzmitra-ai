@@ -110,6 +110,13 @@ export type Database = {
           name: string
           owner_id: string
           problem_statement: string | null
+          industry: string | null
+          goals: string | null
+          constraints_text: string | null
+          intake_mode: string | null
+          intake_method: string | null
+          language_code: string | null
+          workspace_context: Record<string, unknown> | null
           status: string
           ai_readiness_score: number
           updated_at: string
@@ -121,6 +128,13 @@ export type Database = {
           name: string
           owner_id: string
           problem_statement?: string | null
+          industry?: string | null
+          goals?: string | null
+          constraints_text?: string | null
+          intake_mode?: string | null
+          intake_method?: string | null
+          language_code?: string | null
+          workspace_context?: Record<string, unknown> | null
           status?: string
           ai_readiness_score?: number
         }
@@ -131,6 +145,13 @@ export type Database = {
           name?: string
           owner_id?: string
           problem_statement?: string | null
+          industry?: string | null
+          goals?: string | null
+          constraints_text?: string | null
+          intake_mode?: string | null
+          intake_method?: string | null
+          language_code?: string | null
+          workspace_context?: Record<string, unknown> | null
           status?: string
           ai_readiness_score?: number
         }

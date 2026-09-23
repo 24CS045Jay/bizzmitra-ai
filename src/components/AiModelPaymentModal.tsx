@@ -175,7 +175,7 @@ export function AiModelPaymentModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -187,10 +187,10 @@ export function AiModelPaymentModal({
 
         {/* Modal Window */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 16 }}
+          initial={{ opacity: 0, scale: 0.97, y: 40 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 16 }}
-          className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl"
+          exit={{ opacity: 0, scale: 0.97, y: 40 }}
+          className="relative w-full max-w-xl overflow-hidden rounded-t-3xl sm:rounded-3xl border border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl"
         >
           {/* Header Strip */}
           <div className="flex items-center justify-between border-b border-border/60 p-5">
@@ -224,7 +224,7 @@ export function AiModelPaymentModal({
             )}
           </div>
 
-          <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+          <div className="p-6 space-y-5 max-h-[85vh] overflow-y-auto">
             {/* Model Target Details */}
             <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
               <div className="flex items-start justify-between">
@@ -515,7 +515,7 @@ export function AiModelPaymentModal({
             )}
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-2 pb-[env(safe-area-inset-bottom,0px)]">
               <button
                 type="button"
                 onClick={onClose}
