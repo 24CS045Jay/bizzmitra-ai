@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { syncUserRoleAndWallet } from "@/lib/admin-rbac-data";
 import { gridMotionItems } from "@/lib/login-background";
 import { useTranslation } from "@/lib/i18n";
+import { restoreUserActiveWorkspace } from "@/lib/workspace-persistence";
 
 
 export const Route = createFileRoute("/login")({
@@ -33,7 +34,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
-  const { session, signInAsDemoAdmin, signInWithCustomUser } = useAuth();
+  const { session, signInAsDemoAdmin } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
 
@@ -62,13 +63,21 @@ function LoginPage() {
     }
 
     // 2. Normal user login via Supabase
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
     setBusy(false);
     if (error) {
       if (error.message.toLowerCase().includes("email not confirmed")) {
-        signInWithCustomUser(email, email.split("@")[0]);
-        toast.info(`Welcome, ${email}! Check out your workspaces.`);
-        navigate({ to: "/dashboard" });
+        toast.error("Your email is not verified yet. Please check your inbox or click Resend.", {
+          action: {
+            label: "Resend Verification",
+            onClick: async () => {
+              const { error: resendErr } = await supabase.auth.resend({ type: "signup", email: cleanEmail });
+              if (resendErr) toast.error(resendErr.message);
+              else toast.success("Verification email resent! Please check your inbox.");
+            },
+          },
+          duration: 8000,
+        });
         return;
       }
       toast.error(error.message);
@@ -77,58 +86,23 @@ function LoginPage() {
         syncUserRoleAndWallet(data.session.user.email, false);
       }
 
-      // Check if user has existing workspaces in Supabase
+      // Check and restore user's existing workspaces from Supabase
       const userId = data?.session?.user?.id;
       if (userId) {
-        try {
-          const { data: wsList } = await supabase
-            .from("workspaces")
-            .select("id, name, problem_statement, industry, goals, constraints_text, intake_mode, intake_method, language_code, workspace_context")
-            .eq("owner_id", userId)
-            .order("updated_at", { ascending: false });
-
-          if (wsList && wsList.length > 0 && wsList[0]) {
-            const ws = wsList[0];
-            localStorage.setItem("bizzmitra.activeWorkspaceId", ws.id);
-
-            // Restore full context — prefer stored workspace_context JSONB, fall back to individual columns
-            const storedCtx = ws.workspace_context && typeof ws.workspace_context === "object"
-              ? (ws.workspace_context as Record<string, unknown>)
-              : null;
-
-            const restoredContext = {
-              businessName: (storedCtx?.["businessName"] as string) || ws.name || "",
-              problemStatement: (storedCtx?.["problemStatement"] as string) || ws.problem_statement || "",
-              industry: (storedCtx?.["industry"] as string) || ws.industry || "General",
-              goals: (storedCtx?.["goals"] as string) || ws.goals || "",
-              constraints: (storedCtx?.["constraints"] as string) || ws.constraints_text || "",
-              intakeMode: (storedCtx?.["intakeMode"] as string) || ws.intake_mode || "consult",
-              intakeMethod: (storedCtx?.["intakeMethod"] as string) || ws.intake_method || "prompt",
-              language: (storedCtx?.["language"] as string) || ws.language_code || "en",
-            };
-
-            localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(restoredContext));
-            if (restoredContext.language) {
-              localStorage.setItem("bizzmitra.language", restoredContext.language);
-            }
-            navigate({ to: "/dashboard" });
-            return;
-          }
-        } catch {}
+        const restored = await restoreUserActiveWorkspace(userId);
+        if (restored) {
+          toast.success("Welcome back! Workspace loaded.");
+          navigate({ to: "/dashboard" });
+          return;
+        }
       }
 
-      // Check if user already created a custom workspace locally
-      const localWsId = localStorage.getItem("bizzmitra.activeWorkspaceId");
-      const localCtx = localStorage.getItem("bizzmitra.workspaceContext");
-      if (localWsId && localWsId !== "ws-talentcraft-default" && localCtx) {
-        navigate({ to: "/dashboard" });
-      } else {
-        // First-time user: Route to Workspaces hub where they can click Create Workspace!
-        localStorage.removeItem("bizzmitra.activeWorkspaceId");
-        localStorage.removeItem("bizzmitra.workspaceContext");
-        toast.info("Welcome! Here is your workspace hub.");
-        navigate({ to: "/dashboard" });
-      }
+      // First-time user with no workspaces yet: Route to Workspaces hub
+      localStorage.removeItem("bizzmitra.activeWorkspaceId");
+      localStorage.removeItem("bizzmitra.activeWorkspaceName");
+      localStorage.removeItem("bizzmitra.workspaceContext");
+      toast.info("Welcome! Here is your workspace hub.");
+      navigate({ to: "/dashboard" });
     }
   }
 

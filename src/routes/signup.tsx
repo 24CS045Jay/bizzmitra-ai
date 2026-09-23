@@ -42,7 +42,7 @@ function SignupPage() {
   const [step, setStep] = useState<"form" | "otp">("form");
   const [cooldown, setCooldown] = useState(0);
 
-  const { session, signInAsDemoAdmin, signInWithCustomUser, setSession } = useAuth();
+  const { session, signInAsDemoAdmin, setSession } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
 
@@ -146,14 +146,9 @@ function SignupPage() {
           }
 
           toast.error(
-            "Supabase email service could not deliver the confirmation email (hourly rate limit reached). Turn off 'Confirm email' in Supabase Dashboard -> Authentication -> Providers -> Email, or click below to enter directly.",
-            { duration: 8000 }
+            "Could not deliver confirmation email (rate limit reached). Please wait a few moments or try again.",
+            { duration: 6000 }
           );
-          // Allow instant session entry so the user is never blocked
-          signInWithCustomUser(email, fullName || email.split("@")[0]);
-          syncUserRoleAndWallet(email, true);
-          toast.success("Welcome! Entered workspace with instant access.");
-          navigate({ to: "/dashboard" });
           return;
         }
 
@@ -413,23 +408,32 @@ function GoogleIcon({ className }: { className?: string }) {
 
                         if (res1.session) {
                           setSession(res1.session);
+                          setBusy(false);
+                          toast.success("Account confirmed! Welcome to BizzMitra.");
+                          navigate({ to: "/dashboard" });
+                          return true;
                         } else if (password) {
-                          const { data: signInData } = await supabase.auth.signInWithPassword({
+                          const { data: signInData, error: sErr } = await supabase.auth.signInWithPassword({
                             email,
                             password,
                           });
                           if (signInData?.session) {
                             setSession(signInData.session);
-                          } else {
-                            signInWithCustomUser(email, fullName || email.split("@")[0]);
+                            setBusy(false);
+                            toast.success("Account confirmed! Welcome to BizzMitra.");
+                            navigate({ to: "/dashboard" });
+                            return true;
                           }
+                          setBusy(false);
+                          toast.error(sErr?.message || "Please sign in with your password.");
+                          navigate({ to: "/login" });
+                          return true;
                         } else {
-                          signInWithCustomUser(email, fullName || email.split("@")[0]);
+                          setBusy(false);
+                          toast.success("Account confirmed! Please log in.");
+                          navigate({ to: "/login" });
+                          return true;
                         }
-                        setBusy(false);
-                        toast.success("Account confirmed! Welcome to BizzMitra.");
-                        navigate({ to: "/dashboard" });
-                        return true;
                       }
 
                       // 2. Try Supabase verifyOtp with type "email"
@@ -445,32 +449,32 @@ function GoogleIcon({ className }: { className?: string }) {
 
                         if (res2.session) {
                           setSession(res2.session);
+                          setBusy(false);
+                          toast.success("Account confirmed! Welcome to BizzMitra.");
+                          navigate({ to: "/dashboard" });
+                          return true;
                         } else if (password) {
-                          const { data: signInData } = await supabase.auth.signInWithPassword({
+                          const { data: signInData, error: sErr } = await supabase.auth.signInWithPassword({
                             email,
                             password,
                           });
                           if (signInData?.session) {
                             setSession(signInData.session);
-                          } else {
-                            signInWithCustomUser(email, fullName || email.split("@")[0]);
+                            setBusy(false);
+                            toast.success("Account confirmed! Welcome to BizzMitra.");
+                            navigate({ to: "/dashboard" });
+                            return true;
                           }
+                          setBusy(false);
+                          toast.error(sErr?.message || "Please sign in with your password.");
+                          navigate({ to: "/login" });
+                          return true;
                         } else {
-                          signInWithCustomUser(email, fullName || email.split("@")[0]);
+                          setBusy(false);
+                          toast.success("Account confirmed! Please log in.");
+                          navigate({ to: "/login" });
+                          return true;
                         }
-                        setBusy(false);
-                        toast.success("Account confirmed! Welcome to BizzMitra.");
-                        navigate({ to: "/dashboard" });
-                        return true;
-                      }
-
-                      // 3. Seamless developer / testing fallback if code is 123456 or 12345678:
-                      if (trimmedCode === "123456" || trimmedCode === "12345678") {
-                        signInWithCustomUser(email, fullName || email.split("@")[0]);
-                        setBusy(false);
-                        toast.success(`Development code accepted for ${email}! Welcome.`);
-                        navigate({ to: "/dashboard" });
-                        return true;
                       }
 
                       setBusy(false);
@@ -482,7 +486,7 @@ function GoogleIcon({ className }: { className?: string }) {
                     onBack={() => setStep("form")}
                   />
 
-                  {/* Instant Confirm & Enter Workspace in case Supabase rate limit was hit */}
+                  {/* Direct Admin Auto-Confirmation in case email delivery was delayed */}
                   <div className="flex flex-col items-center gap-2 text-center rounded-2xl border border-border/60 bg-muted/20 p-4">
                     <button
                       type="button"
@@ -496,29 +500,33 @@ function GoogleIcon({ className }: { className?: string }) {
                           });
                           const regData = await regRes.json();
                           if (regData.success) {
-                            const { data: signInData } = await supabase.auth.signInWithPassword({ email, password });
+                            const { data: signInData, error: sErr } = await supabase.auth.signInWithPassword({ email, password });
                             if (signInData?.session) {
                               setSession(signInData.session);
                               if (signInData.session.user) {
                                 void syncUserProfile(signInData.session.user.id, fullName || email.split("@")[0]);
                               }
-                              toast.success("Account confirmed and saved to database! Welcome.");
+                              toast.success("Account verified and saved to database! Welcome.");
                               navigate({ to: "/dashboard" });
                               return;
+                            } else if (sErr) {
+                              toast.error(sErr.message);
                             }
+                          } else if (regData.error) {
+                            toast.error(regData.error);
                           }
-                        } catch {}
-                        setBusy(false);
-                        signInWithCustomUser(email, fullName || email.split("@")[0]);
-                        toast.success(`Account confirmed for ${email}! Welcome to your workspace.`);
-                        navigate({ to: "/dashboard" });
+                        } catch (err: any) {
+                          toast.error(err?.message || "Direct verification failed.");
+                        } finally {
+                          setBusy(false);
+                        }
                       }}
                       className="neu-press flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-500 transition-colors"
                     >
-                      <span>⚡ Instant Confirm & Enter Workspace</span>
+                      <span>⚡ Direct Confirm & Enter Workspace</span>
                     </button>
                     <p className="text-[11px] text-muted-foreground">
-                      Didn't get the email due to Supabase rate limits? Click above to enter instantly.
+                      Didn't receive the email code? Click above to verify your account directly via server authentication.
                     </p>
                   </div>
                 </div>

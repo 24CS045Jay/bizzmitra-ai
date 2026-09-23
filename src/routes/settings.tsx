@@ -307,7 +307,27 @@ function SettingsPage() {
     }
   }
 
-  function handleUpgradeTier(tierName: "Free Starter" | "Growth Pro" | "Enterprise Scale") {
+  async function handleTestRazorpay() {
+    try {
+      await initiateRazorpayPayment({
+        amountInRupees: 1,
+        planName: "Gateway Verification (₹1 Test)",
+        creditsGranted: 10,
+        customerName: (user?.user_metadata as Record<string, any> | undefined)?.["full_name"] || fullName || "Test Customer",
+        customerEmail: user?.email || "test@bizzmitra.ai",
+        onSuccess: (resp) => {
+          toast.success(`🎉 Test Payment Verified! Payment ID: ${resp.razorpay_payment_id}`);
+        },
+        onDismiss: () => {
+          toast.info("Test payment window closed.");
+        },
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to initialize Razorpay checkout.");
+    }
+  }
+
+  async function handleUpgradeTier(tierName: "Free Starter" | "Growth Pro" | "Enterprise Scale") {
     if (tierName === "Free Starter") {
       const updated: CreditWallet = {
         ...wallet,
@@ -318,22 +338,62 @@ function SettingsPage() {
       toast.success("Account switched to Free Starter plan");
       return;
     }
-    if (!isSuperAdmin) {
-      const targetModel =
-        tierName === "Enterprise Scale"
-          ? AI_MODELS.find((m) => m.id === "deepseek-v3") || null
-          : AI_MODELS.find((m) => m.id === "gpt-4o") || null;
-      setSelectedModelForPayment(targetModel);
-      setIsPaymentModalOpen(true);
+
+    const priceRupees =
+      tierName === "Enterprise Scale"
+        ? billingCycle === "annual" ? 153590 : 15999
+        : billingCycle === "annual" ? 38390 : 3999;
+
+    const creditsGranted =
+      tierName === "Enterprise Scale"
+        ? billingCycle === "annual" ? 60000 : 5000
+        : billingCycle === "annual" ? 12000 : 1000;
+
+    const priceFormatted = `₹${priceRupees.toLocaleString("en-IN")}`;
+
+    if (!razorpayKey && !getRazorpayKeyId()) {
+      setIsEditingKey(true);
+      toast.warning("Please configure your Razorpay Key ID (rzp_test_... or rzp_live_...) to initiate payment.");
       return;
     }
-    const updated: CreditWallet = {
-      ...wallet,
-      tier: tierName,
-    };
-    setWallet(updated);
-    saveCreditWallet(updated);
-    toast.success(`Admin bypass: Switched to ${tierName}!`);
+
+    try {
+      await initiateRazorpayPayment({
+        amountInRupees: priceRupees,
+        planName: `${tierName} (${billingCycle === "annual" ? "Annual" : "Monthly"})`,
+        creditsGranted,
+        customerName: (user?.user_metadata as Record<string, any> | undefined)?.["full_name"] || fullName || "Enterprise Customer",
+        customerEmail: user?.email || undefined,
+        onSuccess: (resp) => {
+          const newBalance = wallet.balance + creditsGranted;
+          const updated: CreditWallet = {
+            ...wallet,
+            tier: tierName,
+            balance: newBalance,
+            monthlyQuota: wallet.monthlyQuota + creditsGranted,
+            transactions: [
+              {
+                id: `tx-plan-${Date.now().toString().slice(-6)}`,
+                description: `Razorpay Plan Upgrade (${resp.razorpay_payment_id}): ${tierName} (${priceFormatted}) — +${creditsGranted.toLocaleString("en-IN")} Credits`,
+                type: "credit",
+                amount: creditsGranted,
+                timestamp: "Just now",
+                balanceAfter: newBalance,
+              },
+              ...wallet.transactions,
+            ],
+          };
+          setWallet(updated);
+          saveCreditWallet(updated);
+          toast.success(`🎉 Payment of ${priceFormatted} confirmed (Ref: ${resp.razorpay_payment_id})! Upgraded to ${tierName}.`);
+        },
+        onDismiss: () => {
+          toast.info("Payment window closed.");
+        },
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to initialize Razorpay checkout.");
+    }
   }
 
   return (
@@ -524,39 +584,48 @@ function SettingsPage() {
                 </p>
               </div>
             </div>
-            <div>
-              {isEditingKey ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={razorpayKey}
-                    onChange={(e) => {
-                      setRazorpayKey(e.target.value);
-                      saveRazorpayKeyId(e.target.value);
-                    }}
-                    placeholder="rzp_test_... or rzp_live_..."
-                    className="neu-inset px-2.5 py-1 text-xs font-mono outline-none w-56"
-                  />
-                  <button
-                    onClick={() => {
-                      saveRazorpayKeyId(razorpayKey);
-                      setIsEditingKey(false);
-                      toast.success("Razorpay Key ID saved!");
-                    }}
-                    className="neu-sm neu-press px-2.5 py-1 text-xs font-bold text-primary"
-                  >
-                    Save
-                  </button>
-                </div>
-              ) : (
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setIsEditingKey(true)}
-                  className="neu-sm neu-press px-3 py-1 text-xs font-semibold text-primary hover:underline"
+                  type="button"
+                  onClick={handleTestRazorpay}
+                  className="neu-sm neu-press px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 hover:bg-emerald-500/10"
+                  title="Verify Razorpay Gateway with a test prompt"
                 >
-                  Configure Key
+                  <Sparkles className="size-3" /> Test Gateway
                 </button>
-              )}
-            </div>
+
+                {isEditingKey ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={razorpayKey}
+                      onChange={(e) => {
+                        setRazorpayKey(e.target.value);
+                        saveRazorpayKeyId(e.target.value);
+                      }}
+                      placeholder="rzp_test_... or rzp_live_..."
+                      className="neu-inset px-2.5 py-1 text-xs font-mono outline-none w-56"
+                    />
+                    <button
+                      onClick={() => {
+                        saveRazorpayKeyId(razorpayKey);
+                        setIsEditingKey(false);
+                        toast.success("Razorpay Key ID saved!");
+                      }}
+                      className="neu-sm neu-press px-2.5 py-1 text-xs font-bold text-primary"
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsEditingKey(true)}
+                    className="neu-sm neu-press px-3 py-1 text-xs font-semibold text-primary hover:underline"
+                  >
+                    Configure Key
+                  </button>
+                )}
+              </div>
           </div>
 
           <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-3">
