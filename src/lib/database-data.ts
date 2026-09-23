@@ -32,6 +32,7 @@ export interface DatabaseBlueprint {
   ddlSchema: string;
   apiCategories: string[];
   apiSpecifications: ApiEndpointItem[];
+  apiEndpoints?: ApiEndpointItem[];
   metrics: {
     tableCount: string;
     apiCount: string;
@@ -1105,6 +1106,7 @@ export function getDatabaseBlueprint(context?: {
       ddlSchema: SOLAR_DDL_SCHEMA,
       apiCategories: ["All", "Telemetry", "Safety Control", "Operations", "Compliance"],
       apiSpecifications: SOLAR_API_SPECIFICATIONS,
+      apiEndpoints: SOLAR_API_SPECIFICATIONS,
       metrics: {
         tableCount: `${SOLAR_DATABASE_TABLES.length} Entities`,
         apiCount: `${SOLAR_API_SPECIFICATIONS.length} Routes`,
@@ -1134,6 +1136,7 @@ export function getDatabaseBlueprint(context?: {
       ddlSchema: HEALTHCARE_DDL_SCHEMA,
       apiCategories: ["All", "Specimen Ingestion", "Panic Dispatch", "EMR Integration"],
       apiSpecifications: HEALTHCARE_API_SPECIFICATIONS,
+      apiEndpoints: HEALTHCARE_API_SPECIFICATIONS,
       metrics: {
         tableCount: `${HEALTHCARE_DATABASE_TABLES.length} Entities`,
         apiCount: `${HEALTHCARE_API_SPECIFICATIONS.length} Routes`,
@@ -1164,6 +1167,7 @@ export function getDatabaseBlueprint(context?: {
       ddlSchema: LOGISTICS_DDL_SCHEMA,
       apiCategories: ["All", "Telemetry", "Fleet Dispatch", "Route Solvers", "Proof of Delivery"],
       apiSpecifications: LOGISTICS_API_SPECIFICATIONS,
+      apiEndpoints: LOGISTICS_API_SPECIFICATIONS,
       metrics: {
         tableCount: `${LOGISTICS_DATABASE_TABLES.length} Entities`,
         apiCount: `${LOGISTICS_API_SPECIFICATIONS.length} Routes`,
@@ -1182,6 +1186,7 @@ export function getDatabaseBlueprint(context?: {
     ddlSchema: HR_DDL_SCHEMA,
     apiCategories: ["All", "Recruitment", "Operations", "Client Portal"],
     apiSpecifications: HR_API_SPECIFICATIONS,
+    apiEndpoints: HR_API_SPECIFICATIONS,
     metrics: {
       tableCount: `${HR_DATABASE_TABLES.length} Entities`,
       apiCount: `${HR_API_SPECIFICATIONS.length} Routes`,

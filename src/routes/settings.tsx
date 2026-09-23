@@ -12,6 +12,11 @@ import {
   Zap,
   ShieldCheck,
   PlusCircle,
+  Building2,
+  Sliders,
+  Layers,
+  RefreshCw,
+  FileCode2,
 } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
@@ -37,6 +42,7 @@ import {
 } from "@/lib/razorpay";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { SUPPORTED_LANGUAGES, getCurrentLanguage, setLanguage, SupportedLanguage, useTranslation } from "@/lib/i18n";
+import { getDatabaseBlueprint } from "@/lib/database-data";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -80,6 +86,34 @@ const TIERS = [
   },
 ];
 
+const DOMAIN_PRESETS = [
+  {
+    name: "Solar & Clean Tech (SCADA Telemetry)",
+    industry: "Clean Tech & Renewable Energy",
+    problemStatement: "Fragmented SCADA telemetry across 45 distributed solar photovoltaic micro-grids causing 22% inverter downtime and lagging manual failure detection.",
+  },
+  {
+    name: "Healthcare & Diagnostics (LIS & HL7)",
+    industry: "Healthcare & Diagnostics",
+    problemStatement: "Specimen barcode mismatches and 6.5-hour turnaround delay between phlebotomy collection and pathology analyzer results violating NABL/CAP audit compliance.",
+  },
+  {
+    name: "Logistics & Supply Chain (Cold-Chain IoT)",
+    industry: "Logistics & Supply Chain",
+    problemStatement: "Perishable cargo spoilage and unmonitored cold-chain telemetry across 320 refrigerated transit vehicles creating high transit shrink.",
+  },
+  {
+    name: "FinTech & Lending (NBFC Underwriting)",
+    industry: "FinTech & Financial Services",
+    problemStatement: "Manual paper-based underwriting and delayed bureau verification leading to 96-hour loan approval turn-around time and high customer drop-off.",
+  },
+  {
+    name: "TalentCraft HR (Recruitment Pipeline)",
+    industry: "Human Resources & Recruitment",
+    problemStatement: "Manual spreadsheet-driven candidate tracking, uncoordinated interview scheduling, and 28-day hiring cycle lag with 28% drop-off.",
+  },
+];
+
 function SettingsPage() {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
@@ -87,11 +121,38 @@ function SettingsPage() {
   const [fullName, setFullName] = useState("");
   const [plan, setPlan] = useState("free");
   const [workspaceName, setWorkspaceName] = useState("");
+  const [problemStatement, setProblemStatement] = useState("");
+  const [industry, setIndustry] = useState("");
   const [workspace, setWorkspace] = useState<{
     id: string;
     name: string;
     maturity_score: number;
   } | null>(null);
+
+  const [workspaceContext, setWorkspaceContext] = useState<any>(() => {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem("bizzmitra.workspaceContext");
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    if (workspaceContext) {
+      setWorkspaceName(workspaceContext.name || workspaceContext.businessName || "Enterprise Solution Blueprint");
+      setProblemStatement(workspaceContext.problemStatement || workspaceContext.description || "");
+      setIndustry(workspaceContext.industry || "Enterprise Cloud & Software");
+    } else {
+      setWorkspaceName("Enterprise Solution Blueprint");
+      setProblemStatement("End-to-end enterprise digital transformation and automated workflows.");
+      setIndustry("Enterprise Software");
+    }
+  }, [workspaceContext]);
+
+  const dbBlueprint = getDatabaseBlueprint(workspaceContext);
 
   const [wallet, setWallet] = useState<CreditWallet>(INITIAL_WALLET);
   const isSuperAdmin = isSuperAdminEmail(user?.email);
@@ -126,8 +187,12 @@ function SettingsPage() {
       ]);
       setFullName(profile?.full_name ?? "");
       setPlan(profile?.plan ?? "free");
-      setWorkspace(workspaceResult.data);
-      setWorkspaceName(workspaceResult.data?.name ?? "");
+      if (workspaceResult.data) {
+        setWorkspace(workspaceResult.data);
+        if (!workspaceContext) {
+          setWorkspaceName(workspaceResult.data.name ?? "");
+        }
+      }
     }
     void loadSettings();
   }, [user]);
@@ -139,17 +204,47 @@ function SettingsPage() {
     else toast.success("Profile updated");
   }
 
-  async function renameWorkspace() {
-    if (!workspace || !workspaceName.trim()) return;
-    const { error } = await supabase
-      .from("workspaces")
-      .update({ name: workspaceName.trim() })
-      .eq("id", workspace.id);
-    if (error) toast.error(error.message);
-    else {
-      setWorkspace({ ...workspace, name: workspaceName.trim() });
-      toast.success("Workspace renamed");
+  function saveWorkspaceContext(newCtx?: any) {
+    const updated = newCtx || {
+      ...(workspaceContext || {}),
+      name: workspaceName.trim() || "Enterprise Modernization Blueprint",
+      businessName: workspaceName.trim() || "Enterprise Modernization Blueprint",
+      industry: industry.trim() || "Enterprise Software",
+      problemStatement: problemStatement.trim() || "End-to-end enterprise modernization.",
+      description: problemStatement.trim() || "End-to-end enterprise modernization.",
+    };
+    localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(updated));
+    setWorkspaceContext(updated);
+    window.dispatchEvent(new CustomEvent("bizzmitra:workspace-changed", { detail: updated }));
+    toast.success("Active problem statement & workspace blueprint synchronized!");
+    if (workspace && workspaceName.trim()) {
+      void supabase
+        .from("workspaces")
+        .update({ name: workspaceName.trim() })
+        .eq("id", workspace.id)
+        .then(({ error }) => {
+          if (!error) setWorkspace({ ...workspace, name: workspaceName.trim() });
+        });
     }
+  }
+
+  function applyPreset(preset: typeof DOMAIN_PRESETS[0]) {
+    setWorkspaceName(preset.name);
+    setIndustry(preset.industry);
+    setProblemStatement(preset.problemStatement);
+    const updated = {
+      ...(workspaceContext || {}),
+      name: preset.name,
+      businessName: preset.name,
+      industry: preset.industry,
+      problemStatement: preset.problemStatement,
+      description: preset.problemStatement,
+    };
+    saveWorkspaceContext(updated);
+  }
+
+  async function renameWorkspace() {
+    saveWorkspaceContext();
   }
 
   async function handleAddCredits(amount: number, priceRupees: number) {
@@ -278,6 +373,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
+<<<<<<< HEAD
         <StaggerItem className="neu p-6 min-w-0 overflow-hidden">
           <h2 className="font-display text-lg font-bold">{t("settings.workspace", "Active workspace")}</h2>
           <dl className="mt-4 space-y-3 text-sm">
@@ -288,18 +384,108 @@ function SettingsPage() {
             <div className="flex justify-between gap-4">
               <dt className="shrink-0 text-muted-foreground">Tenant Isolation</dt>
               <dd className="font-medium text-emerald-600 dark:text-emerald-400 text-right text-xs leading-normal">PostgreSQL Row-Level Security</dd>
+=======
+        <StaggerItem className="neu p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="size-4 text-primary" />
+              <h2 className="font-display text-lg font-bold">{t("settings.workspace", "Active Workspace & Problem Blueprint")}</h2>
+            </div>
+            <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-mono font-bold text-primary">
+              {dbBlueprint.domainId.toUpperCase()} ENGINE
+            </span>
+          </div>
+
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Configure the active business problem statement. All solution blueprints (Architecture, BPMN, Wireframes, Database, Roadmap, ROI, Collaboration, and Exports) dynamically calibrate to this definition.
+          </p>
+
+          <dl className="grid grid-cols-2 gap-3 text-xs neu-inset p-3">
+            <div>
+              <dt className="text-muted-foreground">Domain Schema</dt>
+              <dd className="font-semibold text-foreground">{(dbBlueprint.tables || []).length} Tables · {(dbBlueprint.apiSpecifications || dbBlueprint.apiEndpoints || []).length} APIs</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Tenant Security</dt>
+              <dd className="font-semibold text-emerald-600 dark:text-emerald-400">PostgreSQL Multi-Tenant RLS</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Maturity Score</dt>
+              <dd className="font-semibold text-foreground">{workspace?.maturity_score ?? 98}% Production Ready</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Real-time Sync</dt>
+              <dd className="font-semibold text-primary flex items-center gap-1">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live Synchronized
+              </dd>
+>>>>>>> 00002da75936af6193945078635a55c3ae44b3b1
             </div>
           </dl>
-          <div className="mt-5 flex gap-2">
-            <input
-              value={workspaceName}
-              onChange={(event) => setWorkspaceName(event.target.value)}
-              placeholder="Workspace name"
-              className="neu-inset min-w-0 flex-1 px-3 py-2 text-sm outline-none"
-            />
-            <button onClick={renameWorkspace} className="neu-sm neu-press px-3 py-2 text-xs font-semibold">
-              Rename
-            </button>
+
+          <div className="space-y-3 pt-1">
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Workspace / Scenario Title</label>
+              <input
+                value={workspaceName}
+                onChange={(event) => setWorkspaceName(event.target.value)}
+                placeholder="e.g. SolarGrid Telemetry Platform"
+                className="neu-inset w-full px-3 py-2 text-xs outline-none font-medium"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Target Industry Sector</label>
+              <input
+                value={industry}
+                onChange={(event) => setIndustry(event.target.value)}
+                placeholder="e.g. Clean Tech & Renewable Energy"
+                className="neu-inset w-full px-3 py-2 text-xs outline-none"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Problem Statement & Scope</label>
+              <textarea
+                value={problemStatement}
+                onChange={(event) => setProblemStatement(event.target.value)}
+                rows={3}
+                placeholder="Describe operational bottleneck, turnaround lag, compliance requirements, or manual silos..."
+                className="neu-inset w-full p-2.5 text-xs outline-none leading-relaxed"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={() => saveWorkspaceContext()}
+                className="neu-press flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 transition shadow-sm"
+              >
+                <Sparkles className="size-3.5" /> Save & Sync Blueprint
+              </button>
+            </div>
+
+            {/* Quick Domain Presets for testing */}
+            <div className="border-t border-border/40 pt-3">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
+                Quick-Switch Domain Problem Presets
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {DOMAIN_PRESETS.map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
+                      workspaceName === preset.name
+                        ? "bg-primary text-primary-foreground font-bold shadow-xs"
+                        : "neu-sm hover:text-primary"
+                    }`}
+                  >
+                    {preset.name.split(" ")[0]} ({preset.name.includes("Solar") ? "Solar" : preset.name.includes("Healthcare") ? "Health" : preset.name.includes("Logistics") ? "Logistics" : preset.name.includes("FinTech") ? "FinTech" : "HR"})
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </StaggerItem>
 
@@ -598,13 +784,31 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
+<<<<<<< HEAD
         <StaggerItem className="neu p-6 lg:col-span-2 min-w-0 overflow-hidden">
           <h2 className="font-display text-lg font-bold">Export defaults</h2>
+=======
+        <StaggerItem className="neu p-6 lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold">Export Defaults & Deliverables Bundle</h2>
+            <span className="rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              7 Enterprise Formats Active
+            </span>
+          </div>
+>>>>>>> 00002da75936af6193945078635a55c3ae44b3b1
           <p className="mt-1 text-sm text-muted-foreground">
-            Applied when you export any artifact from the chain.
+            Available deliverables automatically generated for <strong>{workspaceName || "the active problem statement"}</strong> in the Universal Export Center.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            {["PDF blueprint", "Word document", "PowerPoint deck", "Mermaid source"].map((f, i) => (
+            {[
+              "Executive Board PDF Blueprint",
+              "Microsoft Word Architecture Spec (.doc)",
+              "Microsoft Excel Estimates & ROI (.xls)",
+              "PowerPoint Executive Deck (.ppt)",
+              `${dbBlueprint.domainId.toUpperCase()} OpenAPI 3.1 JSON`,
+              "PostgreSQL 16 RLS DDL (.sql)",
+              `${dbBlueprint.domainId.toUpperCase()} Domain Master CSV`,
+            ].map((f, i) => (
               <span
                 key={f}
                 className={
