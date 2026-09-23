@@ -401,100 +401,80 @@ export function getRoiBlueprint(
     industry?: string;
     problemStatement?: string;
     description?: string;
+    businessAnalysis?: any;
   } | null
 ): DomainRoiBlueprint {
-  if (!workspaceContext) return HR_ROI_BLUEPRINT;
+  const safeName = workspaceContext?.businessName || workspaceContext?.name || "Enterprise Workspace";
+  const safeIndustry = workspaceContext?.industry || "Enterprise Operations";
+  const rawProblem = workspaceContext?.problemStatement || workspaceContext?.description || "";
 
-  const name = (workspaceContext.businessName || workspaceContext.name || "").toLowerCase();
-  const industry = (workspaceContext.industry || "").toLowerCase();
-  const problem = (workspaceContext.problemStatement || workspaceContext.description || "").toLowerCase();
-  const combined = `${name} ${industry} ${problem}`;
-
-  if (
-    combined.includes("solar") ||
-    combined.includes("clean tech") ||
-    combined.includes("renewable") ||
-    combined.includes("energy") ||
-    combined.includes("inverter") ||
-    combined.includes("photovoltaic") ||
-    combined.includes("grid")
-  ) {
-    return {
-      ...SOLAR_ROI_BLUEPRINT,
-      scenarioName: `${workspaceContext.businessName || workspaceContext.name || "Clean Tech Solar"} — Financial ROI & Readiness Engine`,
-    };
+  // Attempt to load dynamic Discovery business analysis
+  let dynamicAnalysis: any = workspaceContext?.businessAnalysis || null;
+  if (!dynamicAnalysis && typeof window !== "undefined") {
+    try {
+      const rawDisc = window.localStorage.getItem("bizzmitra.discoveryData") || window.localStorage.getItem("bizzmitra.discovery");
+      if (rawDisc) {
+        const parsed = JSON.parse(rawDisc);
+        dynamicAnalysis = parsed.businessAnalysis || parsed;
+      }
+    } catch {}
   }
 
-  if (
-    combined.includes("health") ||
-    combined.includes("clinic") ||
-    combined.includes("hospital") ||
-    combined.includes("medical") ||
-    combined.includes("lab") ||
-    combined.includes("doctor") ||
-    combined.includes("patient") ||
-    combined.includes("diagnostic") ||
-    combined.includes("pathology")
-  ) {
-    return {
-      ...HEALTHCARE_ROI_BLUEPRINT,
-      scenarioName: `${workspaceContext.businessName || workspaceContext.name || "Clinical Diagnostics"} — Financial ROI & Readiness Engine`,
-    };
-  }
+  // If dynamic businessAnalysis is available, synthesize real domain ROI blueprint
+  if (dynamicAnalysis && (dynamicAnalysis.businessImpact || dynamicAnalysis.currentState)) {
+    const efficiencyScore = dynamicAnalysis.currentState?.efficiencyScore || 35;
+    const impactList = Array.isArray(dynamicAnalysis.businessImpact) ? dynamicAnalysis.businessImpact : [];
 
-  if (
-    combined.includes("logistics") ||
-    combined.includes("fleet") ||
-    combined.includes("delivery") ||
-    combined.includes("truck") ||
-    combined.includes("dispatch") ||
-    combined.includes("transport") ||
-    combined.includes("freight") ||
-    combined.includes("cargo") ||
-    combined.includes("warehouse") ||
-    combined.includes("supply chain")
-  ) {
-    return {
-      ...LOGISTICS_ROI_BLUEPRINT,
-      scenarioName: `${workspaceContext.businessName || workspaceContext.name || "Fleet Logistics"} — Financial ROI & Readiness Engine`,
-    };
-  }
+    const dynamicBenchmarks = impactList.map((item: any) => ({
+      metric: item.metric || "Turnaround Efficiency",
+      before: item.current || "Baseline",
+      after: item.projected || "Automated",
+      change: item.improvement || "-75%",
+      favorable: true,
+    }));
 
-  if (
-    combined.includes("fintech") ||
-    combined.includes("lending") ||
-    combined.includes("loan") ||
-    combined.includes("banking") ||
-    combined.includes("payment") ||
-    combined.includes("credit") ||
-    combined.includes("wallet") ||
-    combined.includes("underwriting") ||
-    combined.includes("nbfc")
-  ) {
     return {
-      ...FINTECH_ROI_BLUEPRINT,
-      scenarioName: `${workspaceContext.businessName || workspaceContext.name || "FinTech Core"} — Financial ROI & Readiness Engine`,
-    };
-  }
-
-  if (
-    combined.includes("talentcraft") ||
-    combined.includes("recruitment") ||
-    combined.includes("staffing") ||
-    combined.includes("ats") ||
-    combined.includes("candidate") ||
-    combined.includes("hr consultancy")
-  ) {
-    return {
-      ...HR_ROI_BLUEPRINT,
-      scenarioName: `${workspaceContext.businessName || workspaceContext.name || "TalentCraft HR"} — Financial ROI & Readiness Engine`,
+      domainId: `custom-${safeIndustry.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+      domainTitle: `${safeName} (${safeIndustry})`,
+      scenarioName: `${safeName} — Financial ROI & Readiness Engine`,
+      executiveSubtitle: `Algorithmic ROI modeling direct labor time elimination, capacity velocity expansion, and quick payback for ${safeName}.`,
+      laborUnitLabel: "Operations Specialists",
+      platformCostInr: 280000,
+      defaultInputs: {
+        recruiters: 8,
+        monthlyApplicants: 500,
+        hourlyCostInr: 500,
+        spreadsheetHoursPerWeek: 18,
+        automationRatePct: Math.min(85, Math.max(50, 100 - efficiencyScore)),
+        placementFeeAvgInr: 60000,
+        monthlyPlacements: 12,
+      },
+      sliders: [
+        { key: "recruiters", label: `${safeIndustry} Operations Squad`, unit: "Specialists", min: 2, max: 35, step: 1, desc: "Team members currently performing manual processing" },
+        { key: "monthlyApplicants", label: "Monthly Operational Workload", unit: "Units", min: 50, max: 3000, step: 25, desc: "Key transactions/records processed monthly" },
+        { key: "hourlyCostInr", label: "Specialist Cost / Hour", unit: "₹ / hr", min: 200, max: 1500, step: 25, desc: "Blended hourly compensation and overhead" },
+        { key: "spreadsheetHoursPerWeek", label: "Manual Spreadsheet Time", unit: "hrs / wk / person", min: 5, max: 35, step: 1, desc: "Time lost to manual data coordination & entry" },
+        { key: "automationRatePct", label: "Process Automation Rate", unit: "%", min: 30, max: 85, step: 5, desc: "Target workflow automation efficiency" },
+      ],
+      benchmarks: dynamicBenchmarks.length >= 3 ? dynamicBenchmarks : [
+        { metric: "Cycle Turnaround Speed", before: "24 Days", after: "7 Days", change: "-71%", favorable: true },
+        { metric: "Manual Error & Discrepancy Rate", before: "18%", after: "2.5%", change: "-86%", favorable: true },
+        { metric: "Weekly Admin per Specialist", before: "18 Hours", after: "4 Hours", change: "-77%", favorable: true },
+        { metric: "Customer/Partner Escalations", before: "28 / month", after: "4 / month", change: "-85%", favorable: true },
+        { metric: "Audit & Reporting Preparation", before: "2 Weeks", after: "Instant", change: "-95%", favorable: true },
+      ],
+      readinessRadar: [
+        { dimension: "Strategy & Alignment", score: 90, benchmark: 70 },
+        { dimension: "Process Standardization", score: Math.min(95, efficiencyScore + 45), benchmark: 65 },
+        { dimension: "Data Architecture", score: 92, benchmark: 60 },
+        { dimension: "Engineering Readiness", score: 88, benchmark: 75 },
+        { dimension: "Team Adoption", score: 79, benchmark: 68 },
+        { dimension: "Security & Compliance", score: 91, benchmark: 80 },
+      ],
     };
   }
 
   // Universal custom domain fallback
-  const safeName = workspaceContext.businessName || workspaceContext.name || "Custom Platform";
-  const safeIndustry = workspaceContext.industry || "Enterprise Operations";
-
   return {
     domainId: "custom",
     domainTitle: safeIndustry,

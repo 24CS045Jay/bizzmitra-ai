@@ -13,6 +13,30 @@ import {
   generateTechnicalSpecMarkdown,
 } from "../lib/export-engine";
 
+function isNewSupabaseApiKey(value: string): boolean {
+  return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
+}
+
+function createSupabaseFetch(supabaseKey: string): typeof fetch {
+  return (input, init) => {
+    const headers = new Headers(
+      typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined,
+    );
+
+    if (init?.headers) {
+      new Headers(init.headers).forEach((value, key) => headers.set(key, value));
+    }
+
+    // New Supabase API keys are opaque strings, not bearer JWTs.
+    if (isNewSupabaseApiKey(supabaseKey) && headers.get("Authorization") === `Bearer ${supabaseKey}`) {
+      headers.delete("Authorization");
+    }
+
+    headers.set("apikey", supabaseKey);
+    return fetch(input, { ...init, headers });
+  };
+}
+
 function getSupabaseConfig(env: unknown) {
   const supabaseUrl =
     (env as any)?.SUPABASE_URL ||
@@ -24,7 +48,11 @@ function getSupabaseConfig(env: unknown) {
   const serviceRoleKey =
     (env as any)?.SUPABASE_SERVICE_ROLE_KEY ||
     process.env["SUPABASE_SERVICE_ROLE_KEY"] ||
-    "sb_secret_r-9ktd2UNo0Dv1xZEJwhLQ_PQBKXa5n";
+    (env as any)?.SUPABASE_PUBLISHABLE_KEY ||
+    (env as any)?.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    process.env["SUPABASE_PUBLISHABLE_KEY"] ||
+    process.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
+    "sb_publishable_UNXcq8DuZlHhTimGfZVx4A_qVCnnnZh";
 
   const anonKey =
     (env as any)?.SUPABASE_PUBLISHABLE_KEY ||
@@ -96,6 +124,9 @@ export async function handleApiRoute(
   const { supabaseUrl, serviceRoleKey } = getSupabaseConfig(env);
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
+    global: {
+      fetch: createSupabaseFetch(serviceRoleKey),
+    },
   });
 
   // 1. Auth: User Registration
@@ -325,55 +356,947 @@ export async function handleApiRoute(
     }
   }
 
-  // 5. Centralized AI Orchestration: POST /api/ai/generate
-  if (pathname === "/api/ai/generate" && request.method === "POST") {
-    const user = await getAuthenticatedUser(request, supabaseAdmin);
-    if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
+function extractJsonFromText(rawText: string): any {
+  if (!rawText) throw new Error("Empty response from AI");
+  let text = rawText.trim();
+  if (text.startsWith("```json")) {
+    text = text.replace(/^```json\s*/i, "").replace(/\s*```$/, "").trim();
+  } else if (text.startsWith("```")) {
+    text = text.replace(/^```\s*/, "").replace(/\s*```$/, "").trim();
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    const firstBrace = text.indexOf("{");
+    const lastBrace = text.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      const candidate = text.slice(firstBrace, lastBrace + 1);
+      try {
+        return JSON.parse(candidate);
+      } catch {
+        // Attempt clean-up of trailing unclosed arrays/objects if truncated
+        let fixed = candidate.replace(/,\s*([\]}])/g, "$1");
+        try {
+          return JSON.parse(fixed);
+        } catch {}
+      }
+    }
+    throw new Error("Could not extract valid JSON object from LLM response");
+  }
+}
 
+  // 5. Centralized AI Orchestration: POST /api/ai/generate
+  // Global key rotation pointers
+  let groqRotIndex = 0;
+  let geminiRotIndex = 0;
+
+  // Helper: Call LLM (Multi-key Groq pool primary with Multi-key Gemini fallback)
+  async function callLlmJson(prompt: string, systemPrompt = "You are an enterprise systems architect and McKinsey-grade strategy consultant at BizzMitra AI. You must return strictly valid JSON object. No other text or reasoning.") {
+    const rawGroqKeys = [
+      (env as any)?.GROQ_API_KEYS,
+      process.env["GROQ_API_KEYS"],
+      (env as any)?.VITE_GROQ_API_KEYS,
+      process.env["VITE_GROQ_API_KEYS"],
+      (env as any)?.GROQ_API_KEY,
+      process.env["GROQ_API_KEY"],
+      (env as any)?.VITE_GROQ_API_KEY,
+      process.env["VITE_GROQ_API_KEY"],
+    ]
+      .filter(Boolean)
+      .join(",");
+
+    const groqKeys = Array.from(
+      new Set(
+        rawGroqKeys
+          .split(",")
+          .map((k) => k.trim().replace(/^["']|["']$/g, ""))
+          .filter(Boolean)
+      )
+    );
+
+    const rawGeminiKeys = [
+      (env as any)?.GEMINI_API_KEYS,
+      process.env["GEMINI_API_KEYS"],
+      (env as any)?.VITE_GEMINI_API_KEYS,
+      process.env["VITE_GEMINI_API_KEYS"],
+      (env as any)?.GEMINI_API_KEY,
+      process.env["GEMINI_API_KEY"],
+      (env as any)?.VITE_GEMINI_API_KEY,
+      process.env["VITE_GEMINI_API_KEY"],
+    ]
+      .filter(Boolean)
+      .join(",");
+
+    const geminiKeys = Array.from(
+      new Set(
+        rawGeminiKeys
+          .split(",")
+          .map((k) => k.trim().replace(/^["']|["']$/g, ""))
+          .filter(Boolean)
+      )
+    );
+
+    console.log(`[callLlmJson] Initiating LLM call. Groq Pool: ${groqKeys.length} keys, Gemini Pool: ${geminiKeys.length} keys`);
+
+    // 1. Try Groq Ultra-Fast Primary with Multi-Key Rotation
+    if (groqKeys.length > 0) {
+      const groqModels = [
+        { id: "openai/gpt-oss-20b", maxTokens: 4000 },
+        { id: "openai/gpt-oss-120b", maxTokens: 4000 },
+      ];
+
+      // Try across all available Groq keys
+      for (let kIdx = 0; kIdx < groqKeys.length; kIdx++) {
+        const currentKey = groqKeys[(groqRotIndex + kIdx) % groqKeys.length]!;
+
+        for (const modelDef of groqModels) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+            const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${currentKey}`,
+              },
+              body: JSON.stringify({
+                model: modelDef.id,
+                messages: [
+                  { role: "system", content: systemPrompt },
+                  { role: "user", content: prompt },
+                ],
+                temperature: 0.2,
+                max_tokens: modelDef.maxTokens,
+              }),
+              signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            if (groqRes.ok) {
+              const groqData = await groqRes.json();
+              const contentStr = groqData.choices?.[0]?.message?.content;
+              if (contentStr) {
+                const parsed = extractJsonFromText(contentStr);
+                // Advance pointer on success for load-balancing
+                groqRotIndex = (groqRotIndex + 1) % groqKeys.length;
+                return {
+                  success: true,
+                  data: parsed,
+                  modelUsed: `Groq (${modelDef.id})`,
+                  source: "groq-llm",
+                };
+              }
+            } else {
+              const errText = await groqRes.text();
+              if (groqRes.status === 429) {
+                console.warn(`[callLlmJson] Groq key (${currentKey.slice(0, 8)}...) rate-limited (429). Rotating to next key in pool...`);
+                break; // Try next key immediately
+              }
+              console.warn(`[callLlmJson] Groq ${modelDef.id} response (${groqRes.status}):`, errText.slice(0, 120));
+              break;
+            }
+          } catch (err: any) {
+            console.warn(`[callLlmJson] Groq ${modelDef.id} execution error:`, err?.message || err);
+            break;
+          }
+        }
+      }
+    }
+
+    // 2. Fallback to Google Gemini Multi-Key Pool
+    if (geminiKeys.length > 0) {
+      const geminiModels = [
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-pro-preview",
+      ];
+
+      for (let gIdx = 0; gIdx < geminiKeys.length; gIdx++) {
+        const currentGeminiKey = geminiKeys[(geminiRotIndex + gIdx) % geminiKeys.length]!;
+
+        for (const model of geminiModels) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+            const geminiRes = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentGeminiKey}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contents: [
+                    { parts: [{ text: `${systemPrompt}\n\n${prompt}` }] },
+                  ],
+                  generationConfig: {
+                    responseMimeType: "application/json",
+                    temperature: 0.2,
+                    maxOutputTokens: 2048,
+                  },
+                }),
+                signal: controller.signal,
+              }
+            );
+
+            clearTimeout(timeoutId);
+
+            if (geminiRes.ok) {
+              const gData = await geminiRes.json();
+              const textResponse = gData.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (textResponse) {
+                const parsed = extractJsonFromText(textResponse);
+                geminiRotIndex = (geminiRotIndex + 1) % geminiKeys.length;
+                return {
+                  success: true,
+                  data: parsed,
+                  modelUsed: `Google Gemini (${model})`,
+                  source: "gemini-llm",
+                };
+              }
+            } else {
+              const errText = await geminiRes.text();
+              console.warn(`[callLlmJson] Gemini ${model} response (${geminiRes.status}):`, errText.slice(0, 120));
+              if (geminiRes.status === 429) {
+                break; // Rotate to next Gemini key
+              }
+            }
+          } catch (geminiErr: any) {
+            console.warn(`[callLlmJson] Gemini ${model} execution error:`, geminiErr?.message || geminiErr);
+          }
+        }
+      }
+    }
+
+    throw new Error("All AI inference providers (Groq and Gemini) failed or were unconfigured.");
+  }
+
+  // 5a. Unified Dynamic Artifact Generation: POST /api/ai/generate-artifact & POST /api/ai/generate
+  if ((pathname === "/api/ai/generate-artifact" || pathname === "/api/ai/generate") && request.method === "POST") {
     try {
       const body = (await request.json()) as {
         workspaceId?: string;
         moduleType?: ArtifactKind;
-        context?: Record<string, unknown>;
+        kind?: ArtifactKind;
+        businessName?: string;
+        industry?: string;
+        problemStatement?: string;
+        goals?: string;
+        constraints?: string;
+        discoveryData?: any;
+        forceFresh?: boolean;
+        customFields?: string[];
       };
-      const { workspaceId, moduleType } = body;
-      if (!moduleType || !PAYLOADS[moduleType]) {
-        return jsonResponse({ error: "Invalid moduleType" }, 400);
+
+      const kind = (body.kind || body.moduleType) as ArtifactKind;
+      if (!kind) {
+        return jsonResponse({ error: "Missing required 'kind' or 'moduleType' parameter" }, 400);
       }
 
-      const generatedPayload = PAYLOADS[moduleType];
-      let version = 1;
+      const workspaceId = body.workspaceId;
+      const isValidUuid = workspaceId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId);
 
-      if (workspaceId && moduleType !== "summary") {
-        const { data: latest } = await supabaseAdmin
+      // 1. Check if we already have this artifact generated in Supabase (Rate-limit / Cost awareness)
+      if (isValidUuid && !body.forceFresh) {
+        const { data: existing } = await supabaseAdmin
           .from("artifacts")
-          .select("version")
+          .select("content, version, created_at")
           .eq("workspace_id", workspaceId)
-          .eq("module_type", moduleType)
+          .eq("module_type", kind)
           .order("version", { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        version = (latest?.version ?? 0) + 1;
+        if (existing && existing.content) {
+          return jsonResponse({
+            success: true,
+            source: "database-cache",
+            modelUsed: "Persisted Supabase Artifact",
+            content: existing.content,
+            version: existing.version,
+          });
+        }
+      }
 
-        await supabaseAdmin.from("artifacts").insert({
-          workspace_id: workspaceId,
-          module_type: moduleType,
-          content: generatedPayload as any,
-          version,
-        });
+      // 2. Resolve Workspace Context
+      let bName = body.businessName || "Enterprise Workspace";
+      let ind = body.industry || "General Industry";
+      let prob = body.problemStatement || "";
+      let goals = body.goals || "";
+      let constraints = body.constraints || "";
+      let discovery = body.discoveryData || null;
+
+      // Pull latest workspace context if UUID is available
+      if (isValidUuid) {
+        const { data: ws } = await supabaseAdmin
+          .from("workspaces")
+          .select("name, industry, problem_statement, goals, constraints_text, workspace_context")
+          .eq("id", workspaceId)
+          .maybeSingle();
+
+        if (ws) {
+          if (ws.name) bName = ws.name;
+          if (ws.industry) ind = ws.industry;
+          if (ws.problem_statement) prob = ws.problem_statement;
+          if (ws.goals) goals = ws.goals;
+          if (ws.constraints_text) constraints = ws.constraints_text;
+          if (ws.workspace_context && !discovery) discovery = ws.workspace_context;
+        }
+      }
+
+      // 3. Upstream Prompt Chaining: Load previous stages from artifacts table
+      let upstreamSolution: any = null;
+      let upstreamArchitecture: any = null;
+      let upstreamProcess: any = null;
+
+      if (isValidUuid) {
+        const { data: artifactsList } = await supabaseAdmin
+          .from("artifacts")
+          .select("module_type, content")
+          .eq("workspace_id", workspaceId)
+          .in("module_type", ["solution", "architecture", "process", "framing"]);
+
+        if (artifactsList && artifactsList.length > 0) {
+          for (const art of artifactsList) {
+            if (art.module_type === "solution") upstreamSolution = art.content;
+            if (art.module_type === "architecture") upstreamArchitecture = art.content;
+            if (art.module_type === "process") upstreamProcess = art.content;
+            if (art.module_type === "framing" && !prob && (art.content as any)?.statement) {
+              prob = (art.content as any).statement;
+            }
+          }
+        }
+      }
+
+      const baseContextPrompt = `
+Business Name: ${bName}
+Industry: ${ind}
+Problem Statement: ${prob || "Operational automation and workflow optimization."}
+${goals ? `Business Goals: ${goals}` : ""}
+${constraints ? `Operational Constraints: ${constraints}` : ""}
+${discovery ? `Discovery Business Analysis: ${JSON.stringify(discovery)}` : ""}
+${upstreamSolution ? `Upstream Chosen Solution Pillars & Tech Stack: ${JSON.stringify(upstreamSolution)}` : ""}
+${upstreamArchitecture ? `Upstream System Architecture Components: ${JSON.stringify(upstreamArchitecture)}` : ""}
+${upstreamProcess ? `Upstream BPMN Process Flow Details: ${JSON.stringify(upstreamProcess)}` : ""}
+`;
+
+      // 4. Construct Kind-Specific Generation Prompt
+      let prompt = "";
+
+      if (kind === "framing") {
+        prompt = `You are an elite Business Strategy Analyst at BizzMitra AI.
+Analyze the following business context and frame the core problem:
+${baseContextPrompt}
+
+Return strictly valid JSON with this exact structure:
+{
+  "statement": "2-3 sentences synthesizing root causes, daily operational friction, and business drag for ${bName}",
+  "impact": [
+    { "metric": "string (e.g. Daily Backlog, First Response Time, Error Rate, Reclaimed Capacity)", "value": "string (e.g. 70%, 18 hrs, -35%)" },
+    { "metric": "string", "value": "string" },
+    { "metric": "string", "value": "string" },
+    { "metric": "string", "value": "string" }
+  ],
+  "rootCauses": [
+    { "title": "string", "detail": "string" },
+    { "title": "string", "detail": "string" },
+    { "title": "string", "detail": "string" }
+  ],
+  "constraints": [ "string", "string", "string" ]
+}`;
+      } else if (kind === "solution") {
+        prompt = `You are a Principal Enterprise Solutions Architect at BizzMitra AI.
+Design an end-to-end software solution architecture and modular capabilities tailored specifically for ${bName}:
+${baseContextPrompt}
+
+Return strictly valid JSON with this exact structure:
+{
+  "headline": "Compelling, specific architectural solution title tailored to ${bName}",
+  "summary": "2-3 sentences detailing the target architecture, resolution layer, and automation workflow",
+  "pillars": [
+    { "title": "string", "detail": "string" },
+    { "title": "string", "detail": "string" },
+    { "title": "string", "detail": "string" },
+    { "title": "string", "detail": "string" }
+  ],
+  "tradeoffs": [
+    { "option": "string", "verdict": "Recommended" or "Rejected" or "Deferred", "why": "string" },
+    { "option": "string", "verdict": "Rejected" or "Recommended" or "Deferred", "why": "string" },
+    { "option": "string", "verdict": "Rejected" or "Recommended" or "Deferred", "why": "string" }
+  ],
+  "stack": [
+    { "layer": "Presentation & Interface", "choice": "React 19 + TypeScript + Tailwind CSS", "why": "string" },
+    { "layer": "API Gateway & Edge Orchestration", "choice": "Cloudflare Workers / Node.js", "why": "string" },
+    { "layer": "Persistence & Core Data", "choice": "Supabase PostgreSQL 16 + pgvector", "why": "string" },
+    { "layer": "Intelligence & LLM Inference", "choice": "Groq Llama 3.3 70B & Gemini 2.0", "why": "string" }
+  ],
+  "modules": [
+    {
+      "key": "mod-1",
+      "name": "string",
+      "description": "string",
+      "icon": "Users" or "Building2" or "Clock" or "BarChart3",
+      "status": "Core",
+      "timeTag": "Invest",
+      "features": ["string", "string", "string"]
+    },
+    {
+      "key": "mod-2",
+      "name": "string",
+      "description": "string",
+      "icon": "Building2",
+      "status": "Core",
+      "timeTag": "Invest",
+      "features": ["string", "string", "string"]
+    },
+    {
+      "key": "mod-3",
+      "name": "string",
+      "description": "string",
+      "icon": "Clock",
+      "status": "Recommended",
+      "timeTag": "Migrate",
+      "features": ["string", "string", "string"]
+    },
+    {
+      "key": "mod-4",
+      "name": "string",
+      "description": "string",
+      "icon": "BarChart3",
+      "status": "Recommended",
+      "timeTag": "Invest",
+      "features": ["string", "string", "string"]
+    },
+    {
+      "key": "mod-legacy",
+      "name": "Legacy Manual Spreadsheets & Ad-hoc Workflows",
+      "description": "Disparate manual processes with zero auditability.",
+      "icon": "Clock",
+      "status": "Optional",
+      "timeTag": "Eliminate",
+      "features": ["High error rate", "Decommission planned in Phase 2", "Data fragmentation"]
+    }
+  ],
+  "buildBuyMatrix": [
+    {
+      "option": "Custom Cloud-Native Build (Tailored Microservices)",
+      "verdict": "Recommended",
+      "cost": 4,
+      "speed": 4,
+      "control": 5,
+      "fit": 5,
+      "rationale": "High long-term differentiation and complete workflow ownership for ${bName}."
+    },
+    {
+      "option": "Generic Off-the-Shelf SaaS Tool",
+      "verdict": "Viable",
+      "cost": 2,
+      "speed": 5,
+      "control": 2,
+      "fit": 2,
+      "rationale": "Fast initial setup but limited custom field extensibility and high subscription lock-in."
+    },
+    {
+      "option": "BizzMitra AI Hybrid Platform",
+      "verdict": "Recommended",
+      "cost": 5,
+      "speed": 4,
+      "control": 5,
+      "fit": 5,
+      "rationale": "Optimal blend of rapid time-to-value, automated workflows, and enterprise compliance."
+    }
+  ]
+}`;
+      } else if (kind === "architecture") {
+        prompt = `You are a Principal Cloud & Distributed Systems Architect at BizzMitra AI.
+Create the engineering architecture specification for ${bName}:
+${baseContextPrompt}
+
+Return strictly valid JSON with this structure:
+{
+  "domainId": "custom-${ind.toLowerCase().replace(/[^a-z0-9]/g, "-")}",
+  "domainTitle": "${bName} Technical Architecture",
+  "hld": "graph TB\\n  Client[Presentation & Mobile Portal] --> Gateway[Cloudflare Edge Gateway]\\n  Gateway --> Services[Core Microservices Engine]\\n  Services --> AI[AI Inference Pipeline]\\n  Services --> DB[(PostgreSQL 16 & Redis Cache)]",
+  "hldDiagram": "graph TB\\n  Client[Presentation & Mobile Portal] --> Gateway[Cloudflare Edge Gateway]\\n  Gateway --> Services[Core Microservices Engine]\\n  Services --> AI[AI Inference Pipeline]\\n  Services --> DB[(PostgreSQL 16 & Redis Cache)]",
+  "lld": "sequenceDiagram\\n  User->>Gateway: API Request\\n  Gateway->>Services: Route Payload\\n  Services->>DB: Query / Store State\\n  Services-->>User: 200 OK Response",
+  "lldDiagram": "sequenceDiagram\\n  User->>Gateway: API Request\\n  Gateway->>Services: Route Payload\\n  Services->>DB: Query / Store State\\n  Services-->>User: 200 OK Response",
+  "topologyDiagram": "graph TB\\n  Edge[Global CDN] --> App[App Service Pods]\\n  App --> Postgres[(Primary DB)]",
+  "securitySlaDiagram": "graph TD\\n  WAF[Firewall & Rate Limit] --> Auth[JWT & RBAC] --> Kernel[Postgres RLS]",
+  "summary": {
+    "cloudProvider": "Cloudflare Edge & AWS Multi-AZ",
+    "dbEngine": "PostgreSQL 16 (Supabase) + Redis",
+    "concurrencyTarget": "5,000+ Requests / sec",
+    "primarySla": "99.95% Availability"
+  },
+  "keyDecisions": [
+    { "title": "Zero-Cold-Start Edge Gateway", "detail": "Routes API calls with sub-20ms latency.", "badge": "Latency" },
+    { "title": "Row-Level Multi-Tenant Security", "detail": "PostgreSQL RLS guarantees tenant data isolation.", "badge": "Security" },
+    { "title": "Asynchronous Queue Buffering", "detail": "Decouples heavy background jobs via Redis queue.", "badge": "Reliability" }
+  ],
+  "components": [
+    {
+      "id": "comp-client",
+      "name": "Web Workspace & Portals",
+      "layer": "Client & Presentation",
+      "techStack": ["React 19", "TanStack Router", "Tailwind CSS"],
+      "description": "Unified responsive portal for internal teams and stakeholders.",
+      "securityPolicies": ["HTTPS TLS 1.3", "CSP Nonce", "JWT HttpOnly"],
+      "scalingConsiderations": ["Edge asset caching via Cloudflare CDN"],
+      "latencyBudget": "< 80ms FCP",
+      "availabilitySla": "99.99%",
+      "dependencies": ["API Gateway"],
+      "dataIngress": "User interactions",
+      "dataEgress": "Rendered DOM"
+    },
+    {
+      "id": "comp-services",
+      "name": "Core Domain Services Engine",
+      "layer": "Core Services",
+      "techStack": ["Node.js / TypeScript", "Prisma ORM"],
+      "description": "Business logic execution, workflow orchestration, and audit logging.",
+      "securityPolicies": ["Role-Based Access Control (RBAC)", "Service mTLS"],
+      "scalingConsiderations": ["Auto-scaling container group"],
+      "latencyBudget": "< 120ms p95",
+      "availabilitySla": "99.95%",
+      "dependencies": ["PostgreSQL Primary", "Redis Cache"],
+      "dataIngress": "API Gateway routed payloads",
+      "dataEgress": "Database transactions"
+    },
+    {
+      "id": "comp-data",
+      "name": "Database & Persistence Cluster",
+      "layer": "Data & Cache",
+      "techStack": ["PostgreSQL 16", "Redis 7"],
+      "description": "Relational entities, audit logs, and session state.",
+      "securityPolicies": ["AES-256 at-rest", "TLS 1.3 in-transit"],
+      "scalingConsiderations": ["Read replicas with connection pooling"],
+      "latencyBudget": "< 10ms query",
+      "availabilitySla": "99.99%",
+      "dependencies": [],
+      "dataIngress": "SQL queries",
+      "dataEgress": "Relational rows"
+    }
+  ]
+}`;
+      } else if (kind === "process") {
+        prompt = `You are a Principal BPMN 2.0 Process Architect at BizzMitra AI.
+Synthesize the operational process intelligence for ${bName}:
+${baseContextPrompt}
+
+Return strictly valid JSON with this structure:
+{
+  "domainId": "custom-proc-${ind.toLowerCase().replace(/[^a-z0-9]/g, "-")}",
+  "domainTitle": "${bName} Process Intelligence",
+  "asIsDiagram": "graph TD\\n  A[Manual Ingestion] --> B[Manual Verification] --> C[Paper/Spreadsheet Tracking] --> D[Delayed Resolution]",
+  "beforeDiagram": "graph TD\\n  A[Manual Ingestion] --> B[Manual Verification] --> C[Paper/Spreadsheet Tracking] --> D[Delayed Resolution]",
+  "before": "graph TD\\n  A[Manual Ingestion] --> B[Manual Verification] --> C[Paper/Spreadsheet Tracking] --> D[Delayed Resolution]",
+  "toBeDiagram": "graph TD\\n  A[Instant Ingestion] --> B[AI Validation] --> C[Automated Workflow Engine] --> D[Real-time Resolution]",
+  "afterDiagram": "graph TD\\n  A[Instant Ingestion] --> B[AI Validation] --> C[Automated Workflow Engine] --> D[Real-time Resolution]",
+  "after": "graph TD\\n  A[Instant Ingestion] --> B[AI Validation] --> C[Automated Workflow Engine] --> D[Real-time Resolution]",
+  "swimlaneDiagram": "graph TB\\n  subgraph Customer\\n    C1[Submit Request]\\n  end\\n  subgraph Operations\\n    O1[Review Exceptions]\\n  end\\n  subgraph AIEngine[AI Engine]\\n    A1[Auto Parse & Validate]\\n  end\\n  C1 --> A1 --> O1",
+  "swimlane": "graph TB\\n  subgraph Customer\\n    C1[Submit Request]\\n  end\\n  subgraph Operations\\n    O1[Review Exceptions]\\n  end\\n  subgraph AIEngine[AI Engine]\\n    A1[Auto Parse & Validate]\\n  end\\n  C1 --> A1 --> O1",
+  "decisionTreeDiagram": "graph TD\\n  In[Request Received] --> Val{Valid & Complete?}\\n  Val -->|Yes| Auto[Auto-Approve & Route]\\n  Val -->|No| Triage[Flag for Supervisor Review]",
+  "metrics": [
+    { "label": "End-to-End Cycle Time", "before": "24-48 Hours", "after": "3-5 Minutes", "improvement": "95% Faster", "icon": "Clock" },
+    { "label": "Manual Error Rate", "before": "18.2%", "after": "0.3%", "improvement": "98% Reduction", "icon": "Zap" },
+    { "label": "Reclaimed Admin Hours", "before": "0 hrs/wk", "after": "40 hrs/wk", "improvement": "+40 hrs/wk", "icon": "Timer" },
+    { "label": "User Satisfaction", "before": "62% CSAT", "after": "95% CSAT", "improvement": "+33%", "icon": "Users" }
+  ],
+  "bottlenecks": [
+    {
+      "stage": "Manual Data Entry & Ingestion",
+      "problem": "Manual entry into disconnected spreadsheets causes frequent errors.",
+      "impact": "4-6 hours lost daily per operator.",
+      "solution": "Automated ingestion pipeline with instant schema validation.",
+      "timeSavings": "90% time saved"
+    },
+    {
+      "stage": "Multi-Hop Approval Lag",
+      "problem": "Approvals stuck in email inboxes for days.",
+      "impact": "Customer SLA violations and drop-offs.",
+      "solution": "Rules-based automated approval workflows with auto-escalation.",
+      "timeSavings": "85% reduction"
+    }
+  ],
+  "decisionTiers": [
+    { "tier": "Tier 1", "actor": "AI Engine", "criteria": "High Confidence (>90%)", "action": "Auto-Execute", "status": "Active" },
+    { "tier": "Tier 2", "actor": "Supervisor", "criteria": "Exception / Low Confidence", "action": "Manual Review", "status": "Active" }
+  ]
+}`;
+      } else if (kind === "ux") {
+        prompt = `You are a Principal Enterprise UX/UI Product Designer at BizzMitra AI.
+Design the user experience architecture, screen inventory, and interactive wireframes for ${bName}:
+${baseContextPrompt}
+
+Return strictly valid JSON with this structure:
+{
+  "domainId": "custom-ux-${ind.toLowerCase().replace(/[^a-z0-9]/g, "-")}",
+  "domainTitle": "${bName} Interactive Wireframes & UX Flow",
+  "screenCount": 4,
+  "flowComplexity": "Enterprise Multi-Role",
+  "flow": "string (Valid Mermaid graph LR navigation flow)",
+  "flowDiagram": "string (Same valid Mermaid graph LR navigation flow)",
+  "screens": [
+    {
+      "id": "screen-1",
+      "title": "Executive Command Dashboard",
+      "actor": "Business Manager & Admin",
+      "userStory": "As an operations manager, I want full visibility into live queue throughput, SLA alerts, and staff efficiency.",
+      "wireframe": "+--------------------------------------------------------+\\n| [BizzMitra] ${bName} Operations Hub       [Search] [User] |\\n+--------------------------------------------------------+\\n| Active Volume: 1,240 | SLA: 99.4% | Backlog: 12        |\\n+--------------------------------------------------------+\\n| [Real-time Queue Table]         | [Live Telemetry Chart] |\\n| ID-101 | Status: In-Progress    | [===================]  |\\n| ID-102 | Status: AI Resolved    | [===================]  |\\n+--------------------------------------------------------+",
+      "components": ["KPI Metric Banner", "Real-Time Queue Table", "Throughput Radar Chart", "Action Filter Bar"],
+      "actions": ["Filter by Status", "Trigger Batch Processing", "Export CSV Spec", "Drill down to Detail"]
+    },
+    {
+      "id": "screen-2",
+      "title": "Workable Operations & Triage Pipeline",
+      "actor": "Frontline Operations Team",
+      "userStory": "As a frontline operator, I want an interactive Kanban pipeline to review, update, and resolve items rapidly.",
+      "wireframe": "+--------------------------------------------------------+\\n| [Stage: Ingest] -> [Stage: Verify] -> [Stage: Resolve] |\\n| +------------+     +------------+     +------------+   |\\n| | Item #8812 |     | Item #8810 |     | Item #8804 |   |\\n| | Score: 94% |     | Flagged    |     | Completed  |   |\\n| +------------+     +------------+     +------------+   |\\n+--------------------------------------------------------+",
+      "components": ["Drag-and-Drop Kanban Columns", "Priority Tag Badges", "Quick Action Modals", "Audit Timeline"],
+      "actions": ["Move Stage", "Add Note", "Trigger AI Copilot Draft", "Assign Owner"]
+    },
+    {
+      "id": "screen-3",
+      "title": "Stakeholder Self-Serve Portal",
+      "actor": "Client / External User",
+      "userStory": "As a client or end user, I want a frictionless self-serve interface to submit requests and track progress.",
+      "wireframe": "+--------------------------------------------------------+\\n| Welcome to ${bName} Self-Serve Portal                 |\\n+--------------------------------------------------------+\\n| [Submit New Request]  [Track Active Status: #8812]     |\\n| Current Stage: Verification (Est. completion: 15 min)  |\\n+--------------------------------------------------------+",
+      "components": ["Status Stepper", "Digital Document Upload", "Live Chat Assistant", "Approval Checkboxes"],
+      "actions": ["Upload File", "Sign Digital Agreement", "Download Summary PDF"]
+    },
+    {
+      "id": "screen-4",
+      "title": "Analytics & Transformation ROI Cockpit",
+      "actor": "Executive Leadership",
+      "userStory": "As an executive, I want to track 36-month ROI, labor hours reclaimed, and payback milestones.",
+      "wireframe": "+--------------------------------------------------------+\\n| Financial ROI & Capacity Reclaim Cockpit               |\\n+--------------------------------------------------------+\\n| Net Savings: INR 48.2L/yr | Payback: 4.2 Months        |\\n| [36-Month Cumulative Value Chart]                      |\\n+--------------------------------------------------------+",
+      "components": ["Financial Payback Calculator", "36-Month Cumulative Recharts Curve", "Readiness Radar"],
+      "actions": ["Adjust Sensitivity Sliders", "Download Executive Brief", "Share Scenario"]
+    }
+  ]
+}`;
+      } else if (kind === "data") {
+        prompt = `You are a Principal Database Architect & API Designer at BizzMitra AI.
+Design the normalized relational data model, PostgreSQL 16 DDL schema, and RESTful API specifications for ${bName}:
+${baseContextPrompt}
+
+Return strictly valid JSON with this exact structure:
+{
+  "domainId": "custom-db-${ind.toLowerCase().replace(/[^a-z0-9]/g, "-")}",
+  "domainTitle": "${bName} Database & API Designer",
+  "er": "erDiagram\\n  WORKSPACES ||--o{ OPERATIONAL_ITEMS : contains\\n  OPERATIONAL_ITEMS ||--o{ AUDIT_LOGS : tracks",
+  "erDiagram": "erDiagram\\n  WORKSPACES ||--o{ OPERATIONAL_ITEMS : contains\\n  OPERATIONAL_ITEMS ||--o{ AUDIT_LOGS : tracks",
+  "ddlSchema": "CREATE TABLE workspaces (id UUID PRIMARY KEY, name VARCHAR(255) NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW());\\nCREATE TABLE operational_records (id UUID PRIMARY KEY, workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE, title VARCHAR(255) NOT NULL, status VARCHAR(50) DEFAULT 'active', created_at TIMESTAMPTZ DEFAULT NOW());",
+  "metrics": {
+    "tableCount": 3,
+    "apiCount": 3,
+    "rlsPoliciesCount": 3,
+    "relationshipCount": 3
+  },
+  "tables": [
+    {
+      "name": "workspaces",
+      "description": "Multi-tenant tenant root configuration and metadata",
+      "category": "Core Tenant Layer",
+      "rowEstimate": "1k - 10k",
+      "columns": [
+        { "name": "id", "type": "UUID PRIMARY KEY", "constraints": "DEFAULT gen_random_uuid()", "description": "Unique workspace identifier" },
+        { "name": "name", "type": "VARCHAR(255)", "constraints": "NOT NULL", "description": "Business or organization name" },
+        { "name": "created_at", "type": "TIMESTAMPTZ", "constraints": "DEFAULT NOW()", "description": "Timestamp created" }
+      ]
+    },
+    {
+      "name": "operational_records",
+      "description": "Primary transactional records and workflow state",
+      "category": "Domain Operations",
+      "rowEstimate": "50k - 500k",
+      "columns": [
+        { "name": "id", "type": "UUID PRIMARY KEY", "constraints": "DEFAULT gen_random_uuid()", "description": "Unique record identifier" },
+        { "name": "workspace_id", "type": "UUID", "constraints": "REFERENCES workspaces(id) ON DELETE CASCADE", "description": "Tenant FK" },
+        { "name": "status", "type": "VARCHAR(50)", "constraints": "NOT NULL DEFAULT 'active'", "description": "Workflow stage" },
+        { "name": "data", "type": "JSONB", "constraints": "DEFAULT '{}'::jsonb", "description": "Domain attributes payload" }
+      ]
+    }
+  ],
+  "apiSpecifications": [
+    {
+      "method": "POST",
+      "path": "/api/v1/records/intake",
+      "summary": "Ingest and auto-triage operational records",
+      "category": "Ingestion",
+      "requestBody": "{\\"title\\": \\"Sample Request\\", \\"priority\\": \\"high\\"}",
+      "responseBody": "{\\"success\\": true, \\"recordId\\": \\"uuid\\"}",
+      "headers": ["Authorization: Bearer <jwt>", "Content-Type: application/json"],
+      "curlExample": "curl -X POST https://api.bizzmitra.ai/v1/records/intake -H 'Authorization: Bearer token' -d '{\\"title\\":\\"Demo\\"}'"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/records/pipeline",
+      "summary": "List active pipeline records",
+      "category": "Pipeline",
+      "responseBody": "{\\"records\\": [], \\"total\\": 0}",
+      "headers": ["Authorization: Bearer <jwt>"],
+      "curlExample": "curl -X GET https://api.bizzmitra.ai/v1/records/pipeline -H 'Authorization: Bearer token'"
+    }
+  ],
+  "endpoints": [
+    { "method": "POST", "path": "/api/v1/records/intake", "purpose": "Ingest and triage operational records" },
+    { "method": "GET", "path": "/api/v1/records/pipeline", "purpose": "List active pipeline records" }
+  ]
+}
+`;
+      } else if (kind === "roadmap") {
+        prompt = `You are a Principal Technical Program Director & Enterprise Delivery Lead at BizzMitra AI.
+Synthesize a realistic 12-week phased implementation roadmap for ${bName}:
+${baseContextPrompt}
+
+Return strictly valid JSON with this exact structure:
+{
+  "domainId": "custom-rd-${ind.toLowerCase().replace(/[^a-z0-9]/g, "-")}",
+  "domainTitle": "${bName} 12-Week Delivery Roadmap",
+  "totalWeeks": 12,
+  "sprintDurationWeeks": 2,
+  "targetGoLive": "12 Weeks from Kickoff",
+  "riskIndexScore": 22,
+  "ganttDiagram": "gantt\\n  title ${bName} Delivery Plan\\n  dateFormat YYYY-MM-DD\\n  section Phase 1: Foundation\\n  Cloud Setup :2026-10-01, 14d\\n  section Phase 2: Core Domain\\n  Workflow Engine :2026-10-15, 28d\\n  section Phase 3: Rollout\\n  UAT & Go-Live :2026-11-12, 14d",
+  "phases": [
+    {
+      "id": "phase-1",
+      "phase": "Phase 1: Foundation & Architecture",
+      "duration": "Weeks 1–4",
+      "title": "Cloud Infrastructure, RLS Schema & Security Hardening",
+      "goal": "Establish zero-trust multi-tenant cloud environment and PostgreSQL DDL schemas.",
+      "riskLevel": "Low",
+      "workstreams": [
+        { "name": "Cloud Infrastructure", "tasks": ["Provision Supabase & Edge", "Configure rate-limiting and WAF"] },
+        { "name": "Data Architecture", "tasks": ["Deploy PostgreSQL schema & RLS policies", "Seed baseline taxonomy"] }
+      ],
+      "milestones": [
+        { "id": "m-101", "title": "Infrastructure & Schema Sign-Off", "targetDate": "Week 2", "deliverables": ["Production DB cluster", "Tested RLS security"], "riskLevel": "Low", "completed": false },
+        { "id": "m-102", "title": "Auth & Ingestion Live", "targetDate": "Week 4", "deliverables": ["JWT Auth Proxy", "Webhook Ingestion Endpoint"], "riskLevel": "Low", "completed": false }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "phase": "Phase 2: Core Domain & Automation",
+      "duration": "Weeks 5–8",
+      "title": "Workable Operations Hub & AI Engine",
+      "goal": "Implement live Kanban pipeline, automated verification engine, and stakeholder self-serve portal.",
+      "riskLevel": "Medium",
+      "workstreams": [
+        { "name": "Core Application", "tasks": ["Build interactive Kanban & stage movements", "Implement digital document verification"] },
+        { "name": "AI Intelligence", "tasks": ["Deploy semantic parsing pipeline", "Automate draft generation with confidence scoring"] }
+      ],
+      "milestones": [
+        { "id": "m-201", "title": "Operations Hub Beta", "targetDate": "Week 6", "deliverables": ["Tested Kanban workflows", "Staff beta feedback"], "riskLevel": "Medium", "completed": false },
+        { "id": "m-202", "title": "Automated Verification Verified", "targetDate": "Week 8", "deliverables": ["Sub-5s triage engine", "Sandbox pass"], "riskLevel": "Low", "completed": false }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "phase": "Phase 3: Rollout, Governance & Scale",
+      "duration": "Weeks 9–12",
+      "title": "User Acceptance Testing & Full Go-Live",
+      "goal": "Conduct staff training, security compliance audit, and complete zero-downtime cutover.",
+      "riskLevel": "Low",
+      "workstreams": [
+        { "name": "Quality & Security", "tasks": ["Penetration testing & compliance sign-off", "Load testing at 5,000 req/s"] },
+        { "name": "Operations Rollout", "tasks": ["Frontline staff training workshops", "Decommission legacy spreadsheets"] }
+      ],
+      "milestones": [
+        { "id": "m-301", "title": "Staff Training Sign-Off", "targetDate": "Week 10", "deliverables": ["100% staff certified", "Zero blocker bugs"], "riskLevel": "Low", "completed": false },
+        { "id": "m-302", "title": "Production Cutover Live", "targetDate": "Week 12", "deliverables": ["DNS cutover", "Executive dashboard live"], "riskLevel": "Low", "completed": false }
+      ]
+    }
+  ],
+  "milestones": [
+    { "title": "Foundation Ready", "quarter": "Month 1", "target": "Week 4", "status": "In Progress" },
+    { "title": "Operations Hub Beta", "quarter": "Month 2", "target": "Week 8", "status": "Planned" },
+    { "title": "Production Go-Live", "quarter": "Month 3", "target": "Week 12", "status": "Planned" }
+  ],
+  "kpis": [
+    { "metric": "Process Cycle Time Reduction", "target": "> 75% Reduction", "timeline": "Month 3" },
+    { "metric": "Manual Error Rate", "target": "< 0.5%", "timeline": "Month 3" },
+    { "metric": "User Adoption Rate", "target": "> 95% Active Daily Use", "timeline": "Month 4" }
+  ],
+  "staffing": [
+    { "role": "Lead Enterprise Architect", "count": "1 FTE", "commitment": "100%", "allocationPhase": "Phases 1–3" },
+    { "role": "Full-Stack Engineers", "count": "3 FTE", "commitment": "100%", "allocationPhase": "Phases 1–3" },
+    { "role": "AI & Integration Specialist", "count": "1 FTE", "commitment": "75%", "allocationPhase": "Phases 2–3" },
+    { "role": "QA & Change Lead", "count": "1 FTE", "commitment": "50%", "allocationPhase": "Phases 2–3" }
+  ],
+  "risks": [
+    {
+      "id": "risk-1",
+      "risk": "Legacy data inconsistency during migration",
+      "impact": "High",
+      "likelihood": "Medium",
+      "mitigation": "Automated reconciliation scripts with dual-write validation during Phase 2.",
+      "status": "Mitigated"
+    },
+    {
+      "id": "risk-2",
+      "risk": "Staff adoption hesitation with new workflow",
+      "impact": "Medium",
+      "likelihood": "Low",
+      "mitigation": "Role-specific video onboarding and parallel runs during Week 10.",
+      "status": "Monitored"
+    }
+  ]
+}
+`;
+      } else if (kind === "summary") {
+        prompt = `You are a Senior Strategic Advisor at BizzMitra AI.
+Synthesize a concise, high-impact executive transformation summary for ${bName} based on the captured business analysis and solution roadmap:
+${baseContextPrompt}
+
+Return strictly valid JSON:
+{
+  "text": "2-3 paragraphs synthesizing what was captured, the transformation scope, target architecture, and projected ROI for ${bName}."
+}`;
+      }
+
+      // 5. Execute LLM Call (Groq Primary -> Gemini Fallback)
+      const llmResult = await callLlmJson(prompt);
+      const generatedContent = llmResult.data;
+
+      // 6. Persist to Supabase artifacts table
+      let savedVersion = 1;
+      if (isValidUuid) {
+        try {
+          const { data: latest } = await supabaseAdmin
+            .from("artifacts")
+            .select("version")
+            .eq("workspace_id", workspaceId)
+            .eq("module_type", kind)
+            .order("version", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          savedVersion = (latest?.version ?? 0) + 1;
+
+          await supabaseAdmin.from("artifacts").insert({
+            workspace_id: workspaceId,
+            module_type: kind,
+            content: generatedContent as any,
+            version: savedVersion,
+          });
+        } catch (dbErr) {
+          console.warn(`[api/ai/generate-artifact] DB persistence warning for ${kind}:`, dbErr);
+        }
+      }
+
+      // Trigger background predictive prefetch for downstream modules if workspace ID is valid
+      if (isValidUuid && (kind === "framing" || kind === "solution")) {
+        void (async () => {
+          const downstreamKinds: ArtifactKind[] = ["architecture", "process", "ux", "data", "roadmap"];
+          for (const nextKind of downstreamKinds) {
+            try {
+              const { data: hasExisting } = await supabaseAdmin
+                .from("artifacts")
+                .select("id")
+                .eq("workspace_id", workspaceId)
+                .eq("module_type", nextKind)
+                .maybeSingle();
+
+              if (!hasExisting) {
+                console.log(`[prefetch] Starting background pre-generation of ${nextKind} for ${workspaceId}...`);
+                // Use fetch against internal endpoint or invoke generation
+                await fetch(`http://localhost:8082/api/ai/generate-artifact`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    workspaceId,
+                    moduleType: nextKind,
+                    businessName: bName,
+                    industry: ind,
+                    problemStatement: prob,
+                    goals,
+                    constraints,
+                  }),
+                });
+              }
+            } catch (pErr) {
+              console.warn(`[prefetch] Background generation error for ${nextKind}:`, pErr);
+            }
+          }
+        })();
       }
 
       return jsonResponse({
         success: true,
-        moduleType,
-        version,
-        payload: generatedPayload,
-        modelUsed: "Groq Llama-3.3-70b-Versatile",
-        generatedAt: new Date().toISOString(),
+        kind,
+        moduleType: kind,
+        version: savedVersion,
+        modelUsed: llmResult.modelUsed,
+        source: llmResult.source,
+        content: generatedContent,
       });
     } catch (err: any) {
-      return jsonResponse({ error: err?.message || "AI generation failed" }, 500);
+      console.error("[api/ai/generate-artifact error]:", err);
+      return jsonResponse({
+        error: "AI Generation Failed",
+        details: err?.message || "Unknown inference error",
+      }, 500);
+    }
+  }
+
+  // 5a-2. Predictive Prefetch All Artifacts: POST /api/ai/prefetch-all
+  if (pathname === "/api/ai/prefetch-all" && request.method === "POST") {
+    try {
+      const body = (await request.json()) as { workspaceId: string };
+      const { workspaceId } = body;
+      if (!workspaceId) {
+        return jsonResponse({ error: "workspaceId is required" }, 400);
+      }
+
+      const { data: ws } = await supabaseAdmin
+        .from("workspaces")
+        .select("name, industry, problem_statement, goals, constraints_text, workspace_context")
+        .eq("id", workspaceId)
+        .maybeSingle();
+
+      if (!ws) return jsonResponse({ error: "Workspace not found" }, 404);
+
+      const allModules: ArtifactKind[] = ["framing", "solution", "architecture", "process", "ux", "data", "roadmap"];
+
+      // Fire non-blocking parallel generation
+      void (async () => {
+        for (const m of allModules) {
+          try {
+            const { data: existing } = await supabaseAdmin
+              .from("artifacts")
+              .select("id")
+              .eq("workspace_id", workspaceId)
+              .eq("module_type", m)
+              .maybeSingle();
+
+            if (!existing) {
+              await fetch(`http://localhost:8082/api/ai/generate-artifact`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  workspaceId,
+                  moduleType: m,
+                  businessName: ws.name,
+                  industry: ws.industry,
+                  problemStatement: ws.problem_statement,
+                  goals: ws.goals,
+                  constraints: ws.constraints_text,
+                }),
+              });
+            }
+          } catch (e) {
+            console.warn(`[prefetch-all] Failed for module ${m}:`, e);
+          }
+        }
+      })();
+
+      return jsonResponse({ success: true, message: "Prefetch background pipeline started" });
+    } catch (err: any) {
+      return jsonResponse({ error: err?.message || "Prefetch failed" }, 500);
     }
   }
 
@@ -402,23 +1325,6 @@ export async function handleApiRoute(
         documentSummary = "",
         legacyTools = "",
       } = body;
-
-      const groqKey =
-        (env as any)?.GROQ_API_KEY ||
-        process.env["GROQ_API_KEY"] ||
-        (env as any)?.VITE_GROQ_API_KEY ||
-        process.env["VITE_GROQ_API_KEY"];
-
-      const geminiKey =
-        (env as any)?.GEMINI_API_KEY ||
-        process.env["GEMINI_API_KEY"] ||
-        (env as any)?.VITE_GEMINI_API_KEY ||
-        process.env["VITE_GEMINI_API_KEY"];
-
-      if (!groqKey && !geminiKey) {
-        console.error("[api/ai/discovery-interview] No AI keys configured: neither GROQ_API_KEY nor GEMINI_API_KEY found in server environment.");
-        return jsonResponse({ error: "No AI keys configured on server", details: "Neither GROQ_API_KEY nor GEMINI_API_KEY available." }, 503);
-      }
 
       const prompt = `You are an elite Principal Enterprise Systems Architect and McKinsey/BCG Senior Business Analyst for BizzMitra AI.
 A client submitted this business problem statement and intake context:
@@ -454,7 +1360,7 @@ Your task:
    - "futureState": { "summary": string, "recommendedModules": string[], "automationOpportunities": string[] }
    - "businessImpact": array of 4 items { "metric": string, "current": string, "projected": string, "improvement": string }
 
-Return strictly valid JSON in this exact structure with no markdown code fences and no preamble:
+Return strictly valid JSON in this exact structure with no markdown code fences:
 {
   "questions": [
     {
@@ -482,102 +1388,15 @@ Return strictly valid JSON in this exact structure with no markdown code fences 
   }
 }`;
 
-      // 1. Try Groq Primary (Fast Llama 3.3 70B inference)
-      if (groqKey) {
-        try {
-          const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${groqKey}`,
-            },
-            body: JSON.stringify({
-              model: "llama-3.3-70b-versatile",
-              messages: [
-                { role: "system", content: "You are an enterprise business analysis AI. Output strictly valid JSON." },
-                { role: "user", content: prompt },
-              ],
-              response_format: { type: "json_object" },
-              temperature: 0.2,
-            }),
-          });
-
-          if (groqRes.ok) {
-            const groqData = await groqRes.json();
-            const contentStr = groqData.choices?.[0]?.message?.content;
-            if (contentStr) {
-              const cleanContent = contentStr.replace(/```json/g, "").replace(/```/g, "").trim();
-              const parsed = JSON.parse(cleanContent);
-              if (parsed && Array.isArray(parsed.questions) && parsed.questions.length >= 3) {
-                console.log("[api/ai/discovery-interview] Generated dynamic discovery via Groq Llama 3.3 70B");
-                return jsonResponse({
-                  success: true,
-                  modelUsed: "Groq Llama 3.3 70B",
-                  source: "groq-llm",
-                  questions: parsed.questions,
-                  summary: parsed.summary,
-                  businessAnalysis: parsed.businessAnalysis,
-                });
-              }
-            }
-          } else {
-            const errText = await groqRes.text();
-            console.warn(`[api/ai/discovery-interview] Groq API returned status ${groqRes.status}: ${errText}`);
-          }
-        } catch (groqErr: any) {
-          console.warn("[api/ai/discovery-interview] Groq call error:", groqErr?.message || groqErr);
-        }
-      }
-
-      // 2. Fallback to Google Gemini
-      if (geminiKey) {
-        try {
-          const geminiModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
-          for (const model of geminiModels) {
-            const geminiRes = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  contents: [
-                    { parts: [{ text: `You are an enterprise business analysis AI. Output strictly valid JSON.\n\n${prompt}` }] },
-                  ],
-                  generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
-                }),
-              },
-            );
-
-            if (geminiRes.ok) {
-              const gData = await geminiRes.json();
-              const textResponse = gData.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (textResponse) {
-                const cleanText = textResponse.replace(/```json/g, "").replace(/```/g, "").trim();
-                const parsed = JSON.parse(cleanText);
-                if (parsed && Array.isArray(parsed.questions) && parsed.questions.length >= 3) {
-                  console.log(`[api/ai/discovery-interview] Generated dynamic discovery via Google Gemini (${model})`);
-                  return jsonResponse({
-                    success: true,
-                    modelUsed: `Google Gemini (${model})`,
-                    source: "gemini-llm",
-                    questions: parsed.questions,
-                    summary: parsed.summary,
-                    businessAnalysis: parsed.businessAnalysis,
-                  });
-                }
-              }
-            } else {
-              const geminiErrText = await geminiRes.text();
-              console.warn(`[api/ai/discovery-interview] Gemini model ${model} returned status ${geminiRes.status}: ${geminiErrText}`);
-            }
-          }
-        } catch (geminiErr: any) {
-          console.warn("[api/ai/discovery-interview] Gemini call error:", geminiErr?.message || geminiErr);
-        }
-      }
-
-      console.error("[api/ai/discovery-interview] Both Groq and Gemini AI providers failed.");
-      return jsonResponse({ error: "AI inference failed across providers", details: "Groq and Gemini both failed or returned invalid outputs." }, 502);
+      const llmResult = await callLlmJson(prompt, "You are an enterprise business analysis AI. Output strictly valid JSON.");
+      return jsonResponse({
+        success: true,
+        modelUsed: llmResult.modelUsed,
+        source: llmResult.source,
+        questions: llmResult.data.questions,
+        summary: llmResult.data.summary,
+        businessAnalysis: llmResult.data.businessAnalysis,
+      });
     } catch (err: any) {
       console.error("[api/ai/discovery-interview error]:", err);
       return jsonResponse({ error: err?.message || "Internal error" }, 500);
@@ -599,14 +1418,6 @@ Return strictly valid JSON in this exact structure with no markdown code fences 
         industry = "General",
         customFields = [],
       } = body;
-      const groqKey =
-        (env as any)?.GROQ_API_KEY ||
-        process.env["GROQ_API_KEY"] ||
-        process.env["VITE_GROQ_API_KEY"];
-
-      if (!groqKey) {
-        return jsonResponse({ error: "No GROQ_API_KEY configured" }, 503);
-      }
 
       const prompt = `You are a World-Class Principal Enterprise Systems Architect and McKinsey/BCG Strategy Partner at BizzMitra AI.
 A client submitted this business problem statement:
@@ -638,7 +1449,7 @@ Return strictly valid JSON with this exact structure:
     "constraints": [ "string", "string", "string" ]
   },
   "solution": {
-    "headline": "Compelling, specific architectural solution title (e.g. AI-Assisted Clinical Specimen Hub + HL7 Automation)",
+    "headline": "Compelling, specific architectural solution title tailored to ${businessName}",
     "summary": "2-3 sentences detailing the target architecture, resolution layer, and automation workflow",
     "pillars": [
       { "title": "string", "detail": "string" },
@@ -658,8 +1469,8 @@ Return strictly valid JSON with this exact structure:
       "name": "string",
       "description": "string",
       "icon": "Users" or "Building2" or "Clock" or "BarChart3",
-      "status": "Core" or "Recommended" or "Optional" or "Planned",
-      "timeTag": "Invest" or "Migrate" or "Tolerate" or "Eliminate",
+      "status": "Core",
+      "timeTag": "Invest",
       "features": ["string", "string", "string"]
     },
     {
@@ -702,16 +1513,16 @@ Return strictly valid JSON with this exact structure:
   "buildBuyMatrix": [
     {
       "option": "Custom Cloud-Native Build (Tailored Microservices)",
-      "verdict": "Recommended" or "Viable" or "Not Feasible",
+      "verdict": "Recommended",
       "cost": 4,
       "speed": 3,
       "control": 5,
       "fit": 5,
-      "rationale": "High long-term differentiation and complete workflow ownership."
+      "rationale": "High long-term differentiation and complete workflow ownership for ${businessName}."
     },
     {
       "option": "Generic Off-the-Shelf SaaS Tool",
-      "verdict": "Viable" or "Rejected",
+      "verdict": "Viable",
       "cost": 2,
       "speed": 5,
       "control": 2,
@@ -730,43 +1541,15 @@ Return strictly valid JSON with this exact structure:
   ]
 }`;
 
-      const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${groqKey}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
-            { role: "system", content: "You are an enterprise systems architect and strategy consultant. Output strictly valid JSON." },
-            { role: "user", content: prompt },
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.2,
-        }),
-      });
-
-      if (!groqRes.ok) {
-        const errText = await groqRes.text();
-        console.warn("[Groq solution API error]:", errText);
-        return jsonResponse({ error: "Groq LLM call failed", details: errText }, 502);
-      }
-
-      const groqData = await groqRes.json();
-      const contentStr = groqData.choices?.[0]?.message?.content;
-      if (!contentStr) {
-        return jsonResponse({ error: "Empty response from Groq" }, 502);
-      }
-
-      const parsed = JSON.parse(contentStr);
+      const llmResult = await callLlmJson(prompt);
       return jsonResponse({
         success: true,
-        modelUsed: "Groq Llama 3.3 70B (High-Speed Inference)",
-        framing: parsed.framing,
-        solution: parsed.solution,
-        modules: parsed.modules,
-        buildBuyMatrix: parsed.buildBuyMatrix,
+        modelUsed: llmResult.modelUsed,
+        source: llmResult.source,
+        framing: llmResult.data.framing,
+        solution: llmResult.data.solution,
+        modules: llmResult.data.modules,
+        buildBuyMatrix: llmResult.data.buildBuyMatrix,
       });
     } catch (err: any) {
       console.error("[api/ai/solution-framing error]:", err);

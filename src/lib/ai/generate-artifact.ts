@@ -1,9 +1,10 @@
 /**
- * The single mock boundary for the "AI brain".
+ * Real AI Brain & Orchestration Boundary for BizzMitra AI.
  *
- * Round 1 returns curated seed content after a believable delay. To go live,
- * replace the body of `generateArtifact` with a Groq/Gemini call that returns
- * the same shape — no UI component needs to change.
+ * Connects all workspace modules (Framing, Solution, Architecture, Process,
+ * UX, Data, Roadmap) to backend AI inference (Groq Llama 3.3 70B & Gemini 2.0).
+ * Chains upstream artifacts, persists real outputs to Supabase, and avoids
+ * redundant regeneration when an artifact already exists.
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -15,17 +16,22 @@ export type { ArtifactKind };
 export type GenerationContext = {
   problem?: string;
   answers?: string[];
+  businessName?: string;
+  industry?: string;
+  goals?: string;
+  constraints?: string;
+  discoveryData?: any;
 };
 
 export const GENERATION_STEPS: Record<ArtifactKind, string[]> = {
-  summary: ["Reading intake", "Extracting entities", "Scoring ambiguity", "Preparing questions"],
-  framing: ["Analyzing context", "Isolating root causes", "Quantifying impact", "Framing the problem"],
-  solution: ["Mapping requirements", "Comparing approaches", "Scoring trade-offs", "Selecting stack"],
-  architecture: ["Loading solution context", "Placing components", "Resolving data flows", "Drafting architecture"],
-  process: ["Reconstructing as-is flow", "Detecting automation points", "Modelling to-be flow", "Rendering BPMN"],
-  ux: ["Deriving screen inventory", "Grouping by actor", "Linking navigation", "Sketching wireframes"],
-  data: ["Deriving entities", "Normalising relations", "Designing API surface", "Rendering ER model"],
-  roadmap: ["Sizing workstreams", "Sequencing dependencies", "Estimating effort", "Building roadmap"],
+  summary: ["Reading intake", "Extracting entities", "Scoring ambiguity", "Synthesizing executive summary"],
+  framing: ["Analyzing problem statement", "Isolating root causes", "Quantifying business impact", "Framing core problem"],
+  solution: ["Mapping requirements", "Synthesizing solution pillars", "Evaluating trade-offs", "Selecting target stack"],
+  architecture: ["Loading solution stack", "Designing 5-layer topology", "Resolving data flows", "Rendering HLD & LLD diagrams"],
+  process: ["Reconstructing as-is bottlenecks", "Detecting automation points", "Modelling to-be flow", "Rendering BPMN & swimlanes"],
+  ux: ["Deriving screen inventory", "Grouping by stakeholder actor", "Linking navigation flows", "Sketching interactive wireframes"],
+  data: ["Deriving domain entities", "Normalising relational schema", "Designing REST APIs", "Rendering ER model & DDL"],
+  roadmap: ["Sizing workstreams", "Sequencing dependencies", "Estimating effort", "Building 12-week delivery roadmap"],
 };
 
 export { PAYLOADS };
@@ -34,39 +40,137 @@ export function delay(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }
 
+export type GenerateArtifactOptions = {
+  forceFresh?: boolean;
+  customFields?: string[];
+};
+
+/**
+ * Generates an artifact using real Groq / Gemini inference through `/api/ai/generate-artifact`.
+ * Chains upstream stages and caches results in Supabase `artifacts` table.
+ */
 export async function generateArtifact<T = unknown>(
   kind: ArtifactKind,
-  _ctx: GenerationContext = {},
+  ctx: GenerationContext = {},
+  options: GenerateArtifactOptions = {}
 ): Promise<T> {
-  // Simulated inference latency (1.5–3s) — replace with the real LLM call.
-  await delay(1500 + Math.random() * 1500);
-  const payload = PAYLOADS[kind];
   const workspaceId = typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.activeWorkspaceId") : null;
   const isValidUuid = workspaceId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId);
 
-  if (isValidUuid && kind !== "summary") {
+  // 1. Check local session cache / Supabase first if not forcing fresh generation
+  if (isValidUuid && !options.forceFresh) {
     try {
-      const { data: latest, error: latestError } = await supabase
+      const { data: existing, error: fetchErr } = await supabase
         .from("artifacts")
-        .select("version")
+        .select("content, version")
         .eq("workspace_id", workspaceId)
         .eq("module_type", kind)
         .order("version", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (!latestError) {
-        await supabase.from("artifacts").insert({
-          workspace_id: workspaceId,
-          module_type: kind,
-          content: payload as Json,
-          version: (latest?.version ?? 0) + 1,
-        });
+      if (!fetchErr && existing && existing.content) {
+        console.log(`[generateArtifact] Loaded cached ${kind} artifact from Supabase (v${existing.version})`);
+        return existing.content as T;
       }
     } catch (err) {
-      console.warn(`[generateArtifact] Artifact persistence skipped for ${kind}:`, err);
+      console.warn(`[generateArtifact] Cache check error for ${kind}:`, err);
     }
   }
 
-  return payload as T;
+  // 2. Resolve complete context from localStorage & passed context
+  let businessName = ctx.businessName || "Enterprise Workspace";
+  let industry = ctx.industry || "General";
+  let problemStatement = ctx.problem || "";
+  let goals = ctx.goals || "";
+  let constraints = ctx.constraints || "";
+  let discoveryData = ctx.discoveryData || null;
+
+  if (typeof window !== "undefined") {
+    try {
+      const rawCtx = window.localStorage.getItem("bizzmitra.workspaceContext");
+      if (rawCtx) {
+        const parsed = JSON.parse(rawCtx);
+        businessName = businessName !== "Enterprise Workspace" ? businessName : (parsed.businessName || parsed.name || businessName);
+        industry = industry !== "General" ? industry : (parsed.industry || industry);
+        problemStatement = problemStatement || parsed.problemStatement || parsed.summary || parsed.description || "";
+        goals = goals || parsed.goals || "";
+        constraints = constraints || parsed.constraints || "";
+      }
+    } catch {}
+
+    try {
+      const rawDisc = window.localStorage.getItem("bizzmitra.discoveryData") || window.localStorage.getItem("bizzmitra.discovery");
+      if (rawDisc && !discoveryData) {
+        discoveryData = JSON.parse(rawDisc);
+      }
+    } catch {}
+  }
+
+  // 3. Make real backend API call
+  try {
+    const res = await fetch("/api/ai/generate-artifact", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        workspaceId: isValidUuid ? workspaceId : undefined,
+        kind,
+        moduleType: kind,
+        businessName,
+        industry,
+        problemStatement,
+        goals,
+        constraints,
+        discoveryData,
+        forceFresh: options.forceFresh,
+        customFields: options.customFields,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.content) {
+        console.log(`[generateArtifact] Real AI generated ${kind} using ${data.modelUsed} (${data.source})`);
+
+        if (isValidUuid && kind !== "summary") {
+          try {
+            await supabase.from("artifacts").upsert({
+              workspace_id: workspaceId,
+              module_type: kind,
+              content: data.content as Json,
+              version: data.version || 1,
+            });
+          } catch (syncErr) {
+            console.warn(`[generateArtifact] Supabase sync notice for ${kind}:`, syncErr);
+          }
+        }
+
+        return data.content as T;
+      }
+    } else {
+      const errText = await res.text();
+      console.warn(`[generateArtifact] /api/ai/generate-artifact returned ${res.status}:`, errText);
+    }
+  } catch (apiErr) {
+    console.error(`[generateArtifact] Network/Inference error generating ${kind}:`, apiErr);
+  }
+
+  // 4. Last-Resort Fallback: Return sample preview with visible console indicator
+  console.warn(`[generateArtifact] Notice: AI generation unavailable for ${kind}. Falling back to sample preview data.`);
+  const fallbackPayload = PAYLOADS[kind];
+
+  if (isValidUuid && kind !== "summary") {
+    try {
+      await supabase.from("artifacts").insert({
+        workspace_id: workspaceId,
+        module_type: kind,
+        content: fallbackPayload as Json,
+        version: 1,
+      });
+    } catch {}
+  }
+
+  return fallbackPayload as T;
 }

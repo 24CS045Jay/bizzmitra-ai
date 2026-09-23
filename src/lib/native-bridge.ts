@@ -144,7 +144,7 @@ export async function hideSplashScreen(): Promise<void> {
   splashHidden = true;
   try {
     const { SplashScreen } = await import("@capacitor/splash-screen");
-    await SplashScreen.hide({ fadeDuration: 300 });
+    await SplashScreen.hide({ fadeOutDuration: 300 });
     console.log("[NativeBridge] SplashScreen smoothly dismissed post-paint");
   } catch (err) {
     console.warn("[NativeBridge] SplashScreen hide note:", err);

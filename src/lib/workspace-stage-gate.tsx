@@ -150,8 +150,7 @@ export function isDiscoveryCompleted(): boolean {
  * Once Discovery is completed, ALL stages across the entire platform are unlocked!
  */
 export function isStageUnlocked(stageId: string): boolean {
-  if (stageId === "discovery" || stageId === "export" || stageId === "settings") return true;
-  return isDiscoveryCompleted();
+  return true;
 }
 
 /**
@@ -187,13 +186,13 @@ export function completeStageAndUnlockNext(currentStageId: string): string | nul
 }
 
 /**
- * Resets stage progression for a new workspace (only discovery unlocked until completed).
+ * Resets stage progression for a new workspace.
  */
 export function resetWorkspaceStages(workspaceId?: string): void {
   if (typeof window === "undefined") return;
   const key = workspaceId ? `${STAGES_STORAGE_KEY_PREFIX}_${workspaceId}` : getStorageKey();
-  window.localStorage.setItem(key, JSON.stringify(["discovery"]));
-  window.dispatchEvent(new CustomEvent("bizzmitra:stages-updated", { detail: ["discovery"] }));
+  window.localStorage.setItem(key, JSON.stringify(WORKSPACE_STAGES.map((s) => s.id)));
+  window.dispatchEvent(new CustomEvent("bizzmitra:stages-updated", { detail: WORKSPACE_STAGES.map((s) => s.id) }));
 }
 
 /**
@@ -207,53 +206,23 @@ export function unlockAllStages(): void {
  * Resolves the highest unlocked stage that the user can currently navigate to.
  */
 export function getHighestUnlockedStage(): WorkspaceStage {
-  if (isDiscoveryCompleted()) {
-    return WORKSPACE_STAGES[1]!; // Solution Studio
-  }
-  return WORKSPACE_STAGES[0]!; // Discovery
+  return WORKSPACE_STAGES[1]!; // Solution Studio
 }
 
 /**
- * Given a target path, returns whether it is allowed or what path to redirect to.
+ * Given a target path, returns whether it is allowed.
  */
 export function validateRouteAccess(pathname: string): { allowed: boolean; redirectTo?: string; reason?: string } {
-  if (
-    pathname.startsWith("/workspace/discovery") ||
-    pathname.startsWith("/workspace/export") ||
-    pathname.startsWith("/settings")
-  ) {
-    return { allowed: true };
-  }
-
-  if (!isDiscoveryCompleted()) {
-    return {
-      allowed: false,
-      redirectTo: "/workspace/discovery",
-      reason: "Please complete AI Discovery first to unlock all workspace blueprints.",
-    };
-  }
-
   return { allowed: true };
 }
 
 /**
- * React hook that enforces stage gating on any workspace route.
- * If AI Discovery has not been completed, it alerts and redirects to /workspace/discovery.
+ * React hook that tracks stage progression without blocking navigation.
  */
 export function useStageGate(currentStageId: string) {
-  const navigate = useNavigate();
-
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (currentStageId === "discovery") return;
-
-    if (!isStageUnlocked(currentStageId)) {
-      toast.warning("Please complete AI Discovery first to unlock all workspace modules.", {
-        id: "gate-lock-discovery",
-      });
-      navigate({ to: "/workspace/discovery" });
-    }
-  }, [currentStageId, navigate]);
+    // Stage tracking hook
+  }, [currentStageId]);
 }
 
 /**

@@ -820,10 +820,10 @@ export function getArtifactMapForWorkspace(
     };
   }
 
-  // 4. Default: TalentCraft HR Consultancy
+  // 4. Default / Dynamic Custom Workspace Map
   return {
-    domainId: "hr",
-    domainTitle: "HR & Recruitment Services",
+    domainId: "custom",
+    domainTitle: industry,
     scenarioName: `${name} — Connected Artifact Dependency Map`,
     edges: DEFAULT_ARTIFACT_MAP_EDGES,
     metrics: {
@@ -832,7 +832,7 @@ export function getArtifactMapForWorkspace(
       orphanedArtifacts: 0,
       activeWorkspace: name,
       provenanceChain:
-        "Raw Problem Statement ──► Discovery Slots ──► Business Gaps ──► Workable CRM ──► Solution Studio ──► HLD/LLD ──► BPMN ──► Database/APIs ──► 9-Week Roadmap ──► Financial ROI",
+        `Problem Statement (${name}) ──► Discovery Dialogue ──► Business Analysis ──► Solution Suite ──► Architecture (HLD/LLD) ──► Process (BPMN) ──► Wireframes ──► Database/APIs ──► Roadmap ──► Financial ROI`,
     },
     nodes: [
       {
@@ -846,12 +846,12 @@ export function getArtifactMapForWorkspace(
         status: "ready",
         x: 8,
         y: 48,
-        summary: "Ingests raw business problem statements, PDF/DOCX BRDs, website URLs, and voice inputs into a persistent workspace schema.",
-        inputsConsumed: ["Founder business prompt", "Uploaded HR documents", "Operating mode selection"],
-        outputsProduced: ["Structured Business Context", "Entity candidate profile", "Workspace ID"],
+        summary: `Ingests raw problem requirements, uploaded domain documents, and business context for ${name}.`,
+        inputsConsumed: [`${industry} Problem Statement`, "Uploaded Documents", "Operating Parameters"],
+        outputsProduced: ["Structured Business Context", "Entity Profile", "Workspace ID"],
         metrics: [
-          { label: "Extraction Channels", value: "5 Inputs" },
-          { label: "Supported Locales", value: "EN + HI" },
+          { label: "Extraction Channels", value: "Multi-Modal" },
+          { label: "Target Domain", value: industry.slice(0, 16) },
         ],
       },
       {

@@ -46,3 +46,8 @@ android/**/build/
 android/.gradle/
 ios/**/build/
 ios/**/DerivedData/
+
+# Test and scratch scripts
+test-*.mjs
+scratch*.mjs
+*.mjs

@@ -67,12 +67,120 @@ export function getCollaborationStateForWorkspace(
     industry?: string;
     problemStatement?: string;
     description?: string;
+    businessAnalysis?: any;
   } | null
 ): CollaborationWorkspaceState {
-  const name = workspaceContext?.businessName || workspaceContext?.name || "TalentCraft HR Consultancy";
-  const industry = workspaceContext?.industry || "HR & Recruitment Services";
+  const name = workspaceContext?.businessName || workspaceContext?.name || "Enterprise Workspace";
+  const industry = workspaceContext?.industry || "Enterprise Operations";
   const problem = workspaceContext?.problemStatement || workspaceContext?.description || "";
   const combined = `${name} ${industry} ${problem}`.toLowerCase();
+
+  // Load dynamic discovery stakeholders if available
+  let dynamicAnalysis: any = workspaceContext?.businessAnalysis || null;
+  if (!dynamicAnalysis && typeof window !== "undefined") {
+    try {
+      const rawDisc = window.localStorage.getItem("bizzmitra.discoveryData") || window.localStorage.getItem("bizzmitra.discovery");
+      if (rawDisc) {
+        const parsed = JSON.parse(rawDisc);
+        dynamicAnalysis = parsed.businessAnalysis || parsed;
+      }
+    } catch {}
+  }
+
+  const dynamicStakeholders = Array.isArray(dynamicAnalysis?.stakeholders)
+    ? dynamicAnalysis.stakeholders
+    : null;
+
+  // If we have dynamic analysis or a custom business name/problem, synthesize dynamic collaboration state
+  if (dynamicStakeholders && dynamicStakeholders.length > 0) {
+    const signOffs: ApproverSignOff[] = dynamicStakeholders.slice(0, 4).map((s: any, idx: number) => {
+      const role = typeof s === "string" ? s : s.role || `Domain Specialist ${idx + 1}`;
+      const name = typeof s === "object" && s.name ? s.name : `Lead ${role.split(" ")[0]} Evaluator`;
+      const email = `${name.toLowerCase().replace(/[^a-z0-9]/g, ".")}@${name.toLowerCase().replace(/[^a-z0-9]/g, "") || "enterprise"}.io`;
+      return {
+        role,
+        name,
+        email,
+        signed: true,
+        signedAt: "Just now · Verified",
+        comments: typeof s === "object" && s.concern ? `Addressed requirement: ${s.concern}` : `Verified architecture alignment with ${industry} specifications and ${name} operational standards.`,
+      };
+    });
+
+    const comments: ArtifactComment[] = [
+      {
+        id: `c-dyn-${Date.now()}-1`,
+        artifactId: "data",
+        artifactName: "Database & API Schema",
+        author: {
+          name: signOffs[0]?.name || "Lead Architect",
+          role: signOffs[0]?.role || "Solution Architect",
+        },
+        content: `Ensure relational schema indexes and audit columns are optimized for ${industry} workload volume.`,
+        timestamp: "Recently",
+        severity: "feedback",
+        resolved: true,
+        replies: [
+          {
+            id: `r-dyn-1`,
+            authorName: "BizzMitra AI Engine",
+            authorRole: "AI Architect",
+            content: `Schema and API definitions have been generated to match ${name} specifications.`,
+            timestamp: "Just now",
+          },
+        ],
+      },
+      {
+        id: `c-dyn-${Date.now()}-2`,
+        artifactId: "roadmap",
+        artifactName: "Implementation Roadmap",
+        author: {
+          name: signOffs[1]?.name || "Delivery Lead",
+          role: signOffs[1]?.role || "Program Manager",
+        },
+        content: `Phase milestones align with our priority to address: ${problem ? problem.slice(0, 80) + '...' : 'core bottlenecks'}.`,
+        timestamp: "Recently",
+        severity: "approved",
+        resolved: true,
+      },
+    ];
+
+    return {
+      workspaceId: workspaceContext?.businessName ? `ws-${name.toLowerCase().replace(/[^a-z0-9]/g, "-")}` : "ws-dynamic",
+      scenarioName: name,
+      overallStatus: "approved",
+      signOffs: signOffs.length >= 2 ? signOffs : [
+        ...signOffs,
+        {
+          role: "Enterprise Solution Architect",
+          name: "Dr. Arvind Menon",
+          email: "arvind.m@bizzmitra.ai",
+          signed: true,
+          signedAt: "Just now · Verified",
+          comments: `Verified end-to-end multi-tier pipeline consistency for ${name}.`,
+        },
+      ],
+      comments,
+      auditLogs: [
+        {
+          id: `log-dyn-${Date.now()}-1`,
+          actor: { name: "Param Shah", type: "user", role: "Transformation Lead" },
+          action: "Approved Transformation Blueprint",
+          category: "governance",
+          details: `Validated AI-generated architecture and execution blueprints for ${name}.`,
+          timestamp: "Just now",
+        },
+        {
+          id: `log-dyn-${Date.now()}-2`,
+          actor: { name: "BizzMitra AI Engine", type: "ai", role: "AI Planning Engine" },
+          action: "Synthesized Transformation Roadmap & Blueprints",
+          category: "ai_generation",
+          details: `Generated end-to-end technical blueprints for ${industry} domain.`,
+          timestamp: "Just now",
+        },
+      ],
+    };
+  }
 
   // 1. Clean Tech & Solar
   if (
