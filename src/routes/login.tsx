@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Reveal } from "@/components/motion/primitives";
@@ -30,6 +31,7 @@ function LoginPage() {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const { session, signInAsDemoAdmin, signInWithCustomUser } = useAuth();
   const { theme } = useTheme();
@@ -81,20 +83,34 @@ function LoginPage() {
         try {
           const { data: wsList } = await supabase
             .from("workspaces")
-            .select("id, name, problem_statement")
+            .select("id, name, problem_statement, industry, goals, constraints_text, intake_mode, intake_method, language_code, workspace_context")
             .eq("owner_id", userId)
             .order("updated_at", { ascending: false });
 
           if (wsList && wsList.length > 0 && wsList[0]) {
-            localStorage.setItem("bizzmitra.activeWorkspaceId", wsList[0].id);
-            localStorage.setItem(
-              "bizzmitra.workspaceContext",
-              JSON.stringify({
-                businessName: wsList[0].name,
-                problemStatement: wsList[0].problem_statement || "",
-                industry: "Custom Workspace",
-              }),
-            );
+            const ws = wsList[0];
+            localStorage.setItem("bizzmitra.activeWorkspaceId", ws.id);
+
+            // Restore full context — prefer stored workspace_context JSONB, fall back to individual columns
+            const storedCtx = ws.workspace_context && typeof ws.workspace_context === "object"
+              ? (ws.workspace_context as Record<string, unknown>)
+              : null;
+
+            const restoredContext = {
+              businessName: (storedCtx?.["businessName"] as string) || ws.name || "",
+              problemStatement: (storedCtx?.["problemStatement"] as string) || ws.problem_statement || "",
+              industry: (storedCtx?.["industry"] as string) || ws.industry || "General",
+              goals: (storedCtx?.["goals"] as string) || ws.goals || "",
+              constraints: (storedCtx?.["constraints"] as string) || ws.constraints_text || "",
+              intakeMode: (storedCtx?.["intakeMode"] as string) || ws.intake_mode || "consult",
+              intakeMethod: (storedCtx?.["intakeMethod"] as string) || ws.intake_method || "prompt",
+              language: (storedCtx?.["language"] as string) || ws.language_code || "en",
+            };
+
+            localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(restoredContext));
+            if (restoredContext.language) {
+              localStorage.setItem("bizzmitra.language", restoredContext.language);
+            }
             navigate({ to: "/dashboard" });
             return;
           }
@@ -237,14 +253,25 @@ function GoogleIcon({ className }: { className?: string }) {
                 <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   {t("auth.password", "Password")}
                 </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="mt-0.5 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
-                  placeholder="••••••••"
-                />
+                <div className="mt-0.5 flex items-center gap-2">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
               </div>
               <button
                 type="submit"

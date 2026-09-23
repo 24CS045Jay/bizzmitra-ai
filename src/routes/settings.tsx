@@ -249,12 +249,12 @@ function SettingsPage() {
       </Reveal>
 
       <Stagger className="mt-8 grid gap-4 lg:grid-cols-2">
-        <StaggerItem className="neu p-6">
+        <StaggerItem className="neu p-6 min-w-0 overflow-hidden">
           <h2 className="font-display text-lg font-bold">{t("settings.profile", "Profile")}</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Email</dt>
-              <dd className="truncate font-medium">{user?.email ?? "—"}</dd>
+              <dt className="shrink-0 text-muted-foreground">Email</dt>
+              <dd className="truncate font-medium min-w-0 text-right">{user?.email ?? "—"}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Current Plan</dt>
@@ -278,7 +278,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6">
+        <StaggerItem className="neu p-6 min-w-0 overflow-hidden">
           <h2 className="font-display text-lg font-bold">{t("settings.workspace", "Active workspace")}</h2>
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between gap-4">
@@ -286,8 +286,8 @@ function SettingsPage() {
               <dd className="font-medium">{workspace?.maturity_score ?? 96}%</dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Tenant Isolation</dt>
-              <dd className="font-medium text-emerald-600 dark:text-emerald-400">PostgreSQL Row-Level Security</dd>
+              <dt className="shrink-0 text-muted-foreground">Tenant Isolation</dt>
+              <dd className="font-medium text-emerald-600 dark:text-emerald-400 text-right text-xs leading-normal">PostgreSQL Row-Level Security</dd>
             </div>
           </dl>
           <div className="mt-5 flex gap-2">
@@ -304,7 +304,7 @@ function SettingsPage() {
         </StaggerItem>
 
         {/* AI Credit Wallet Section */}
-        <StaggerItem className="neu p-6 lg:col-span-2">
+        <StaggerItem className="neu p-6 lg:col-span-2 min-w-0 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/80 pb-4">
             <div className="flex items-center gap-3">
               <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -414,13 +414,13 @@ function SettingsPage() {
             </div>
             <div className="rounded-xl border border-border bg-background/40 divide-y divide-border/60 overflow-hidden">
               {wallet.transactions.slice(0, 4).map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between p-3 text-xs">
-                  <div className="flex items-center gap-2.5">
-                    <span className={tx.type === "credit" ? "text-emerald-500 font-bold" : "text-amber-500 font-bold"}>
+                <div key={tx.id} className="flex items-center justify-between gap-3 p-3 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={tx.type === "credit" ? "text-emerald-500 font-bold shrink-0" : "text-amber-500 font-bold shrink-0"}>
                       {tx.type === "credit" ? "+" : "—"}
                     </span>
-                    <div>
-                      <p className="font-semibold">{tx.description}</p>
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate">{tx.description}</p>
                       <p className="text-[11px] text-muted-foreground">{tx.timestamp}</p>
                     </div>
                   </div>
@@ -437,7 +437,7 @@ function SettingsPage() {
         </StaggerItem>
 
         {/* Pricing Tiers & Upgrade Engine */}
-        <StaggerItem className="neu p-6 lg:col-span-2">
+        <StaggerItem className="neu p-6 lg:col-span-2 min-w-0 overflow-hidden">
           <div className="text-center max-w-xl mx-auto mb-6">
             <h2 className="font-display text-2xl font-extrabold">{t("settings.plans", "Subscription Plans & SaaS Tiers")}</h2>
             <p className="text-xs text-muted-foreground mt-1 mb-4">
@@ -531,7 +531,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6 lg:col-span-2">
+        <StaggerItem className="neu p-6 lg:col-span-2 min-w-0 overflow-hidden">
           <h2 className="font-display text-lg font-bold">{t("settings.appearance", "Appearance & Theme")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Switch between Warm Graphite (light) and Ambient Ray (dark) modes.
@@ -564,7 +564,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6 lg:col-span-2">
+        <StaggerItem className="neu p-6 lg:col-span-2 min-w-0 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-display text-lg font-bold">{t("settings.language", "Language & Multilingual Support")}</h2>
@@ -598,7 +598,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6 lg:col-span-2">
+        <StaggerItem className="neu p-6 lg:col-span-2 min-w-0 overflow-hidden">
           <h2 className="font-display text-lg font-bold">Export defaults</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Applied when you export any artifact from the chain.

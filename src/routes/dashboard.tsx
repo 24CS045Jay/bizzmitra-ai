@@ -86,14 +86,16 @@ function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     async function loadWorkspaces() {
-      let query = supabase.from("workspaces").select("*");
+      let query = supabase
+        .from("workspaces")
+        .select("id, name, problem_statement, industry, goals, constraints_text, intake_mode, language_code, workspace_context, status, maturity_score, ai_readiness_score, created_at, updated_at");
       if (!isTest && user?.id) {
         query = query.eq("owner_id", user.id);
       }
       const { data, error } = await query.order("updated_at", { ascending: false });
       if (error) toast.error(error.message);
       else {
-        const list = data ?? [];
+        const list = (data ?? []) as Tables<"workspaces">[];
         setWorkspaces(list);
         if (list.length > 0) {
           const activeId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
@@ -101,6 +103,27 @@ function DashboardPage() {
           if (found?.name) {
             setActiveWsName(found.name);
             window.localStorage.setItem("bizzmitra.activeWorkspaceId", found.id);
+
+            // Rebuild full workspaceContext from DB so it persists across sign-out/re-login
+            const storedCtx = found.workspace_context && typeof found.workspace_context === "object"
+              ? (found.workspace_context as Record<string, unknown>)
+              : null;
+
+            const rebuiltContext = {
+              businessName: (storedCtx?.["businessName"] as string) || found.name || "",
+              problemStatement: (storedCtx?.["problemStatement"] as string) || found.problem_statement || "",
+              industry: (storedCtx?.["industry"] as string) || found.industry || "General",
+              goals: (storedCtx?.["goals"] as string) || found.goals || "",
+              constraints: (storedCtx?.["constraints"] as string) || found.constraints_text || "",
+              intakeMode: (storedCtx?.["intakeMode"] as string) || found.intake_mode || "consult",
+              intakeMethod: (storedCtx?.["intakeMethod"] as string) || found.intake_method || "prompt",
+              language: (storedCtx?.["language"] as string) || found.language_code || "en",
+            };
+
+            window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(rebuiltContext));
+            if (rebuiltContext.language) {
+              window.localStorage.setItem("bizzmitra.language", rebuiltContext.language);
+            }
           }
         } else if (isTest) {
           setActiveWsName("TalentCraft HR Consultancy");

@@ -314,6 +314,13 @@ function IntakePage() {
             owner_id: user.id,
             name: businessName.trim() || `${problemStatement.trim().slice(0, 40)}…`,
             problem_statement: problemStatement.trim(),
+            industry,
+            goals: goals.trim() || null,
+            constraints_text: constraints.trim() || null,
+            intake_mode: mode,
+            intake_method: activeTab,
+            language_code: lang,
+            workspace_context: contextPayload,
             maturity_score: 54,
             ai_readiness_score: 81,
             status: "active",
@@ -366,11 +373,13 @@ function IntakePage() {
 
   return (
     <AppShell>
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
-        <ArtifactHeader id="intake" kicker={strings.kicker} title={strings.title} />
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
+        <div className="min-w-0 flex-1">
+          <ArtifactHeader id="intake" kicker={strings.kicker} title={strings.title} />
+        </div>
 
         {/* Multilingual Selector */}
-        <div className="neu-sm flex items-center gap-1.5 p-1 text-xs">
+        <div className="shrink-0 neu-sm flex items-center gap-1.5 p-1 text-xs">
           <Languages className="ml-1 size-3.5 text-muted-foreground" />
           <button
             type="button"
