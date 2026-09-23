@@ -69,7 +69,7 @@ export const TEAM_MEMBERS: TeamMember[] = [
     avatarBg: "from-blue-500 to-indigo-600",
     image: "", // Ready for member photo
     specialties: ["Executive Discovery", "Target Operating Models", "Value Stream Mapping", "Sprint Phasing"],
-    metrics: { label: "Transformations Delivered", value: "$420M+" },
+    metrics: { label: "Transformations Delivered", value: "₹3,500 Cr+" },
     socials: { linkedin: "https://linkedin.com" },
   },
   {

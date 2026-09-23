@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { completeDiscoveryAndUnlockAll } from "@/lib/workspace-stage-gate";
 
 export interface WorkspaceContextData {
   businessName: string;
@@ -13,6 +14,13 @@ export interface WorkspaceContextData {
   language?: string;
   sourceDetails?: Record<string, unknown>;
   createdAt?: string;
+  discoveryCompleted?: boolean;
+  discoveryAnswers?: Array<{ question: string; answer: string; hint?: string; missingEntity?: string }>;
+  discoveryQuestions?: any[];
+  discoverySummary?: string;
+  businessAnalysis?: any;
+  lastUpdated?: string;
+  regenerateVersion?: number;
 }
 
 /**
@@ -40,6 +48,9 @@ export async function restoreUserActiveWorkspace(userId: string): Promise<boolea
         localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(cached.context));
         if (cached.context.language) {
           localStorage.setItem("bizzmitra.language", cached.context.language);
+        }
+        if (cached.context.discoveryCompleted === true) {
+          completeDiscoveryAndUnlockAll(cached.activeId, cached.context);
         }
         window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
       }
@@ -101,6 +112,12 @@ export async function restoreUserActiveWorkspace(userId: string): Promise<boolea
             ? (matched.workspace_context as Record<string, unknown>)
             : null;
 
+        const isDiscoveryDone = Boolean(
+          storedCtx?.["discoveryCompleted"] === true ||
+          storedCtx?.["discoveryAnswers"] ||
+          (matched.maturity_score && matched.maturity_score >= 80)
+        );
+
         const restoredContext: WorkspaceContextData = {
           businessName: (storedCtx?.["businessName"] as string) || matched.name || "Enterprise Workspace",
           name: matched.name || "Enterprise Workspace",
@@ -113,6 +130,11 @@ export async function restoreUserActiveWorkspace(userId: string): Promise<boolea
           intakeMethod: (storedCtx?.["intakeMethod"] as string) || matched.intake_method || "prompt",
           language: (storedCtx?.["language"] as string) || matched.language_code || "en",
           sourceDetails: (storedCtx?.["sourceDetails"] as Record<string, unknown>) || {},
+          discoveryCompleted: isDiscoveryDone,
+          discoveryAnswers: storedCtx?.["discoveryAnswers"] as any,
+          discoveryQuestions: storedCtx?.["discoveryQuestions"] as any,
+          discoverySummary: storedCtx?.["discoverySummary"] as any,
+          businessAnalysis: storedCtx?.["businessAnalysis"] as any,
         };
 
         localStorage.setItem("bizzmitra.activeWorkspaceId", matched.id);
@@ -120,6 +142,10 @@ export async function restoreUserActiveWorkspace(userId: string): Promise<boolea
         localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(restoredContext));
         if (restoredContext.language) {
           localStorage.setItem("bizzmitra.language", restoredContext.language);
+        }
+
+        if (isDiscoveryDone) {
+          completeDiscoveryAndUnlockAll(matched.id, restoredContext);
         }
 
         // Cache for this user

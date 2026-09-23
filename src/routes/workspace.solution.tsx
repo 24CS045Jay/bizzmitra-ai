@@ -181,8 +181,17 @@ function SolutionPage() {
         setStudioSettings(custom.detail);
       }
     };
+
+    const handleWorkspaceUpdate = () => {
+      void syncAndGenerate();
+    };
+
     window.addEventListener("bizzmitra:studio-updated", handleStudioUpdate);
-    return () => window.removeEventListener("bizzmitra:studio-updated", handleStudioUpdate);
+    window.addEventListener("bizzmitra:workspace-updated", handleWorkspaceUpdate);
+    return () => {
+      window.removeEventListener("bizzmitra:studio-updated", handleStudioUpdate);
+      window.removeEventListener("bizzmitra:workspace-updated", handleWorkspaceUpdate);
+    };
   }, []);
 
   const handleRegenerate = async (force = true, customFields?: string[]) => {

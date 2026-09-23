@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
@@ -7,9 +8,13 @@ import {
   Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
+import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
 
 export function MobileBottomNav() {
   const currentPath = useRouterState({ select: (s) => s.location.pathname });
+  const { isLimitReached, workspaceCount, refresh: refreshLimit } = useWorkspaceLimit();
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   // Only render on core authenticated / workspace app pages
   const isExcluded =
@@ -64,18 +69,24 @@ export function MobileBottomNav() {
           {navItems.map((item) => {
             const Icon = item.icon;
 
-            if (item.isAction) {
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className="group relative -top-3 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 via-primary to-violet-500 shadow-lg shadow-primary/30 transition-transform active:scale-90"
-                >
-                  <Icon className="size-6 text-white transition-transform group-active:rotate-90" />
-                  <span className="sr-only">New Blueprint</span>
-                </Link>
-              );
-            }
+              if (item.isAction) {
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={(e) => {
+                      if (item.to === "/workspace/new" && isLimitReached) {
+                        e.preventDefault();
+                        setIsUpgradeModalOpen(true);
+                      }
+                    }}
+                    className="group relative -top-3 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 via-primary to-violet-500 shadow-lg shadow-primary/30 transition-transform active:scale-90"
+                  >
+                    <Icon className="size-6 text-white transition-transform group-active:rotate-90" />
+                    <span className="sr-only">New Blueprint</span>
+                  </Link>
+                );
+              }
 
             return (
               <Link
@@ -100,6 +111,15 @@ export function MobileBottomNav() {
           })}
         </div>
       </div>
+
+      <WorkspaceUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        workspaceCount={workspaceCount || 1}
+        onUpgradeSuccess={() => {
+          void refreshLimit();
+        }}
+      />
     </nav>
   );
 }

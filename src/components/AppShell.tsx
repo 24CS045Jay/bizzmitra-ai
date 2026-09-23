@@ -44,6 +44,9 @@ import {
   loadCurrentRole,
   saveCurrentRole,
 } from "@/lib/admin-rbac-data";
+import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
+import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
+import { completeDiscoveryAndUnlockAll } from "@/lib/workspace-stage-gate";
 
 const NAV = [
   { to: "/dashboard", label: "Workspaces", icon: LayoutGrid },
@@ -69,6 +72,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user, signOut } = useAuth();
   const { t } = useTranslation();
   const isSuperAdmin = isSuperAdminEmail(user?.email);
+
+  const { isLimitReached, workspaceCount, refresh: refreshLimit } = useWorkspaceLimit();
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   const getNavLabel = (item: (typeof NAV)[number]) => {
     const map: Record<string, string> = {
@@ -160,7 +166,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 ? (currentWs.workspace_context as Record<string, unknown>)
                 : null;
 
+            const isCompleted =
+              storedCtx?.["discoveryCompleted"] === true ||
+              (storedCtx?.["discoveryAnswers"] && Array.isArray(storedCtx["discoveryAnswers"]) && storedCtx["discoveryAnswers"].length > 0);
+
             const fullContext = {
+              ...(storedCtx || {}),
               businessName: (storedCtx?.["businessName"] as string) || currentWs.name || "Enterprise Workspace",
               problemStatement: (storedCtx?.["problemStatement"] as string) || currentWs.problem_statement || "",
               industry: (storedCtx?.["industry"] as string) || currentWs.industry || "Cross-Industry Transformation",
@@ -169,6 +180,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               intakeMode: (storedCtx?.["intakeMode"] as string) || currentWs.intake_mode || "consult",
               intakeMethod: (storedCtx?.["intakeMethod"] as string) || currentWs.intake_method || "prompt",
               language: (storedCtx?.["language"] as string) || currentWs.language_code || storedLang,
+              discoveryCompleted: Boolean(isCompleted),
             };
 
             setActiveWs({
@@ -181,6 +193,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             window.localStorage.setItem("bizzmitra.activeWorkspaceId", currentWs.id);
             window.localStorage.setItem("bizzmitra.activeWorkspaceName", fullContext.businessName);
             window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(fullContext));
+            if (isCompleted) {
+              completeDiscoveryAndUnlockAll(currentWs.id, fullContext);
+            }
             if (fullContext.language) {
               window.localStorage.setItem("bizzmitra.language", fullContext.language);
             }
@@ -294,7 +309,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             <Link
               key={item.to}
               to={item.to}
-              onClick={onNavigate}
+              onClick={(e) => {
+                if (item.to === "/workspace/new" && isLimitReached) {
+                  e.preventDefault();
+                  setIsUpgradeModalOpen(true);
+                  return;
+                }
+                onNavigate?.();
+              }}
               className={cn(
                 "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                 active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
@@ -352,6 +374,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <LogOut className="size-3.5" /> Sign out
         </button>
       </div>
+
+      <WorkspaceUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        workspaceCount={workspaceCount || 1}
+        onUpgradeSuccess={() => {
+          void refreshLimit();
+        }}
+      />
     </div>
   );
 }

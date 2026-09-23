@@ -66,12 +66,19 @@ export function RoadmapPage() {
   } | null>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("bizzmitra.workspaceContext");
-      if (raw) {
-        setWorkspaceContext(JSON.parse(raw));
-      }
-    } catch {}
+    function loadContext() {
+      try {
+        const raw = localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          setWorkspaceContext(JSON.parse(raw));
+        }
+      } catch {}
+      setDynamicBlueprint(null);
+    }
+    loadContext();
+
+    window.addEventListener("bizzmitra:workspace-updated", loadContext);
+    return () => window.removeEventListener("bizzmitra:workspace-updated", loadContext);
   }, []);
 
   const [dynamicBlueprint, setDynamicBlueprint] = useState<any>(null);

@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Clock,
   LayoutGrid,
+  Lock,
   Plus,
   ShieldAlert,
   Sparkles,
@@ -24,6 +25,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getRoadmapForWorkspace } from "@/lib/planning-data";
 import { evaluateBlueprintRisks } from "@/lib/risk-evaluator";
+import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
+import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
+import { completeDiscoveryAndUnlockAll } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -83,6 +87,21 @@ function DashboardPage() {
     return isTest ? "TalentCraft HR Consultancy" : "";
   });
 
+  const {
+    isBasicPlan,
+    isLimitReached,
+    workspaceCount,
+    refresh: refreshWorkspaceLimit,
+  } = useWorkspaceLimit();
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+  const handleCreateWorkspaceAttempt = (e: React.MouseEvent) => {
+    if (isLimitReached || (isBasicPlan && workspaces.length >= 1)) {
+      e.preventDefault();
+      setIsUpgradeModalOpen(true);
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
     async function loadWorkspaces() {
@@ -132,7 +151,12 @@ function DashboardPage() {
               ? (found.workspace_context as Record<string, unknown>)
               : null;
 
+            const isCompleted =
+              storedCtx?.["discoveryCompleted"] === true ||
+              (storedCtx?.["discoveryAnswers"] && Array.isArray(storedCtx["discoveryAnswers"]) && storedCtx["discoveryAnswers"].length > 0);
+
             const rebuiltContext = {
+              ...(storedCtx || {}),
               businessName: (storedCtx?.["businessName"] as string) || found.name || "",
               problemStatement: (storedCtx?.["problemStatement"] as string) || found.problem_statement || "",
               industry: (storedCtx?.["industry"] as string) || found.industry || "General",
@@ -141,9 +165,13 @@ function DashboardPage() {
               intakeMode: (storedCtx?.["intakeMode"] as string) || found.intake_mode || "consult",
               intakeMethod: (storedCtx?.["intakeMethod"] as string) || found.intake_method || "prompt",
               language: (storedCtx?.["language"] as string) || found.language_code || "en",
+              discoveryCompleted: Boolean(isCompleted),
             };
 
             window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(rebuiltContext));
+            if (isCompleted) {
+              completeDiscoveryAndUnlockAll(found.id, rebuiltContext);
+            }
             if (rebuiltContext.language) {
               window.localStorage.setItem("bizzmitra.language", rebuiltContext.language);
             }
@@ -245,6 +273,7 @@ function DashboardPage() {
 
               <Link
                 to="/workspace/new"
+                onClick={handleCreateWorkspaceAttempt}
                 className="neu-press inline-flex items-center gap-2 self-start sm:self-auto rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground glow-primary shadow-sm"
               >
                 <Plus className="size-4" />
@@ -270,6 +299,7 @@ function DashboardPage() {
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <Link
                   to="/workspace/new"
+                  onClick={handleCreateWorkspaceAttempt}
                   className="neu-press inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground glow-primary shadow-md hover:brightness-105 transition-all"
                 >
                   <Plus className="size-4" />
@@ -293,9 +323,9 @@ function DashboardPage() {
                   <div className="size-7 rounded-lg bg-primary/15 text-primary text-xs font-bold flex items-center justify-center mb-2.5">
                     1
                   </div>
-                  <h4 className="font-semibold text-xs text-foreground">New Intake Form</h4>
-                  <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
-                    Frame your business context, problem statement, and primary transformation goals.
+                  <h3 className="font-bold text-sm text-foreground">Multi-Modal Intake</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Define problem via text, voice, PDF ingestion, or existing URLs.
                   </p>
                 </div>
 
@@ -303,9 +333,9 @@ function DashboardPage() {
                   <div className="size-7 rounded-lg bg-primary/15 text-primary text-xs font-bold flex items-center justify-center mb-2.5">
                     2
                   </div>
-                  <h4 className="font-semibold text-xs text-foreground">AI Guided Discovery</h4>
-                  <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
-                    Diagnostic agent conducts interactive interviews to reveal root bottlenecks.
+                  <h3 className="font-bold text-sm text-foreground">AI Guided Discovery</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Interactive diagnostic loss tree questions synthesize root causes.
                   </p>
                 </div>
 
@@ -313,15 +343,24 @@ function DashboardPage() {
                   <div className="size-7 rounded-lg bg-primary/15 text-primary text-xs font-bold flex items-center justify-center mb-2.5">
                     3
                   </div>
-                  <h4 className="font-semibold text-xs text-foreground">Solution Cockpit</h4>
-                  <p className="mt-1 text-[11px] text-muted-foreground leading-snug">
-                    Interactive solution maps, ready-to-use CRM prototypes, and roadmap tracking.
+                  <h3 className="font-bold text-sm text-foreground">11 Living Deliverables</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Generate architectures, schemas, wireframes, roadmaps, and pitch decks.
                   </p>
                 </div>
               </div>
             </div>
           </Reveal>
         </div>
+
+        <WorkspaceUpgradeModal
+          isOpen={isUpgradeModalOpen}
+          onClose={() => setIsUpgradeModalOpen(false)}
+          workspaceCount={workspaces.length || workspaceCount || 1}
+          onUpgradeSuccess={() => {
+            void refreshWorkspaceLimit();
+          }}
+        />
       </AppShell>
     );
   }
@@ -572,12 +611,21 @@ function DashboardPage() {
             <h2 className="font-display text-xl font-bold text-foreground">All Transformation Workspaces</h2>
             <p className="text-xs text-muted-foreground">Switch or create blueprints for client initiatives.</p>
           </div>
-          <Link
-            to="/workspace/new"
-            className="neu-press flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2.5 text-xs font-bold text-primary-foreground glow-primary"
-          >
-            <Plus className="size-4" /> New workspace
-          </Link>
+          <div className="flex items-center gap-3">
+            {isBasicPlan && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 px-3 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                <Lock className="size-3" />
+                Basic: {workspaces.length}/1 Workspace Used
+              </span>
+            )}
+            <Link
+              to="/workspace/new"
+              onClick={handleCreateWorkspaceAttempt}
+              className="neu-press flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2.5 text-xs font-bold text-primary-foreground glow-primary"
+            >
+              <Plus className="size-4" /> New workspace
+            </Link>
+          </div>
         </div>
 
         <Stagger className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -632,6 +680,15 @@ function DashboardPage() {
         </Stagger>
       </div>
       </>
+
+      <WorkspaceUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        workspaceCount={workspaces.length || workspaceCount || 1}
+        onUpgradeSuccess={() => {
+          void refreshWorkspaceLimit();
+        }}
+      />
     </AppShell>
   );
 }

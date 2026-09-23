@@ -223,171 +223,195 @@ export function AiCopilotPanel() {
         return;
       }
 
+      // 2. Extract cached discovery inputs if available
+      let discoverySummary = "";
+      let diagnosticAnswers: Array<{ question: string; answer: string }> = [];
+      try {
+        if (typeof window !== "undefined") {
+          const rawCtx = window.localStorage.getItem("bizzmitra.workspaceContext");
+          if (rawCtx) {
+            const parsed = JSON.parse(rawCtx);
+            if (parsed.discoverySummary) discoverySummary = parsed.discoverySummary;
+            if (parsed.discoveryAnswers) diagnosticAnswers = parsed.discoveryAnswers;
+          }
+        }
+      } catch {}
+
       const roadmap = getRoadmapForWorkspace({ name: workspaceName, industry: "HR Tech" });
       const { topRisks, actionItems, scoreResult } = evaluateBlueprintRisks(roadmap, {
         name: workspaceName,
         problemStatement: problem,
       });
 
-      // 2. Synthesize answers with concise, to-the-point reasoning
-      await delay(500 + Math.random() * 300);
-
-      const q = textToSend.toLowerCase().trim();
       let responseText = "";
-      let badge: string | undefined;
-      let bullets: string[] | undefined;
+      let badge: string | undefined = "Blueprint Copilot";
+      let bullets: string[] | undefined = undefined;
 
-      // Intent 1: Greetings & Casual Openers
-      if (/^(hi|hello|hey|greetings|namaste|good\s(morning|afternoon|evening)|yo\b|sup\b|howdy)/i.test(q)) {
-        badge = "Blueprint Copilot";
-        responseText = `Hello! How can I assist with your **${workspaceName}** blueprint today?`;
-      }
-      // Intent 1b: Status & Well-being
-      else if (/how\s*(are|r)\s*you|how's\s*it\s*going|what'?s\s*up/i.test(q)) {
-        badge = "Blueprint Copilot";
-        responseText = `I'm doing well, ready to help! What would you like to explore for **${workspaceName}**?`;
-      }
-      // Intent 1c: Politeness & Closures
-      else if (/^(thanks|thank\s*you|thx|appreciate\s*it|great\s*thanks|bye|goodbye)/i.test(q)) {
-        badge = "Blueprint Copilot";
-        responseText = `You're welcome! Let me know whenever you need anything else for **${workspaceName}**.`;
-      }
-      // Intent 1d: Capabilities / Help
-      else if (q === "help" || /what\s*can\s*you\s*do|who\s*are\s*you/i.test(q)) {
-        badge = "Copilot Scope";
-        responseText = `I provide direct insights on **${workspaceName}** across:`;
-        bullets = [
-          "Delivery timeline, milestones & phases",
-          "Top risks, DPDP compliance & mitigations",
-          "Budget estimates, CapEx & ROI payback",
-          "Technical architecture & database schema",
-          "Immediate sprint action items",
-        ];
-      }
-      // Intent 2: Business Scaling, Growth & Expansion
-      else if (q.includes("scale") || q.includes("grow") || q.includes("expand") || q.includes("more client")) {
-        badge = "Scaling Strategy";
-        responseText = `Three core operational levers to scale **${workspaceName}**:`;
-        bullets = [
-          "⚡ Automated Sourcing: Cuts turnaround from 28 to 9 days via the digital pipeline.",
-          "📈 Capacity Reclaim: Saves 18 hrs/week per recruiter to manage 600+ monthly applicants.",
-          "🏢 Client Self-Service: Direct portal reduces client feedback delays to 4 hours.",
-        ];
-      }
-      // Intent 3: Risks & Compliance (DPDP, Security, Bottlenecks)
-      else if (q.includes("risk") || q.includes("threat") || q.includes("security") || q.includes("compliance") || q.includes("dpdp") || q.includes("audit")) {
-        const primaryRisk = topRisks[0];
-        const backupRisk = roadmap.riskRegister[0];
-        badge = "Risk & Compliance";
-        responseText = `Primary operational risk: **"${primaryRisk?.title ?? backupRisk?.title}"** (${(primaryRisk?.category ?? backupRisk?.category ?? "Compliance").toUpperCase()}):`;
-        bullets = [
-          `Impact: ${primaryRisk?.detail ?? backupRisk?.consequence ?? "Requires 180-day resume purge routine under India DPDP Act."}`,
-          `Mitigation: ${primaryRisk?.remediation ?? backupRisk?.mitigationStrategy ?? "Implement automated retention triggers in PostgreSQL and steering committee sign-off."}`,
-        ];
-      }
-      // Intent 4: Rollout Timeline & Phases
-      else if (q.includes("rollout") || q.includes("timeline") || q.includes("schedule") || q.includes("how long") || q.includes("duration") || q.includes("phase") || q.includes("week") || q.includes("gantt")) {
-        badge = "Delivery Roadmap";
-        responseText = `Rollout is **${roadmap.targetTimelineWeeks} calendar weeks** across **${roadmap.phases.length} phases** (${roadmap.totalPersonDays} person-days total effort):`;
-        bullets = roadmap.phases.map(
-          (p) => `${p.name}: Weeks ${p.startWeek + 1}–${p.startWeek + p.durationWeekCount} (${p.durationWeeks})`,
-        );
-      }
-      // Intent 5: Profit Maximization & Margins
-      else if (q.includes("profit") || q.includes("margin") || q.includes("earn") || q.includes("monetiz")) {
-        badge = "Profit Strategy";
-        responseText = `Key profitability drivers for **${workspaceName}**:`;
-        bullets = [
-          "Direct Labor Savings: ~₹68,400+/year from automating manual recruiter spreadsheet tasks.",
-          "Placement Velocity: 35% higher monthly placements with existing 8 consultants.",
-          "Payback: Reached in 4.2 months with a 340% 3-year cumulative ROI.",
-        ];
-      }
-      // Intent 6: Financials, Budget, CapEx, ROI, Savings
-      else if (q.includes("budget") || q.includes("cost") || q.includes("financial") || q.includes("roi") || q.includes("saving") || q.includes("money") || q.includes("capex") || q.includes("price") || q.includes("how much")) {
-        badge = "Financial Model";
-        const estimatedCapex = roadmap.totalPersonDays * 12500;
-        responseText = `Financial snapshot for **${workspaceName}** (8 recruiters, 400 monthly applicants):`;
-        bullets = [
-          `Total CapEx: ~₹${(estimatedCapex / 100000).toFixed(1)} Lakhs (${roadmap.totalPersonDays} person-days)`,
-          "Net Annual Labor Savings: ~₹68,400+/year",
-          "Payback Period: 4.2 to 5.2 months post-launch",
-          "3-Year ROI Multiple: 340%",
-        ];
-      }
-      // Intent 7: Next Action Items, Sprints & Tasks
-      else if (q.includes("action") || q.includes("next") || q.includes("todo") || q.includes("task") || q.includes("sprint") || q.includes("deliverable")) {
-        badge = "Next Actions";
-        responseText = `Top immediate sprint deliverables:`;
-        bullets = actionItems.slice(0, 3).map(
-          (item) => `✅ ${item.title} — ${item.owner} (${item.timeline})`,
-        );
-      }
-      // Intent 8: Architecture, Tech Stack, Database, API
-      else if (q.includes("database") || q.includes("postgres") || q.includes("schema") || q.includes("sql") || q.includes("tables")) {
-        badge = "Database";
-        responseText = `**PostgreSQL 16** with Row-Level Security (RLS) isolating tenant records, automated audit trails, and DPDP compliance retention triggers.`;
-      }
-      else if (q.includes("api") || q.includes("rest") || q.includes("endpoint")) {
-        badge = "API Surface";
-        responseText = `REST API on **Cloudflare Edge Workers** with JWT Bearer authentication, rate limiting, and OpenAPI 3.1 schema.`;
-      }
-      else if (q.includes("architecture") || q.includes("stack") || q.includes("tech") || q.includes("backend") || q.includes("frontend") || q.includes("hld") || q.includes("lld")) {
-        badge = "Architecture";
-        responseText = `Core technical stack for **${workspaceName}**:`;
-        bullets = [
-          "Frontend: React 19 + TanStack Router + Tailwind CSS v4",
-          "Edge / Gateway: Cloudflare Edge Worker with JWT auth",
-          "Async Workers: Redis 7 + BullMQ queue",
-          "Database: PostgreSQL 16 with Row-Level Security (RLS)",
-        ];
-      }
-      // Intent 9: HR CRM, Solution, Features
-      else if (q.includes("crm") || q.includes("candidate") || q.includes("pipeline") || q.includes("feature") || q.includes("punch")) {
-        badge = "HR CRM Modules";
-        responseText = `Core modules in your HR CRM solution:`;
-        bullets = [
-          "Candidate Pipeline: Real-time 4-stage tracking (Screening → Offer)",
-          "Punch Clock: Daily attendance logging and active hours tracking",
-          "Solution Studio: Custom candidate attributes with AI regeneration",
-          "CSV Export: One-click complete talent roster download",
-        ];
-      }
-      // Intent 10: Confidence Score & Maturity
-      else if (q.includes("confidence") || q.includes("score") || q.includes("maturity") || q.includes("readiness")) {
-        badge = "Readiness Score";
-        responseText = `Confidence Score is **${scoreResult.score}% (${scoreResult.grade})**:`;
-        bullets = [
-          `${scoreResult.breakdown.filter((d) => d.completed).length} of ${scoreResult.breakdown.length} blueprint domains verified.`,
-          `Next step: ${scoreResult.improvementHint}`,
-        ];
-      }
-      // Intent 11: Problem Statement
-      else if (q.includes("problem") || q.includes("challenge") || q.includes("context") || q.includes("about")) {
-        badge = "Context";
-        responseText = problem
-          ? `Active problem statement for **${workspaceName}**:\n"${problem}"`
-          : `**${workspaceName}** is modernizing manual spreadsheet recruitment into an automated, compliant ATS pipeline.`;
-      }
-      // Intent 12: Team & Roles
-      else if (q.includes("team") || q.includes("recruiter") || q.includes("staff") || q.includes("who is working")) {
-        badge = "Team & Roles";
-        responseText = `**${workspaceName}** models 8 recruitment consultants supported by an Enterprise Admin and Lead Architect.`;
-      }
-      // Intent 13: Export & Deliverables
-      else if (q.includes("export") || q.includes("download") || q.includes("pdf") || q.includes("report")) {
-        badge = "Export Options";
-        responseText = `You can export blueprint deliverables anytime from the **Export Center** in the sidebar, or export candidate lists to CSV from the HR CRM.`;
-      }
-      // Intent 14: To-the-point contextual fallback for ANY other question
-      else {
-        badge = "Blueprint Copilot";
-        responseText = `For **${workspaceName}**, this relates to your active ${roadmap.scenarioName} (${roadmap.targetTimelineWeeks}-week delivery path). Feel free to ask specifically about timeline, budget, risks, or architecture.`;
+      // 3. Primary Layer: Call Live Server AI Copilot with Conversation History & Full Context
+      try {
+        const res = await fetch("/api/ai/copilot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: textToSend,
+            history: messages.map((m) => ({
+              sender: m.sender,
+              text: m.text,
+              bullets: m.bullets,
+            })),
+            workspaceContext: {
+              workspaceId: wsId || undefined,
+              businessName: workspaceName,
+              industry: "HR Tech",
+              problemStatement: problem,
+              discoverySummary,
+              diagnosticAnswers,
+              roadmap,
+            },
+            activeModelId,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.text) {
+            responseText = data.text;
+            badge = data.badge || "Blueprint Copilot";
+            bullets = Array.isArray(data.bullets) && data.bullets.length > 0 ? data.bullets : undefined;
+          }
+        }
+      } catch (apiErr) {
+        console.warn("[AiCopilotPanel] Server copilot API unavailable, using local intelligence engine:", apiErr);
       }
 
-      // 3. Deduct credits based on exact token count (prompt tokens + completion tokens) & active model multiplier
+      // 4. Secondary Layer: Contextual Deterministic Fallback if server inference is unreachable
+      if (!responseText) {
+        const q = textToSend.toLowerCase().trim();
+
+        // Check for Out-of-Scope questions
+        const outOfScopeRegex = /(recipe|cake|pasta|cook|food|bake|dinner|weather|rain|temperature|cricket|football|fifa|ipl|world\s*cup|movie|cinema|actor|actress|hollywood|bollywood|song|lyrics|singer|celebrity|joke|comedy|funny|horoscope|zodiac|astrology|capital\s*of|president\s*of|prime\s*minister\s*of|who\s*won\b|translate\b|homework|dating|girlfriend|boyfriend)/i;
+
+        if (outOfScopeRegex.test(q)) {
+          badge = "Scope Notice";
+          responseText = `This question is outside my context scope. I am dedicated to **${workspaceName}**'s business transformation, roadmap, and architecture.`;
+          bullets = undefined;
+        }
+        // Intent: Specific Day in Rollout Plan (e.g. "what is the work to do on day 7", "day 1", "day 14")
+        else if (/\b(?:day|on\s+day)\s*(\d+)\b/i.test(q)) {
+          const match = q.match(/\b(?:day|on\s+day)\s*(\d+)\b/i);
+          const dayNum = match ? parseInt(match[1]!, 10) : 7;
+          const weekNum = Math.ceil(dayNum / 7) || 1;
+          const dayInWeek = ((dayNum - 1) % 7) + 1;
+
+          // Find which phase this day belongs to
+          const currentPhase = roadmap.phases.find(
+            (p) => (p.startWeek + 1) <= weekNum && weekNum <= (p.startWeek + p.durationWeekCount)
+          ) || (weekNum > roadmap.targetTimelineWeeks ? roadmap.phases[roadmap.phases.length - 1]! : roadmap.phases[0]!);
+
+          const activeMilestone = currentPhase.milestones[Math.min(dayInWeek - 1, currentPhase.milestones.length - 1)] || currentPhase.milestones[0];
+
+          badge = `Day ${dayNum}`;
+          responseText = `On **Day ${dayNum}** (Phase ${currentPhase.phaseNumber}, Week ${weekNum}):`;
+          bullets = [
+            `${activeMilestone?.title ?? "System pipeline validation"} (${activeMilestone?.deliverable ?? "Core deliverable"})`,
+            `Sprint review and daily test sign-off`,
+          ];
+        }
+        // Intent: Greetings & Casual Openers
+        else if (/^(hi|hello|hey|greetings|namaste|good\s(morning|afternoon|evening)|yo\b|sup\b|howdy)/i.test(q)) {
+          badge = "Blueprint Copilot";
+          responseText = `Hello! How can I assist with your **${workspaceName}** blueprint today?`;
+          bullets = undefined;
+        }
+        // Intent: Status & Well-being
+        else if (/how\s*(are|r)\s*you|how's\s*it\s*going|what'?s\s*up/i.test(q)) {
+          badge = "Blueprint Copilot";
+          responseText = `I'm doing well! What would you like to explore for **${workspaceName}**?`;
+          bullets = undefined;
+        }
+        // Intent: Politeness & Closures
+        else if (/^(thanks|thank\s*you|thx|appreciate\s*it|great\s*thanks|bye|goodbye)/i.test(q)) {
+          badge = "Blueprint Copilot";
+          responseText = `You're welcome! Let me know if you need anything else for **${workspaceName}**.`;
+          bullets = undefined;
+        }
+        // Intent: Capabilities / Help
+        else if (q === "help" || /what\s*can\s*you\s*do|who\s*are\s*you/i.test(q)) {
+          badge = "Copilot Scope";
+          responseText = `I provide direct insights on **${workspaceName}**'s rollout timeline, daily sprint work, architecture, risks, and budget.`;
+          bullets = undefined;
+        }
+        // Intent: Rollout Timeline & Phases
+        else if (q.includes("rollout") || q.includes("timeline") || q.includes("schedule") || q.includes("how long") || q.includes("duration") || q.includes("phase") || q.includes("week") || q.includes("gantt")) {
+          badge = "Delivery Roadmap";
+          responseText = `Rollout is **${roadmap.targetTimelineWeeks} weeks** across **${roadmap.phases.length} phases** (${roadmap.totalPersonDays} person-days total effort):`;
+          bullets = roadmap.phases.map(
+            (p) => `Phase ${p.phaseNumber}: ${p.name} (${p.durationWeeks})`,
+          );
+        }
+        // Intent: Risks & Compliance
+        else if (q.includes("risk") || q.includes("threat") || q.includes("security") || q.includes("compliance") || q.includes("dpdp") || q.includes("audit")) {
+          const primaryRisk = topRisks[0];
+          const backupRisk = roadmap.riskRegister[0];
+          badge = "Risk & Compliance";
+          responseText = `Primary risk is **${primaryRisk?.title ?? backupRisk?.title}** (${primaryRisk?.category ?? "Compliance"}): ${primaryRisk?.remediation ?? backupRisk?.mitigationStrategy ?? "Automated retention triggers in PostgreSQL"}.`;
+          bullets = undefined;
+        }
+        // Intent: Financials, Budget, CapEx, ROI, Savings
+        else if (q.includes("budget") || q.includes("cost") || q.includes("financial") || q.includes("roi") || q.includes("saving") || q.includes("money") || q.includes("capex") || q.includes("price") || q.includes("how much")) {
+          badge = "Financial Model";
+          const estimatedCapex = roadmap.totalPersonDays * 12500;
+          responseText = `Estimated CapEx for **${workspaceName}** is ~₹${(estimatedCapex / 100000).toFixed(1)} Lakhs (${roadmap.totalPersonDays} person-days, 4.2-month payback).`;
+          bullets = undefined;
+        }
+        // Intent: Next Action Items, Sprints & Tasks
+        else if (q.includes("action") || q.includes("next") || q.includes("todo") || q.includes("task") || q.includes("sprint") || q.includes("deliverable")) {
+          badge = "Next Actions";
+          responseText = `Immediate sprint deliverables:`;
+          bullets = actionItems.slice(0, 2).map(
+            (item) => `${item.title} (${item.timeline})`,
+          );
+        }
+        // Intent: Architecture, Tech Stack, Database, API
+        else if (q.includes("database") || q.includes("postgres") || q.includes("schema") || q.includes("sql") || q.includes("tables")) {
+          badge = "Database";
+          responseText = `**PostgreSQL 16** with Row-Level Security (RLS) isolating tenant records, automated audit trails, and DPDP compliance retention triggers.`;
+          bullets = undefined;
+        }
+        else if (q.includes("api") || q.includes("rest") || q.includes("endpoint")) {
+          badge = "API Surface";
+          responseText = `REST API on **Cloudflare Edge Workers** with JWT Bearer authentication, rate limiting, and OpenAPI 3.1 schema.`;
+          bullets = undefined;
+        }
+        else if (q.includes("architecture") || q.includes("stack") || q.includes("tech") || q.includes("backend") || q.includes("frontend") || q.includes("hld") || q.includes("lld")) {
+          badge = "Architecture";
+          responseText = `Core stack for **${workspaceName}**: React 19 frontend, Cloudflare Edge Worker gateway, BullMQ queue, and PostgreSQL 16 with RLS.`;
+          bullets = undefined;
+        }
+        // Intent: Confidence Score & Maturity
+        else if (q.includes("confidence") || q.includes("score") || q.includes("maturity") || q.includes("readiness")) {
+          badge = "Readiness Score";
+          responseText = `Confidence Score is **${scoreResult.score}% (${scoreResult.grade})** across ${scoreResult.breakdown.length} verified blueprint domains.`;
+          bullets = undefined;
+        }
+        // Intent: Contextual fallback with relevance check
+        else {
+          const isBusinessRelated = /(work|task|sprint|item|step|plan|goal|lead|status|system|data|flow|user|client|customer|scale|cost|price|fee|pay|bill|time|date|month|year|deploy|launch|release|test|bug|fix|code|spec|api|doc|team|staff|role|hire|metric|kpi|milestone)/i.test(q);
+          if (!isBusinessRelated) {
+            badge = "Scope Notice";
+            responseText = `This question is outside my context scope. I am dedicated to **${workspaceName}**'s business transformation, roadmap, and architecture.`;
+            bullets = undefined;
+          } else {
+            badge = "Blueprint Copilot";
+            responseText = `For **${workspaceName}**, this relates to your ${roadmap.targetTimelineWeeks}-week delivery path. Ask me about timeline, daily sprint work, budget, or architecture.`;
+            bullets = undefined;
+          }
+        }
+      }
+
+      // 5. Deduct credits based on exact token count (prompt tokens + completion tokens) & active model multiplier
       const fullResponseContent = `${responseText} ${bullets ? bullets.join(" ") : ""}`;
-      const deduction = deductCreditsByTokens(
+      deductCreditsByTokens(
         textToSend,
         fullResponseContent,
         `AI Copilot (${activeModel.name}): "${textToSend.slice(0, 30)}${textToSend.length > 30 ? "..." : ""}"`,
@@ -399,6 +423,7 @@ export function AiCopilotPanel() {
         sender: "assistant",
         text: responseText,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        badge,
         bullets,
       };
 
