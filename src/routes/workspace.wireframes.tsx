@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Sparkles,
@@ -212,11 +212,57 @@ function WireframesPage() {
     toast.success("Synthesizing wireframes for new problem context...");
   };
 
-  const inventoryList = blueprint.screenInventory || [];
-  const filteredInventory =
-    inventoryFilter === "all"
-      ? inventoryList
-      : inventoryList.filter((s: any) => s.screenTarget === inventoryFilter);
+  const inventoryList: any[] = useMemo(() => {
+    // 1. Direct inventory on blueprint
+    if (Array.isArray(blueprint?.inventory) && blueprint.inventory.length > 0) {
+      return blueprint.inventory;
+    }
+    // 2. Direct screenInventory on blueprint (alternate property)
+    if (Array.isArray(blueprint?.screenInventory) && blueprint.screenInventory.length > 0) {
+      return blueprint.screenInventory;
+    }
+    // 3. Fallback blueprint inventory
+    if (Array.isArray(fallbackBlueprint?.inventory) && fallbackBlueprint.inventory.length > 0) {
+      return fallbackBlueprint.inventory;
+    }
+    // 4. Synthesize from screenConcepts
+    if (Array.isArray(blueprint?.screenConcepts) && blueprint.screenConcepts.length > 0) {
+      return blueprint.screenConcepts.map((sc: any, idx: number) => ({
+        id: `WF-0${idx + 1}`,
+        name: sc.title || `Screen ${idx + 1}`,
+        note: sc.description || (sc.uxHighlights ? sc.uxHighlights.join(" • ") : "Core interactive wireframe frame."),
+        screenTarget: (sc.id || "dashboard") as ScreenConceptId,
+      }));
+    }
+    // 5. Synthesize from screens
+    if (Array.isArray(blueprint?.screens) && blueprint.screens.length > 0) {
+      const targets: ScreenConceptId[] = ["dashboard", "pipeline", "insights", "settings"];
+      return blueprint.screens.map((s: any, idx: number) => ({
+        id: s.id || `WF-0${idx + 1}`,
+        name: s.title || s.name || `Screen ${idx + 1}`,
+        note: s.userStory || s.description || (Array.isArray(s.components) ? s.components.join(" • ") : "Screen architecture component."),
+        screenTarget: (s.screenTarget || targets[idx % targets.length]) as ScreenConceptId,
+      }));
+    }
+    return [];
+  }, [blueprint, fallbackBlueprint]);
+
+  const normalizeTarget = (target?: string): ScreenConceptId => {
+    const t = (target || "").toLowerCase();
+    if (t.includes("pipe") || t.includes("board") || t.includes("kanban") || t.includes("flow")) return "pipeline";
+    if (t.includes("insight") || t.includes("telemet") || t.includes("analy") || t.includes("kpi")) return "insights";
+    if (t.includes("set") || t.includes("admin") || t.includes("gov") || t.includes("config")) return "settings";
+    return "dashboard";
+  };
+
+  const filteredInventory = useMemo(() => {
+    if (inventoryFilter === "all") return inventoryList;
+    return inventoryList.filter(
+      (s: any) =>
+        s.screenTarget === inventoryFilter ||
+        normalizeTarget(s.screenTarget) === inventoryFilter
+    );
+  }, [inventoryList, inventoryFilter]);
 
   const handleRegenerate = async () => {
     const tId = toast.loading("Regenerating UX wireframes with AI...");
@@ -440,23 +486,143 @@ function WireframesPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredInventory.map((w: any) => (
-                <div
-                  key={w.id}
-                  className="neu-sm p-4 rounded-xl border border-border/70 bg-surface/50 space-y-2 hover:border-primary/40 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono text-primary uppercase font-bold">
-                      ID: {w.id}
-                    </span>
-                    <span className="rounded bg-primary/10 px-2 py-0.5 text-[9px] font-mono text-primary capitalize font-medium">
-                      {w.screenTarget}
-                    </span>
-                  </div>
-                  <p className="text-xs font-bold text-foreground">{w.name}</p>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">{w.note}</p>
+              {filteredInventory.length > 0 ? (
+                filteredInventory.map((w: any) => {
+                  const target: ScreenConceptId = normalizeTarget(w.screenTarget);
+                  return (
+                    <div
+                      key={w.id}
+                      className="group rounded-2xl border border-border/80 bg-card/80 p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md space-y-3"
+                    >
+                      {/* Wireframe Frame Window Schematic Preview */}
+                      <div className="rounded-xl border border-border/70 bg-surface/70 p-2.5 transition-colors group-hover:border-primary/30 group-hover:bg-surface/90">
+                        {/* Frame Window Bar */}
+                        <div className="flex items-center justify-between border-b border-border/50 pb-1.5 mb-2">
+                          <div className="flex items-center gap-1">
+                            <span className="size-1.5 rounded-full bg-red-400/80" />
+                            <span className="size-1.5 rounded-full bg-amber-400/80" />
+                            <span className="size-1.5 rounded-full bg-emerald-400/80" />
+                          </div>
+                          <span className="text-[9px] font-mono font-medium text-muted-foreground">
+                            frame://{w.id.toLowerCase()}/{target}
+                          </span>
+                        </div>
+
+                        {/* Miniature Wireframe Schematic Canvas */}
+                        <div className="h-16 w-full rounded-lg border border-dashed border-border/60 bg-background/50 p-2 flex flex-col justify-between overflow-hidden">
+                          {target === "dashboard" && (
+                            <div className="space-y-1.5">
+                              <div className="flex gap-1.5">
+                                <div className="h-3 w-1/3 rounded bg-blue-500/20" />
+                                <div className="h-3 w-1/3 rounded bg-blue-500/20" />
+                                <div className="h-3 w-1/3 rounded bg-blue-500/20" />
+                              </div>
+                              <div className="flex gap-1.5">
+                                <div className="h-6 w-2/3 rounded bg-surface border border-border/50" />
+                                <div className="h-6 w-1/3 rounded bg-surface border border-border/50" />
+                              </div>
+                            </div>
+                          )}
+
+                          {target === "pipeline" && (
+                            <div className="flex h-full gap-1.5">
+                              <div className="flex-1 rounded bg-amber-500/10 p-1 flex flex-col gap-1">
+                                <div className="h-1.5 w-3/4 rounded bg-amber-500/30" />
+                                <div className="h-3 rounded bg-surface border border-border/50" />
+                              </div>
+                              <div className="flex-1 rounded bg-amber-500/10 p-1 flex flex-col gap-1">
+                                <div className="h-1.5 w-3/4 rounded bg-amber-500/30" />
+                                <div className="h-3 rounded bg-surface border border-border/50" />
+                              </div>
+                              <div className="flex-1 rounded bg-amber-500/10 p-1 flex flex-col gap-1">
+                                <div className="h-1.5 w-3/4 rounded bg-amber-500/30" />
+                                <div className="h-3 rounded bg-surface border border-border/50" />
+                              </div>
+                            </div>
+                          )}
+
+                          {target === "insights" && (
+                            <div className="flex h-full flex-col justify-between">
+                              <div className="flex justify-between items-center">
+                                <div className="h-2 w-12 rounded bg-emerald-500/30" />
+                                <div className="h-2 w-8 rounded bg-emerald-500/20" />
+                              </div>
+                              <div className="flex items-end gap-1.5 h-7 pt-1">
+                                <div className="w-1/5 h-3 rounded-t bg-emerald-500/20" />
+                                <div className="w-1/5 h-5 rounded-t bg-emerald-500/40" />
+                                <div className="w-1/5 h-4 rounded-t bg-emerald-500/30" />
+                                <div className="w-1/5 h-6 rounded-t bg-emerald-500/50" />
+                                <div className="w-1/5 h-7 rounded-t bg-emerald-500/60" />
+                              </div>
+                            </div>
+                          )}
+
+                          {target === "settings" && (
+                            <div className="flex h-full gap-2">
+                              <div className="w-1/3 rounded bg-purple-500/15 p-1 flex flex-col gap-1">
+                                <div className="h-1.5 w-full rounded bg-purple-500/30" />
+                                <div className="h-1.5 w-2/3 rounded bg-purple-500/20" />
+                                <div className="h-1.5 w-3/4 rounded bg-purple-500/20" />
+                              </div>
+                              <div className="flex-1 flex flex-col justify-around">
+                                <div className="flex justify-between items-center">
+                                  <div className="h-1.5 w-12 rounded bg-border" />
+                                  <div className="h-2 w-4 rounded-full bg-purple-500/40" />
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <div className="h-1.5 w-10 rounded bg-border" />
+                                  <div className="h-2 w-4 rounded-full bg-purple-500/40" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Header Badges */}
+                      <div className="flex items-center justify-between pt-0.5">
+                        <span className="text-[10px] font-mono text-primary uppercase font-bold tracking-wider">
+                          FRAME: {w.id}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[9px] font-mono capitalize font-semibold border ${
+                            target === "dashboard"
+                              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                              : target === "pipeline"
+                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                : target === "insights"
+                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                  : "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
+                          }`}
+                        >
+                          {target}
+                        </span>
+                      </div>
+
+                      {/* Frame Name & Component Notes */}
+                      <div>
+                        <p className="text-xs font-bold text-foreground leading-snug">{w.name}</p>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed mt-1 line-clamp-3">
+                          {w.note}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="col-span-full rounded-2xl border border-dashed border-border/80 p-8 text-center bg-card/40">
+                  <Layout className="mx-auto size-8 text-muted-foreground/60 mb-2" />
+                  <p className="text-xs font-semibold text-foreground">No frames found for "{inventoryFilter}"</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Explore all synthesized screen frames across the blueprint</p>
+                  <button
+                    type="button"
+                    onClick={() => setInventoryFilter("all")}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-xs hover:opacity-90"
+                  >
+                    Show All Screens
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 

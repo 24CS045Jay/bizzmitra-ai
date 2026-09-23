@@ -143,13 +143,14 @@ function SolutionPage() {
       if (wsId && !wsId.startsWith("ws-")) {
         const { data: ws } = await supabase
           .from("workspaces")
-          .select("problem_statement, name")
+          .select("problem_statement, name, industry")
           .eq("id", wsId)
           .maybeSingle();
 
         if (ws?.problem_statement) {
           loadedText = ws.problem_statement;
           if (ws.name) bName = ws.name;
+          if (ws.industry) ind = ws.industry;
         }
       }
 
@@ -158,16 +159,28 @@ function SolutionPage() {
       setBusinessName(bName);
       setIndustry(ind);
 
-      // Trigger dynamic AI generation via Groq 120B
+      let discoverySummary = "";
+      let diagnosticAnswers: any[] = [];
       try {
-        const res = await generateDynamicSolution(loadedText, bName, ind);
+        const dSum = window.localStorage.getItem("bizzmitra.discoverySummary");
+        if (dSum) discoverySummary = dSum;
+        const dAns = window.localStorage.getItem("bizzmitra.diagnosticAnswers");
+        if (dAns) diagnosticAnswers = JSON.parse(dAns);
+      } catch {}
+
+      // Trigger dynamic AI generation via backend API (/api/ai/solution-framing)
+      try {
+        const res = await generateDynamicSolution(loadedText, bName, ind, {
+          discoverySummary,
+          diagnosticAnswers,
+        });
         setFraming(res.framing);
         setSolution(res.solution);
         setModules(res.modules);
         if (res.buildBuyMatrix && res.buildBuyMatrix.length > 0) {
           setBuildBuyMatrix(res.buildBuyMatrix);
         }
-        setAiModelLabel(res.source === "groq-llm" ? "Groq 120B AI" : "BizzMitra Strategic Engine");
+        setAiModelLabel(res.source === "groq-llm" ? (res.modelUsed || "Groq Llama 3.3 70B") : "BizzMitra Adaptive Strategy Engine");
       } catch (e) {
         console.warn("[SolutionPage] Dynamic generation error:", e);
       }
@@ -195,11 +208,22 @@ function SolutionPage() {
   }, []);
 
   const handleRegenerate = async (force = true, customFields?: string[]) => {
-    const tId = toast.loading("Regenerating dynamic solution with Groq 120B AI...");
+    const tId = toast.loading("Regenerating dynamic solution with AI...");
     try {
+      let discoverySummary = "";
+      let diagnosticAnswers: any[] = [];
+      try {
+        const dSum = window.localStorage.getItem("bizzmitra.discoverySummary");
+        if (dSum) discoverySummary = dSum;
+        const dAns = window.localStorage.getItem("bizzmitra.diagnosticAnswers");
+        if (dAns) diagnosticAnswers = JSON.parse(dAns);
+      } catch {}
+
       const res = await generateDynamicSolution(problemText, businessName, industry, {
         forceFresh: force,
         customFields: customFields || studioSettings.customFields.map((f) => f.label),
+        discoverySummary,
+        diagnosticAnswers,
       });
       setFraming(res.framing);
       setSolution(res.solution);
@@ -207,7 +231,7 @@ function SolutionPage() {
       if (res.buildBuyMatrix && res.buildBuyMatrix.length > 0) {
         setBuildBuyMatrix(res.buildBuyMatrix);
       }
-      setAiModelLabel(res.source === "groq-llm" ? "Groq 120B AI" : "BizzMitra Strategic Engine");
+      setAiModelLabel(res.source === "groq-llm" ? (res.modelUsed || "Groq Llama 3.3 70B") : "BizzMitra Adaptive Strategy Engine");
       toast.success("Solution successfully regenerated with AI!", { id: tId });
     } catch {
       toast.error("Failed to regenerate solution", { id: tId });
