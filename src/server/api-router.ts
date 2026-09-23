@@ -446,8 +446,11 @@ function extractJsonFromText(rawText: string): any {
     // 1. Try Groq Ultra-Fast Primary with Multi-Key Rotation
     if (groqKeys.length > 0) {
       const groqModels = [
-        { id: "llama-3.1-8b-instant", maxTokens: maxTokensOverride || 2000 },
+        { id: "qwen/qwen3.8-27b", maxTokens: maxTokensOverride || 3000 },
+        { id: "openai/gpt-oss-120b", maxTokens: maxTokensOverride || 3000 },
+        { id: "openai/gpt-oss-20b", maxTokens: maxTokensOverride || 3000 },
         { id: "llama-3.3-70b-versatile", maxTokens: maxTokensOverride || 3000 },
+        { id: "llama-3.1-8b-instant", maxTokens: maxTokensOverride || 2000 },
       ];
 
       // Try across all available Groq keys
@@ -457,7 +460,7 @@ function extractJsonFromText(rawText: string): any {
         for (const modelDef of groqModels) {
           try {
             const controller = new AbortController();
-            const timeoutMs = timeoutOverrideMs || 4000;
+            const timeoutMs = timeoutOverrideMs || 10000;
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
             const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -501,11 +504,11 @@ function extractJsonFromText(rawText: string): any {
                 break; // Try next key immediately
               }
               console.warn(`[callLlmJson] Groq ${modelDef.id} response (${groqRes.status}):`, errText.slice(0, 120));
-              break;
+              continue; // Try next model in pool
             }
           } catch (err: any) {
             console.warn(`[callLlmJson] Groq ${modelDef.id} execution error:`, err?.message || err);
-            break;
+            continue; // Try next model in pool
           }
         }
       }
@@ -1446,15 +1449,25 @@ ${customFields && customFields.length > 0 ? `Configured Custom Schema Attributes
 Your task:
 Synthesize an enterprise-grade Problem Framing and Recommended Architectural Solution for this specific business. Do NOT output generic HR templates unless the problem is strictly HR. Customize every pillar, metric, constraint, root cause, software module, and build-vs-buy option to their exact domain.
 
+CRITICAL INSTRUCTION FOR IMPACT METRICS (DO NOT RETURN GENERIC NUMBERS LIKE 72% / -58% / 95% / 3.8x):
+You MUST calculate 4 highly tailored, realistic, domain-specific quantitative impact metrics specifically relevant to ${businessName}'s operations and problem:
+Examples:
+- If Cold-chain Logistics / Fleet: "Perishable Transit Shrink Reduction" (-48%), "Fleet Turnaround Latency" (-54%), "Cold-Chain Sensor Telemetry Coverage" (99.8%), "Projected Annual Fleet ROI" (4.2x)
+- If E-commerce / Amazon FBA: "Stockout Day Rate Avoided" (-62%), "Aged Inventory Surcharge Saved" (₹16.5L / yr), "Automated Repricing Latency" (Sub-5s), "Annual Inventory Capital ROI" (5.1x)
+- If FinTech / Lending: "Underwriting Turnaround Time" (-76%), "Bureau Verification Automation" (94%), "Default Risk Prediction Accuracy" (98.2%), "Capital Turnover Efficiency" (3.7x)
+- If Healthcare / Diagnostics: "Specimen Turnaround SLA" (-68%), "Barcode Matching Accuracy" (99.9%), "NABL Audit Compliance" (100%), "Lab Operational Margin Gain" (32%)
+- If Manufacturing / Industrial: "OEE (Overall Equipment Effectiveness)" (+28%), "Unplanned Downtime Reduction" (-64%), "Defect Rate in Production" (< 0.2%), "Annual Machine Asset ROI" (4.6x)
+- If CleanTech / Solar: "Inverter Downtime Elimination" (-78%), "SCADA Telemetry Latency" (< 2s), "Grid Dispatch Compliance" (99.9%), "Annual Clean Energy Yield" (+22%)
+
 Return strictly valid JSON with this exact structure:
 {
   "framing": {
     "statement": "2-3 sentences synthesizing root causes, daily operational friction, and business drag",
     "impact": [
-      { "metric": "string (e.g. Automatable Volume, TAT, Error Rate, Cost)", "value": "string (e.g. 70% / day, 18 hrs, -35%)" },
-      { "metric": "string", "value": "string" },
-      { "metric": "string", "value": "string" },
-      { "metric": "string", "value": "string" }
+      { "metric": "string (Specific domain metric name)", "value": "string (e.g. -48%, +34%, 99.2%, 4.2x, ₹18.4L)" },
+      { "metric": "string (Specific domain metric name)", "value": "string" },
+      { "metric": "string (Specific domain metric name)", "value": "string" },
+      { "metric": "string (Specific domain metric name)", "value": "string" }
     ],
     "rootCauses": [
       { "title": "string", "detail": "string" },
