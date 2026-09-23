@@ -34,6 +34,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentIngestionModal } from "@/components/DocumentIngestionModal";
 import { resetWorkspaceStages } from "@/lib/workspace-stage-gate";
+import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
+import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
 
 export const Route = createFileRoute("/workspace/new")({
   head: () => ({
@@ -75,6 +77,16 @@ function IntakePage() {
   const [goals, setGoals] = useState("");
   const [constraints, setConstraints] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Workspace Plan Limit State
+  const { isBasicPlan, isLimitReached, workspaceCount, refresh: refreshLimit } = useWorkspaceLimit();
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (isLimitReached) {
+      setIsUpgradeModalOpen(true);
+    }
+  }, [isLimitReached]);
 
   // Document Upload Simulator State
   const [uploading, setUploading] = useState(false);
@@ -281,6 +293,12 @@ function IntakePage() {
 
   // Workspace Creation Handler
   async function createWorkspace() {
+    if (isLimitReached) {
+      toast.error("In the basic plan you can only create one workspace. Please upgrade your plan to create another workspace.");
+      setIsUpgradeModalOpen(true);
+      return;
+    }
+
     if (!problemStatement.trim()) {
       toast.error("Please provide a business problem or description");
       return;
@@ -401,6 +419,30 @@ function IntakePage() {
       </div>
 
       <p className="mt-2 text-sm text-muted-foreground">{strings.subtitle}</p>
+
+      {/* Plan Limit Warning Banner */}
+      {isLimitReached && (
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="size-4 shrink-0 text-amber-500" />
+            <div>
+              <p className="font-bold text-amber-600 dark:text-amber-400">
+                Workspace Limit Reached ({workspaceCount}/1 Workspaces Used)
+              </p>
+              <p className="text-muted-foreground mt-0.5">
+                In the Basic (Free Starter) plan, you can only create 1 workspace. Upgrade your plan to create another workspace.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsUpgradeModalOpen(true)}
+            className="neu-press shrink-0 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:brightness-105 transition-all"
+          >
+            Upgrade Plan
+          </button>
+        </div>
+      )}
 
       {/* Dual Operating Modes */}
       <Reveal className="mt-6">
@@ -853,12 +895,17 @@ function IntakePage() {
 
         <button
           type="button"
-          onClick={createWorkspace}
-          disabled={!problemStatement.trim() || busy}
+          onClick={isLimitReached ? () => setIsUpgradeModalOpen(true) : createWorkspace}
+          disabled={(!problemStatement.trim() && !isLimitReached) || busy}
           className="neu-press rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-primary-foreground shadow-md transition-all flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50 shrink-0"
         >
           {busy ? (
             <span>{strings.creating}</span>
+          ) : isLimitReached ? (
+            <>
+              <span>Upgrade Plan to Create Workspace</span>
+              <ArrowRight className="size-4" />
+            </>
           ) : (
             <>
               <span>{strings.cta}</span>
@@ -882,6 +929,15 @@ function IntakePage() {
             type: ctx.fileType,
             extractedSummary: ctx.businessContext,
           });
+        }}
+      />
+
+      <WorkspaceUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        workspaceCount={workspaceCount || 1}
+        onUpgradeSuccess={() => {
+          void refreshLimit();
         }}
       />
     </AppShell>

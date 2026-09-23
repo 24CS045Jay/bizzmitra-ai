@@ -37,6 +37,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { isSuperAdminEmail } from "@/lib/admin-rbac-data";
 import { cn } from "@/lib/utils";
 import { isStageUnlocked, getUnlockedStages, WORKSPACE_STAGES } from "@/lib/workspace-stage-gate";
+import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
+import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
 
 interface SubMenuItem {
   label: string;
@@ -282,6 +284,9 @@ export function AppSidebar2({
   const { t } = useTranslation();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isSuperAdmin = isSuperAdminEmail(user?.email);
+
+  const { isLimitReached, workspaceCount, refresh: refreshLimit } = useWorkspaceLimit();
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = React.useState(false);
 
   const getGroupTitle = (name: string) => {
     switch (name) {
@@ -565,7 +570,14 @@ export function AppSidebar2({
             >
               <Link
                 to={activeWs.name === "No Active Workspace" ? "/workspace/new" : "/dashboard"}
-                onClick={onNavigate}
+                onClick={(e) => {
+                  if (activeWs.name === "No Active Workspace" && isLimitReached) {
+                    e.preventDefault();
+                    setIsUpgradeModalOpen(true);
+                    return;
+                  }
+                  onNavigate?.();
+                }}
                 className="neu-sm neu-press flex cursor-pointer items-center justify-between gap-2.5 rounded-xl border border-border/70 bg-card p-2.5 shadow-xs"
               >
                 <div className="min-w-0 flex-1">
@@ -626,6 +638,12 @@ export function AppSidebar2({
                     <Link
                       to={item.to}
                       onClick={(e) => {
+                        if (item.to === "/workspace/new" && isLimitReached) {
+                          e.preventDefault();
+                          setActiveFlyout(null);
+                          setIsUpgradeModalOpen(true);
+                          return;
+                        }
                         if (!isUnlocked) {
                           e.preventDefault();
                           toast.warning(`Please complete earlier stages first to unlock ${getItemLabel(item)}.`);
@@ -815,7 +833,13 @@ export function AppSidebar2({
                     <Link
                       key={sub.label}
                       to={sub.href}
-                      onClick={() => {
+                      onClick={(e) => {
+                        if (sub.href === "/workspace/new" && isLimitReached) {
+                          e.preventDefault();
+                          setActiveFlyout(null);
+                          setIsUpgradeModalOpen(true);
+                          return;
+                        }
                         setActiveFlyout(null);
                         onNavigate?.();
                       }}
@@ -831,6 +855,15 @@ export function AppSidebar2({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <WorkspaceUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        workspaceCount={workspaceCount || 1}
+        onUpgradeSuccess={() => {
+          void refreshLimit();
+        }}
+      />
     </>
   );
 }

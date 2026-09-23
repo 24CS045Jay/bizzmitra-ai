@@ -200,6 +200,35 @@ export async function handleApiRoute(
           return jsonResponse({ error: "Workspace name is required" }, 400);
         }
 
+        // Enforce basic plan limit: max 1 workspace
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("plan")
+          .eq("id", user.id)
+          .single();
+
+        const userPlan = profile?.plan || "free";
+        const isBasic = userPlan === "free" || userPlan === "starter" || userPlan === "basic";
+
+        if (isBasic) {
+          const { count, error: countErr } = await supabaseAdmin
+            .from("workspaces")
+            .select("id", { count: "exact", head: true })
+            .eq("owner_id", user.id);
+
+          if (!countErr && (count ?? 0) >= 1) {
+            return jsonResponse(
+              {
+                error:
+                  "In basic plan you can only create one workspace. Please upgrade your plan to create another workspace.",
+                limitReached: true,
+                maxWorkspaces: 1,
+              },
+              403,
+            );
+          }
+        }
+
         const { data: newWs, error } = await supabaseAdmin
           .from("workspaces")
           .insert({

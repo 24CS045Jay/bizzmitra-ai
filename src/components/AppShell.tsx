@@ -44,6 +44,8 @@ import {
   loadCurrentRole,
   saveCurrentRole,
 } from "@/lib/admin-rbac-data";
+import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
+import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
 
 const NAV = [
   { to: "/dashboard", label: "Workspaces", icon: LayoutGrid },
@@ -69,6 +71,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user, signOut } = useAuth();
   const { t } = useTranslation();
   const isSuperAdmin = isSuperAdminEmail(user?.email);
+
+  const { isLimitReached, workspaceCount, refresh: refreshLimit } = useWorkspaceLimit();
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   const getNavLabel = (item: (typeof NAV)[number]) => {
     const map: Record<string, string> = {
@@ -279,7 +284,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             <Link
               key={item.to}
               to={item.to}
-              onClick={onNavigate}
+              onClick={(e) => {
+                if (item.to === "/workspace/new" && isLimitReached) {
+                  e.preventDefault();
+                  setIsUpgradeModalOpen(true);
+                  return;
+                }
+                onNavigate?.();
+              }}
               className={cn(
                 "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                 active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
@@ -337,6 +349,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <LogOut className="size-3.5" /> Sign out
         </button>
       </div>
+
+      <WorkspaceUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        workspaceCount={workspaceCount || 1}
+        onUpgradeSuccess={() => {
+          void refreshLimit();
+        }}
+      />
     </div>
   );
 }
