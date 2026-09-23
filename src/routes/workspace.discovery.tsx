@@ -62,9 +62,9 @@ export const Route = createFileRoute("/workspace/discovery")({
 export interface DiscoveryAnswerItem {
   questionId: string;
   question: string;
-  hint?: string;
-  whyWeAsk?: string;
-  missingEntity?: string;
+  hint?: string | undefined;
+  whyWeAsk?: string | undefined;
+  missingEntity?: string | undefined;
   options: string[];
   answer: string;
 }
@@ -72,9 +72,9 @@ export interface DiscoveryAnswerItem {
 type Turn = {
   role: "user" | "ai";
   text: string;
-  hint?: string;
-  whyWeAsk?: string;
-  missingEntity?: string;
+  hint?: string | undefined;
+  whyWeAsk?: string | undefined;
+  missingEntity?: string | undefined;
 };
 
 function DiscoveryPage() {
@@ -141,7 +141,7 @@ function DiscoveryPage() {
   const [complete, setComplete] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     const wsId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
-    return Boolean(initialContext.discoveryCompleted || isDiscoveryCompleted(wsId));
+    return Boolean(initialContext.discoveryCompleted || isDiscoveryCompleted(wsId ?? undefined));
   });
   const [customInput, setCustomInput] = useState("");
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
@@ -264,7 +264,7 @@ function DiscoveryPage() {
       setTurns(reconstructed);
       setStep(initialContext.discoveryAnswers.length);
       setComplete(true);
-      completeDiscoveryAndUnlockAll(id);
+      completeDiscoveryAndUnlockAll(id || undefined);
       return;
     }
 
@@ -325,7 +325,7 @@ function DiscoveryPage() {
               const qIdx = Math.floor(i / 2);
               const scriptQ = localScript[qIdx];
               extracted.push({
-                questionId: scriptQ?.id || `q-${qIdx}`,
+                questionId: scriptQ?.id || scriptQ?.questionId || `q-${qIdx}`,
                 question: qTurn.text,
                 hint: scriptQ?.hint,
                 whyWeAsk: scriptQ?.whyWeAsk,
@@ -412,7 +412,7 @@ function DiscoveryPage() {
         }
         setTurns((prev) => [...prev, { role: "ai", text: summaryText }]);
         setComplete(true);
-        completeDiscoveryAndUnlockAll(workspaceId, {
+        completeDiscoveryAndUnlockAll(workspaceId || undefined, {
           discoveryCompleted: true,
           discoveryAnswers: answers,
           discoveryQuestions: script,
@@ -441,7 +441,7 @@ function DiscoveryPage() {
 
   useEffect(() => {
     if (complete) {
-      completeDiscoveryAndUnlockAll(workspaceId, {
+      completeDiscoveryAndUnlockAll(workspaceId || undefined, {
         discoveryCompleted: true,
         discoveryAnswers: answers,
         discoveryQuestions: script,
@@ -454,10 +454,11 @@ function DiscoveryPage() {
   function handleFastTrackComplete() {
     setThinking(true);
     const filledAnswers: DiscoveryAnswerItem[] = [...answers];
-    script.forEach((q) => {
-      if (!filledAnswers.some((a) => a.questionId === q.id || a.question === q.question)) {
+    script.forEach((q, idx) => {
+      const qId = q.id || q.questionId || `q-${idx}`;
+      if (!filledAnswers.some((a) => a.questionId === qId || a.question === q.question)) {
         filledAnswers.push({
-          questionId: q.id,
+          questionId: qId,
           question: q.question,
           hint: q.hint,
           whyWeAsk: q.whyWeAsk,
@@ -472,7 +473,7 @@ function DiscoveryPage() {
     setTimeout(() => {
       setTurns((prev) => [...prev, { role: "ai", text: summaryText }]);
       setComplete(true);
-      completeDiscoveryAndUnlockAll(workspaceId, {
+      completeDiscoveryAndUnlockAll(workspaceId || undefined, {
         discoveryCompleted: true,
         discoveryAnswers: filledAnswers,
         discoveryQuestions: script,
@@ -514,9 +515,10 @@ function DiscoveryPage() {
     if (currentQ) {
       setAnswers((prev) => {
         const next = [...prev];
-        const existingIdx = next.findIndex((a) => a.questionId === currentQ.id || a.question === currentQ.question);
+        const qId = currentQ.id || currentQ.questionId || `q-${step}`;
+        const existingIdx = next.findIndex((a) => a.questionId === qId || a.question === currentQ.question);
         const item: DiscoveryAnswerItem = {
-          questionId: currentQ.id,
+          questionId: qId,
           question: currentQ.question,
           hint: currentQ.hint,
           whyWeAsk: currentQ.whyWeAsk,
@@ -541,8 +543,8 @@ function DiscoveryPage() {
     const baseline =
       answers.length > 0
         ? answers
-        : script.map((q) => ({
-            questionId: q.id,
+        : script.map((q, idx) => ({
+            questionId: q.id || q.questionId || `q-${idx}`,
             question: q.question,
             hint: q.hint,
             whyWeAsk: q.whyWeAsk,
@@ -584,7 +586,7 @@ function DiscoveryPage() {
         constraints: initialContext.constraints,
         intakeMode: initialContext.intakeMode,
         intakeMethod: initialContext.intakeMethod,
-        diagnosticAnswers: targetAnswers.map((a) => ({ question: a.question, answer: a.answer, hint: a.hint })),
+        diagnosticAnswers: targetAnswers.map((a) => ({ question: a.question, answer: a.answer, ...(a.hint ? { hint: a.hint } : {}) })),
       });
 
       const newSummary = res.summary || summaryText;
@@ -621,7 +623,7 @@ function DiscoveryPage() {
       }
 
       const newVersion = Date.now();
-      completeDiscoveryAndUnlockAll(workspaceId, {
+      completeDiscoveryAndUnlockAll(workspaceId || undefined, {
         discoveryCompleted: true,
         discoveryAnswers: targetAnswers,
         discoveryQuestions: script,
@@ -1060,8 +1062,8 @@ function DiscoveryPage() {
               <div className="grid gap-3.5 grid-cols-1 md:grid-cols-3 w-full max-w-full min-w-0">
                 {(answers.length > 0
                   ? answers
-                  : script.map((q) => ({
-                      questionId: q.id,
+                  : script.map((q, idx) => ({
+                      questionId: q.id || q.questionId || `q-${idx}`,
                       question: q.question,
                       hint: q.hint,
                       whyWeAsk: q.whyWeAsk,

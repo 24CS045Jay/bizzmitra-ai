@@ -196,7 +196,7 @@ export function isStageUnlocked(stageId: string): boolean {
  */
 export function completeDiscoveryAndUnlockAll(
   workspaceId?: string,
-  extraContext?: Record<string, unknown>,
+  extraContext?: any,
 ): void {
   if (typeof window === "undefined") return;
   const wsId = workspaceId || window.localStorage.getItem("bizzmitra.activeWorkspaceId") || "default";
@@ -231,7 +231,7 @@ export function completeDiscoveryAndUnlockAll(
         workspace_context: updatedCtx,
         maturity_score: 85,
         updated_at: new Date().toISOString(),
-      })
+      } as any)
       .eq("id", wsId)
       .then(({ error }) => {
         if (error) console.warn("[completeDiscoveryAndUnlockAll DB error]:", error.message);
