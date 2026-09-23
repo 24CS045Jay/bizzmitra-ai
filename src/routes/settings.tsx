@@ -373,17 +373,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        <StaggerItem className="neu p-6 min-w-0 overflow-hidden">
-          <h2 className="font-display text-lg font-bold">{t("settings.workspace", "Active workspace")}</h2>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Maturity</dt>
-              <dd className="font-medium">{workspace?.maturity_score ?? 96}%</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="shrink-0 text-muted-foreground">Tenant Isolation</dt>
-              <dd className="font-medium text-emerald-600 dark:text-emerald-400 text-right text-xs leading-normal">PostgreSQL Row-Level Security</dd>
-        <StaggerItem className="neu p-6 space-y-4">
+        <StaggerItem className="neu p-6 min-w-0 overflow-hidden space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Building2 className="size-4 text-primary" />
@@ -782,8 +772,6 @@ function SettingsPage() {
         </StaggerItem>
 
         <StaggerItem className="neu p-6 lg:col-span-2 min-w-0 overflow-hidden">
-          <h2 className="font-display text-lg font-bold">Export defaults</h2>
-        <StaggerItem className="neu p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg font-bold">Export Defaults & Deliverables Bundle</h2>
             <span className="rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
