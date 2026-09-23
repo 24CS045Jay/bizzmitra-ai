@@ -73,16 +73,23 @@ function DataPage() {
   });
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setWorkspaceContext({
-          businessName: parsed.businessName || "TalentCraft HR Consultancy",
-          industry: parsed.industry || "HR & Recruitment Services",
-        });
-      }
-    } catch {}
+    function loadContext() {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setWorkspaceContext({
+            businessName: parsed.businessName || "TalentCraft HR Consultancy",
+            industry: parsed.industry || "HR & Recruitment Services",
+          });
+        }
+      } catch {}
+      setDynamicBlueprint(null);
+    }
+    loadContext();
+
+    window.addEventListener("bizzmitra:workspace-updated", loadContext);
+    return () => window.removeEventListener("bizzmitra:workspace-updated", loadContext);
   }, []);
 
   const [dynamicBlueprint, setDynamicBlueprint] = useState<any>(null);

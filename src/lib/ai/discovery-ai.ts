@@ -20,6 +20,7 @@ export interface DiscoveryGenerationOptions {
   intakeMethod?: string;
   documentSummary?: string;
   legacyTools?: string;
+  diagnosticAnswers?: Array<{ question: string; answer: string; hint?: string }>;
 }
 
 /**
@@ -41,6 +42,7 @@ export async function generateDynamicDiscovery(
   const intakeMethod = options?.intakeMethod || "";
   const documentSummary = options?.documentSummary || "";
   const legacyTools = options?.legacyTools || "";
+  const diagnosticAnswers = options?.diagnosticAnswers || [];
 
   // 1. Centralized Server AI Router (Groq Llama 3.3 70B primary, Google Gemini fallback)
   try {
@@ -57,6 +59,7 @@ export async function generateDynamicDiscovery(
         intakeMethod,
         documentSummary,
         legacyTools,
+        diagnosticAnswers,
       }),
     });
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Workspace Stage Progression & Access Control Engine
@@ -126,7 +127,6 @@ export function getUnlockedStages(): string[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Ensure discovery is always present
         if (!parsed.includes("discovery")) parsed.unshift("discovery");
         return parsed;
       }
@@ -137,31 +137,109 @@ export function getUnlockedStages(): string[] {
 
 /**
  * Checks whether AI Discovery has been completed for the active workspace.
+ * Checked against workspaceContext flag, local storage, user cache, and stages list.
  */
-export function isDiscoveryCompleted(): boolean {
+export function isDiscoveryCompleted(targetWsId?: string): boolean {
   if (typeof window === "undefined") return false;
+  const wsId = targetWsId || window.localStorage.getItem("bizzmitra.activeWorkspaceId") || "default";
+
+  // Demo account default always unlocked
+  if (wsId === "ws-talentcraft-default") return true;
+
+  // 1. Direct workspaceContext check
+  try {
+    const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.discoveryCompleted === true) return true;
+    }
+  } catch {}
+
+  // 2. Explicit discovery completed key
+  if (window.localStorage.getItem(`bizzmitra.discoveryCompleted_${wsId}`) === "true") {
+    return true;
+  }
+
+  // 3. User-scoped cache check
+  try {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith("bizzmitra.user_workspaces_")) {
+        const val = window.localStorage.getItem(k);
+        if (val) {
+          const parsed = JSON.parse(val);
+          if (parsed?.activeId === wsId && parsed?.context?.discoveryCompleted === true) {
+            return true;
+          }
+        }
+      }
+    }
+  } catch {}
+
+  // 4. Stored unlocked stages list
   const unlocked = getUnlockedStages();
   return unlocked.includes("solution") || unlocked.includes("all") || unlocked.length > 1;
 }
 
 /**
  * Checks whether a specific stage is unlocked.
- * Discovery is always accessible.
- * Once Discovery is completed, ALL stages across the entire platform are unlocked!
+ * Discovery, export, and settings are always accessible.
+ * Once Discovery is completed, ALL stages across the platform are unlocked!
  */
 export function isStageUnlocked(stageId: string): boolean {
-  return true;
+  if (stageId === "discovery" || stageId === "export" || stageId === "settings") return true;
+  return isDiscoveryCompleted();
 }
 
 /**
- * Unlocks all workspace stages upon completing AI Discovery.
+ * Unlocks all workspace stages upon completing AI Discovery and persists to DB.
  */
-export function completeDiscoveryAndUnlockAll(workspaceId?: string): void {
+export function completeDiscoveryAndUnlockAll(
+  workspaceId?: string,
+  extraContext?: Record<string, unknown>,
+): void {
   if (typeof window === "undefined") return;
+  const wsId = workspaceId || window.localStorage.getItem("bizzmitra.activeWorkspaceId") || "default";
   const allIds = [...WORKSPACE_STAGES.map((s) => s.id), "crm", "all"];
-  const key = workspaceId ? `${STAGES_STORAGE_KEY_PREFIX}_${workspaceId}` : getStorageKey();
+
+  const key = `${STAGES_STORAGE_KEY_PREFIX}_${wsId}`;
   window.localStorage.setItem(key, JSON.stringify(allIds));
+  window.localStorage.setItem(`bizzmitra.discoveryCompleted_${wsId}`, "true");
+
+  // Update local workspaceContext
+  let currentCtx: any = {};
+  try {
+    const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+    if (raw) currentCtx = JSON.parse(raw);
+  } catch {}
+
+  const updatedCtx = {
+    ...currentCtx,
+    ...(extraContext || {}),
+    discoveryCompleted: true,
+    lastUpdated: new Date().toISOString(),
+  };
+
+  window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(updatedCtx));
+
+  // Persist to Supabase if valid UUID
+  const isUuid = wsId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(wsId);
+  if (isUuid) {
+    void supabase
+      .from("workspaces")
+      .update({
+        workspace_context: updatedCtx,
+        maturity_score: 85,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", wsId)
+      .then(({ error }) => {
+        if (error) console.warn("[completeDiscoveryAndUnlockAll DB error]:", error.message);
+      });
+  }
+
   window.dispatchEvent(new CustomEvent("bizzmitra:stages-updated", { detail: allIds }));
+  window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated", { detail: updatedCtx }));
 }
 
 /**
@@ -186,13 +264,25 @@ export function completeStageAndUnlockNext(currentStageId: string): string | nul
 }
 
 /**
- * Resets stage progression for a new workspace.
+ * Resets stage progression for a new workspace (only discovery unlocked until completed).
  */
 export function resetWorkspaceStages(workspaceId?: string): void {
   if (typeof window === "undefined") return;
-  const key = workspaceId ? `${STAGES_STORAGE_KEY_PREFIX}_${workspaceId}` : getStorageKey();
-  window.localStorage.setItem(key, JSON.stringify(WORKSPACE_STAGES.map((s) => s.id)));
-  window.dispatchEvent(new CustomEvent("bizzmitra:stages-updated", { detail: WORKSPACE_STAGES.map((s) => s.id) }));
+  const wsId = workspaceId || window.localStorage.getItem("bizzmitra.activeWorkspaceId") || "default";
+  const key = `${STAGES_STORAGE_KEY_PREFIX}_${wsId}`;
+  window.localStorage.setItem(key, JSON.stringify(["discovery"]));
+  window.localStorage.removeItem(`bizzmitra.discoveryCompleted_${wsId}`);
+
+  try {
+    const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      parsed.discoveryCompleted = false;
+      window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(parsed));
+    }
+  } catch {}
+
+  window.dispatchEvent(new CustomEvent("bizzmitra:stages-updated", { detail: ["discovery"] }));
 }
 
 /**
@@ -206,23 +296,54 @@ export function unlockAllStages(): void {
  * Resolves the highest unlocked stage that the user can currently navigate to.
  */
 export function getHighestUnlockedStage(): WorkspaceStage {
-  return WORKSPACE_STAGES[1]!; // Solution Studio
+  if (isDiscoveryCompleted()) {
+    return WORKSPACE_STAGES[1]!; // Solution Studio
+  }
+  return WORKSPACE_STAGES[0]!; // Discovery
 }
 
 /**
  * Given a target path, returns whether it is allowed.
  */
 export function validateRouteAccess(pathname: string): { allowed: boolean; redirectTo?: string; reason?: string } {
+  if (
+    pathname.startsWith("/workspace/discovery") ||
+    pathname.startsWith("/workspace/new") ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/workspace/export")
+  ) {
+    return { allowed: true };
+  }
+
+  if (!isDiscoveryCompleted()) {
+    return {
+      allowed: false,
+      redirectTo: "/workspace/discovery",
+      reason: "Please complete AI Discovery first to unlock all workspace blueprints.",
+    };
+  }
+
   return { allowed: true };
 }
 
 /**
- * React hook that tracks stage progression without blocking navigation.
+ * React hook that enforces stage gating on any workspace route.
  */
 export function useStageGate(currentStageId: string) {
+  const navigate = useNavigate();
+
   useEffect(() => {
-    // Stage tracking hook
-  }, [currentStageId]);
+    if (typeof window === "undefined") return;
+    if (currentStageId === "discovery") return;
+
+    if (!isStageUnlocked(currentStageId)) {
+      toast.warning("Please complete AI Discovery first to unlock all workspace modules.", {
+        id: "gate-lock-discovery",
+      });
+      navigate({ to: "/workspace/discovery" });
+    }
+  }, [currentStageId, navigate]);
 }
 
 /**

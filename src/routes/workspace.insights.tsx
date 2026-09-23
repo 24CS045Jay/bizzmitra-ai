@@ -76,12 +76,18 @@ export function InsightsPage() {
   } | null>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("bizzmitra.workspaceContext");
-      if (raw) {
-        setWorkspaceContext(JSON.parse(raw));
-      }
-    } catch {}
+    function loadContext() {
+      try {
+        const raw = localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          setWorkspaceContext(JSON.parse(raw));
+        }
+      } catch {}
+    }
+    loadContext();
+
+    window.addEventListener("bizzmitra:workspace-updated", loadContext);
+    return () => window.removeEventListener("bizzmitra:workspace-updated", loadContext);
   }, []);
 
   const blueprint: DomainRoiBlueprint = useMemo(

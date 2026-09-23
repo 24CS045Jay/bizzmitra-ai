@@ -90,9 +90,9 @@ export function ArtifactHeader({
   }
 
   return (
-    <header className="mb-8">
+    <header className="mb-8 w-full max-w-full min-w-0 overflow-hidden">
       {/* Chain breadcrumb — the visible "connected workspace" motif */}
-      <nav aria-label="Artifact chain" className="mb-6 overflow-x-auto pb-1">
+      <nav aria-label="Artifact chain" className="mb-6 w-full max-w-full min-w-0 overflow-x-auto pb-1">
         <ol className="flex items-center gap-1.5 whitespace-nowrap text-xs">
           {CHAIN.map((c, i) => {
             const isItemUnlocked = c.id === "intake" || isStageUnlocked(c.id);

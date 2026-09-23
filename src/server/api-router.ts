@@ -391,7 +391,12 @@ function extractJsonFromText(rawText: string): any {
   let geminiRotIndex = 0;
 
   // Helper: Call LLM (Multi-key Groq pool primary with Multi-key Gemini fallback)
-  async function callLlmJson(prompt: string, systemPrompt = "You are an enterprise systems architect and McKinsey-grade strategy consultant at BizzMitra AI. You must return strictly valid JSON object. No other text or reasoning.") {
+  async function callLlmJson(
+    prompt: string,
+    systemPrompt = "You are an enterprise systems architect and McKinsey-grade strategy consultant at BizzMitra AI. You must return strictly valid JSON object. No other text or reasoning.",
+    maxTokensOverride?: number,
+    timeoutOverrideMs?: number
+  ) {
     const rawGroqKeys = [
       (env as any)?.GROQ_API_KEYS,
       process.env["GROQ_API_KEYS"],
@@ -441,8 +446,8 @@ function extractJsonFromText(rawText: string): any {
     // 1. Try Groq Ultra-Fast Primary with Multi-Key Rotation
     if (groqKeys.length > 0) {
       const groqModels = [
-        { id: "openai/gpt-oss-20b", maxTokens: 4000 },
-        { id: "openai/gpt-oss-120b", maxTokens: 4000 },
+        { id: "llama-3.1-8b-instant", maxTokens: maxTokensOverride || 2000 },
+        { id: "llama-3.3-70b-versatile", maxTokens: maxTokensOverride || 3000 },
       ];
 
       // Try across all available Groq keys
@@ -452,7 +457,8 @@ function extractJsonFromText(rawText: string): any {
         for (const modelDef of groqModels) {
           try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            const timeoutMs = timeoutOverrideMs || 4000;
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
             const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
               method: "POST",
@@ -508,10 +514,9 @@ function extractJsonFromText(rawText: string): any {
     // 2. Fallback to Google Gemini Multi-Key Pool
     if (geminiKeys.length > 0) {
       const geminiModels = [
-        "gemini-3.6-flash",
-        "gemini-3.5-flash",
-        "gemini-3.5-flash-lite",
-        "gemini-3.1-pro-preview",
+        "gemini-2.5-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
       ];
 
       for (let gIdx = 0; gIdx < geminiKeys.length; gIdx++) {
@@ -520,7 +525,8 @@ function extractJsonFromText(rawText: string): any {
         for (const model of geminiModels) {
           try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 12000);
+            const timeoutMs = timeoutOverrideMs || 5000;
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
             const geminiRes = await fetch(
               `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentGeminiKey}`,
@@ -534,7 +540,7 @@ function extractJsonFromText(rawText: string): any {
                   generationConfig: {
                     responseMimeType: "application/json",
                     temperature: 0.2,
-                    maxOutputTokens: 2048,
+                    maxOutputTokens: maxTokensOverride || 2048,
                   },
                 }),
                 signal: controller.signal,
@@ -1313,6 +1319,7 @@ Return strictly valid JSON:
         intakeMethod?: string;
         documentSummary?: string;
         legacyTools?: string;
+        diagnosticAnswers?: Array<{ question: string; answer: string; hint?: string }>;
       };
       const {
         problemStatement = "",
@@ -1324,6 +1331,7 @@ Return strictly valid JSON:
         intakeMethod = "",
         documentSummary = "",
         legacyTools = "",
+        diagnosticAnswers = [],
       } = body;
 
       const prompt = `You are an elite Principal Enterprise Systems Architect and McKinsey/BCG Senior Business Analyst for BizzMitra AI.
@@ -1338,6 +1346,7 @@ ${intakeMode ? `Operating Mode: ${intakeMode}` : ""}
 ${intakeMethod ? `Intake Channel: ${intakeMethod}` : ""}
 ${documentSummary ? `Uploaded SOP/Document Context: ${documentSummary}` : ""}
 ${legacyTools ? `Current Tools & Systems: ${legacyTools}` : ""}
+${diagnosticAnswers && diagnosticAnswers.length > 0 ? `Diagnostic Interview Answers provided by client:\n${diagnosticAnswers.map((a, idx) => `Q${idx + 1}: ${a.question}\nAnswer: ${a.answer}`).join("\n")}` : ""}
 ---
 
 Your task:
@@ -1411,12 +1420,16 @@ Return strictly valid JSON in this exact structure with no markdown code fences:
         businessName?: string;
         industry?: string;
         customFields?: string[];
+        discoverySummary?: string;
+        diagnosticAnswers?: Array<{ question: string; answer: string }>;
       };
       const {
         problemStatement = "",
         businessName = "Enterprise Business",
         industry = "General",
         customFields = [],
+        discoverySummary = "",
+        diagnosticAnswers = [],
       } = body;
 
       const prompt = `You are a World-Class Principal Enterprise Systems Architect and McKinsey/BCG Strategy Partner at BizzMitra AI.
@@ -1425,6 +1438,8 @@ A client submitted this business problem statement:
 Business Name: ${businessName}
 Industry: ${industry}
 Problem Statement: ${problemStatement}
+${discoverySummary ? `Discovery Diagnostic Summary: ${discoverySummary}` : ""}
+${diagnosticAnswers && diagnosticAnswers.length > 0 ? `Discovery Diagnostic Answers:\n${diagnosticAnswers.map((a, idx) => `Q${idx + 1}: ${a.question} -> Answer: ${a.answer}`).join("\n")}` : ""}
 ${customFields && customFields.length > 0 ? `Configured Custom Schema Attributes (from Solution Studio): ${customFields.join(", ")}` : ""}
 ---
 
@@ -1553,6 +1568,122 @@ Return strictly valid JSON with this exact structure:
       });
     } catch (err: any) {
       console.error("[api/ai/solution-framing error]:", err);
+      return jsonResponse({ error: err?.message || "Internal error" }, 500);
+    }
+  }
+
+  // 5d. Intelligent AI Copilot Chat: POST /api/ai/copilot
+  if (pathname === "/api/ai/copilot" && request.method === "POST") {
+    try {
+      const body = (await request.json()) as {
+        message: string;
+        history?: Array<{ sender: "user" | "assistant"; text: string; bullets?: string[] }>;
+        workspaceContext?: {
+          workspaceId?: string;
+          businessName?: string;
+          industry?: string;
+          problemStatement?: string;
+          discoverySummary?: string;
+          diagnosticAnswers?: Array<{ question: string; answer: string }>;
+          roadmap?: any;
+          currentStage?: string;
+        };
+        activeModelId?: string;
+      };
+
+      const {
+        message = "",
+        history = [],
+        workspaceContext = {},
+        activeModelId = "claude-3-7-sonnet",
+      } = body;
+
+      const bName = workspaceContext.businessName || "Active Business Workspace";
+      const ind = workspaceContext.industry || "General Enterprise";
+      const prob = workspaceContext.problemStatement || "Operational workflow and system modernization";
+      const roadmapData = workspaceContext.roadmap;
+
+      // Format conversation history for context memory
+      const formattedHistory = (history || [])
+        .slice(-8)
+        .map((m) => `${m.sender === "user" ? "Client" : "Copilot"}: ${m.text}${m.bullets && m.bullets.length ? `\n- ${m.bullets.join("\n- ")}` : ""}`)
+        .join("\n\n");
+
+      // Format roadmap phases & milestones
+      let roadmapSummary = "";
+      if (roadmapData && Array.isArray(roadmapData.phases)) {
+        roadmapSummary = `Delivery Timeline: ${roadmapData.targetTimelineWeeks || 12} calendar weeks total (${roadmapData.totalPersonDays || 114} person-days total effort across ${roadmapData.phases.length} phases).\nPhases Breakdown:\n` +
+          roadmapData.phases.map((p: any) => {
+            const startDay = (p.startWeek || 0) * 7 + 1;
+            const endDay = ((p.startWeek || 0) + (p.durationWeekCount || 4)) * 7;
+            const ms = (p.milestones || []).map((m: any) => `  * Milestone: ${m.title} (${m.deliverable || "Core deliverable"}, ${m.effortDays || 5} effort days)`).join("\n");
+            const delivs = (p.criticalDeliverables || []).map((d: any) => `  * Critical Deliverable: ${d}`).join("\n");
+            return `Phase ${p.phaseNumber || 1}: ${p.name} (${p.durationWeeks || `Weeks ${(p.startWeek || 0) + 1}–${(p.startWeek || 0) + (p.durationWeekCount || 4)}`}, Days ${startDay}–${endDay})\nObjective: ${p.objective || "System foundation and rollout"}\nDeliverables:\n${delivs}\nMilestones:\n${ms}`;
+          }).join("\n\n");
+      }
+
+      const prompt = `You are the BizzMitra AI Blueprint Copilot, an elite Principal Enterprise Solution Architect and Strategic Delivery Lead for "${bName}" (${ind}).
+
+Workspace Context:
+- Business: ${bName}
+- Industry: ${ind}
+- Problem Statement: "${prob}"
+${workspaceContext.discoverySummary ? `- Discovery Summary: "${workspaceContext.discoverySummary}"` : ""}
+${workspaceContext.diagnosticAnswers && workspaceContext.diagnosticAnswers.length > 0 ? `- Strategic Diagnostic Inputs:\n${workspaceContext.diagnosticAnswers.map((a, i) => `  Q${i+1}: ${a.question} -> Answer: ${a.answer}`).join("\n")}` : ""}
+
+Active Execution Roadmap & Rollout Details:
+${roadmapSummary || "12-week enterprise phased rollout across Foundation, Core Architecture, and Production Go-Live."}
+
+Conversation History (Context Memory):
+${formattedHistory || "(Start of conversation)"}
+
+User's Latest Query:
+"${message}"
+
+CRITICAL INSTRUCTIONS (MUST BE ULTRA-CONCISE & TO THE POINT):
+1. EXTREME BREVITY (NO BIG OUTPUTS, NO FLUFF):
+   - Answer directly and strictly to the point in 1-2 short sentences maximum.
+   - For greetings ("hi", "hello", "hey", etc.):
+     Set "text" to "Hello! How can I assist with your **${bName}** blueprint today?" and set "bullets": []. DO NOT include any bullets for greetings!
+   - If the user asks for specific tasks or daily work (e.g. "what is the work to do on day 7"):
+     Set "text" to "On **Day 7** (Phase 1, Week 1):"
+     Provide ONLY 2 short bullet points (max 6-8 words each) with the exact technical tasks.
+   - If the user asks for the rollout plan (e.g. "give my rollout plan"):
+     Set "text" to "Rollout is **${roadmapData?.targetTimelineWeeks || 12} weeks** across **${roadmapData?.phases?.length || 3} phases**:"
+     Provide 1 concise bullet per phase (e.g. "Phase 1: Foundation (Weeks 1–4)").
+   - For all other questions: Give a direct 1-sentence answer and leave "bullets": [].
+
+2. OUT-OF-RANGE / OUT-OF-CONTEXT QUESTIONS:
+   - If the query is outside business transformation, software architecture, rollout plan, or technical blueprints:
+   - Set "isOutOfScope": true.
+   - Set "text": "This question is outside my context scope. I am dedicated to **${bName}**'s business transformation, roadmap, and architecture."
+   - Set "bullets": [].
+
+Return strictly valid JSON with this exact structure:
+{
+  "badge": "string (e.g. 'Day 7', 'Rollout Plan', 'Scope Notice')",
+  "text": "string (1-2 short sentences max. Supports **bold**)",
+  "bullets": ["string"],
+  "isOutOfScope": boolean
+}`;
+
+      const llmResult = await callLlmJson(
+        prompt,
+        "You are an ultra-concise enterprise blueprint copilot. Output strictly valid JSON. Keep answers very short, direct, and strictly to the point.",
+        250,
+        3500
+      );
+      return jsonResponse({
+        success: true,
+        modelUsed: llmResult.modelUsed,
+        source: llmResult.source,
+        badge: llmResult.data.badge || "Blueprint Copilot",
+        text: llmResult.data.text || "",
+        bullets: Array.isArray(llmResult.data.bullets) && llmResult.data.bullets.length > 0 ? llmResult.data.bullets : [],
+        isOutOfScope: Boolean(llmResult.data.isOutOfScope),
+      });
+    } catch (err: any) {
+      console.error("[api/ai/copilot error]:", err);
       return jsonResponse({ error: err?.message || "Internal error" }, 500);
     }
   }

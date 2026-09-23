@@ -27,6 +27,7 @@ import { getRoadmapForWorkspace } from "@/lib/planning-data";
 import { evaluateBlueprintRisks } from "@/lib/risk-evaluator";
 import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
 import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
+import { completeDiscoveryAndUnlockAll } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -150,7 +151,12 @@ function DashboardPage() {
               ? (found.workspace_context as Record<string, unknown>)
               : null;
 
+            const isCompleted =
+              storedCtx?.["discoveryCompleted"] === true ||
+              (storedCtx?.["discoveryAnswers"] && Array.isArray(storedCtx["discoveryAnswers"]) && storedCtx["discoveryAnswers"].length > 0);
+
             const rebuiltContext = {
+              ...(storedCtx || {}),
               businessName: (storedCtx?.["businessName"] as string) || found.name || "",
               problemStatement: (storedCtx?.["problemStatement"] as string) || found.problem_statement || "",
               industry: (storedCtx?.["industry"] as string) || found.industry || "General",
@@ -159,9 +165,13 @@ function DashboardPage() {
               intakeMode: (storedCtx?.["intakeMode"] as string) || found.intake_mode || "consult",
               intakeMethod: (storedCtx?.["intakeMethod"] as string) || found.intake_method || "prompt",
               language: (storedCtx?.["language"] as string) || found.language_code || "en",
+              discoveryCompleted: Boolean(isCompleted),
             };
 
             window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(rebuiltContext));
+            if (isCompleted) {
+              completeDiscoveryAndUnlockAll(found.id, rebuiltContext);
+            }
             if (rebuiltContext.language) {
               window.localStorage.setItem("bizzmitra.language", rebuiltContext.language);
             }

@@ -46,6 +46,7 @@ import {
 } from "@/lib/admin-rbac-data";
 import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
 import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
+import { completeDiscoveryAndUnlockAll } from "@/lib/workspace-stage-gate";
 
 const NAV = [
   { to: "/dashboard", label: "Workspaces", icon: LayoutGrid },
@@ -165,7 +166,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 ? (currentWs.workspace_context as Record<string, unknown>)
                 : null;
 
+            const isCompleted =
+              storedCtx?.["discoveryCompleted"] === true ||
+              (storedCtx?.["discoveryAnswers"] && Array.isArray(storedCtx["discoveryAnswers"]) && storedCtx["discoveryAnswers"].length > 0);
+
             const fullContext = {
+              ...(storedCtx || {}),
               businessName: (storedCtx?.["businessName"] as string) || currentWs.name || "Enterprise Workspace",
               problemStatement: (storedCtx?.["problemStatement"] as string) || currentWs.problem_statement || "",
               industry: (storedCtx?.["industry"] as string) || currentWs.industry || "Cross-Industry Transformation",
@@ -174,6 +180,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               intakeMode: (storedCtx?.["intakeMode"] as string) || currentWs.intake_mode || "consult",
               intakeMethod: (storedCtx?.["intakeMethod"] as string) || currentWs.intake_method || "prompt",
               language: (storedCtx?.["language"] as string) || currentWs.language_code || storedLang,
+              discoveryCompleted: Boolean(isCompleted),
             };
 
             setActiveWs({
@@ -186,6 +193,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             window.localStorage.setItem("bizzmitra.activeWorkspaceId", currentWs.id);
             window.localStorage.setItem("bizzmitra.activeWorkspaceName", fullContext.businessName);
             window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(fullContext));
+            if (isCompleted) {
+              completeDiscoveryAndUnlockAll(currentWs.id, fullContext);
+            }
             if (fullContext.language) {
               window.localStorage.setItem("bizzmitra.language", fullContext.language);
             }

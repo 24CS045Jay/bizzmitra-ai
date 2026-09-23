@@ -42,7 +42,12 @@ export async function generateDynamicSolution(
   problemStatement: string,
   businessName = "Enterprise Business",
   industry = "General",
-  options?: { forceFresh?: boolean; customFields?: string[] }
+  options?: {
+    forceFresh?: boolean;
+    customFields?: string[];
+    discoverySummary?: string;
+    diagnosticAnswers?: Array<{ question: string; answer: string }>;
+  }
 ): Promise<SolutionGenerationResult> {
   const cacheKey = `bizzmitra.solution_cache.${encodeURIComponent((problemStatement || "").slice(0, 50))}`;
 
@@ -71,6 +76,8 @@ export async function generateDynamicSolution(
         businessName,
         industry,
         customFields: options?.customFields || [],
+        discoverySummary: options?.discoverySummary || "",
+        diagnosticAnswers: options?.diagnosticAnswers || [],
       }),
     });
 

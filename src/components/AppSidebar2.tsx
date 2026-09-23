@@ -36,7 +36,7 @@ import { useTranslation } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { isSuperAdminEmail } from "@/lib/admin-rbac-data";
 import { cn } from "@/lib/utils";
-import { isStageUnlocked, getUnlockedStages, WORKSPACE_STAGES } from "@/lib/workspace-stage-gate";
+import { isStageUnlocked, getUnlockedStages, WORKSPACE_STAGES, completeDiscoveryAndUnlockAll } from "@/lib/workspace-stage-gate";
 import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
 import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
 
@@ -388,28 +388,39 @@ export function AppSidebar2({
     if (user?.id) {
       supabase
         .from("workspaces")
-        .select("id, name, problem_statement")
+        .select("id, name, problem_statement, industry, workspace_context")
         .eq("owner_id", user.id)
         .order("updated_at", { ascending: false })
         .then(({ data: wsList }) => {
           if (wsList && wsList.length > 0 && wsList[0]) {
             const wsId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
             const currentWs = wsList.find((w) => w.id === wsId) || wsList[0];
+            const storedCtx =
+              currentWs.workspace_context && typeof currentWs.workspace_context === "object"
+                ? (currentWs.workspace_context as Record<string, unknown>)
+                : null;
+            const isCompleted =
+              storedCtx?.["discoveryCompleted"] === true ||
+              (storedCtx?.["discoveryAnswers"] && Array.isArray(storedCtx["discoveryAnswers"]) && storedCtx["discoveryAnswers"].length > 0);
+            const fullCtx = {
+              ...(storedCtx || {}),
+              businessName: (storedCtx?.["businessName"] as string) || currentWs.name || "Custom Workspace",
+              problemStatement: (storedCtx?.["problemStatement"] as string) || currentWs.problem_statement || "",
+              industry: (storedCtx?.["industry"] as string) || currentWs.industry || "Custom Workspace",
+              discoveryCompleted: Boolean(isCompleted),
+            };
+
             setActiveWs({
-              name: currentWs.name,
-              industry: "Custom Workspace",
-              mode: "consult",
+              name: fullCtx.businessName,
+              industry: fullCtx.industry,
+              mode: (fullCtx.intakeMode as any) || "consult",
               lang: storedLang,
             });
             window.localStorage.setItem("bizzmitra.activeWorkspaceId", currentWs.id);
-            window.localStorage.setItem(
-              "bizzmitra.workspaceContext",
-              JSON.stringify({
-                businessName: currentWs.name,
-                problemStatement: currentWs.problem_statement || "",
-                industry: "Custom Workspace",
-              }),
-            );
+            window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(fullCtx));
+            if (isCompleted) {
+              completeDiscoveryAndUnlockAll(currentWs.id, fullCtx);
+            }
           } else {
             // Check if user has local workspace context
             const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
