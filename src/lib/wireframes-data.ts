@@ -1282,8 +1282,8 @@ export function generateUniversalWireframeBlueprint(context?: {
   if (!businessName || businessName === "TalentCraft HR Consultancy" || businessName === "Enterprise Workspace") {
     if (rawProblem.length > 0) {
       // Pick first 2-3 words or recognizable noun
-      const firstChunk = rawProblem.split(/[.,;\n]/)[0].trim();
-      businessName = firstChunk.length > 28 ? `${firstChunk.slice(0, 26).trim()}…` : firstChunk;
+      const firstChunk = (rawProblem.split(/[.,;\n]/)[0] || "").trim();
+      businessName = firstChunk.length > 28 ? `${firstChunk.slice(0, 26).trim()}…` : (firstChunk || "Operational System");
     } else {
       businessName = "Operational System";
     }

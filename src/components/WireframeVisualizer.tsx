@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Monitor,
   Tablet,
@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 
 import {
   getWireframeBlueprint,
+  type ScreenConcept,
   type ScreenConceptId,
   type ViewportMode,
   type WireframeBlueprint,
@@ -49,11 +50,33 @@ export function WireframeVisualizer({
     } catch {}
   }, []);
 
-  const blueprint = propBlueprint || getWireframeBlueprint(workspaceContext);
-  const screenConcepts = blueprint.screenConcepts;
+  const fallbackBlueprint = useMemo(() => getWireframeBlueprint(workspaceContext), [workspaceContext]);
 
-  const currentConcept =
-    screenConcepts.find((s) => s.id === activeScreen) || screenConcepts[0]!;
+  const screenConcepts: ScreenConcept[] = useMemo(() => {
+    const raw: any = propBlueprint;
+    if (raw?.screenConcepts && Array.isArray(raw.screenConcepts) && raw.screenConcepts.length > 0) {
+      return raw.screenConcepts;
+    }
+    if (raw?.screens && Array.isArray(raw.screens) && raw.screens.length > 0) {
+      return raw.screens.map((s: any, idx: number) => ({
+        id: (s.id || `screen-${idx + 1}`) as ScreenConceptId,
+        title: s.title || `Screen ${idx + 1}`,
+        category: s.actor || "Enterprise View",
+        description: s.userStory || "",
+        uxHighlights: Array.isArray(s.components) ? s.components : ["Live Operations Queue", "Real-Time Telemetry"],
+        mockData: fallbackBlueprint.screenConcepts[idx % fallbackBlueprint.screenConcepts.length]?.mockData || fallbackBlueprint.screenConcepts[0]!.mockData,
+      }));
+    }
+    return fallbackBlueprint.screenConcepts;
+  }, [propBlueprint, fallbackBlueprint]);
+
+  const currentConcept: ScreenConcept = useMemo(() => {
+    return (
+      screenConcepts.find((s) => s.id === activeScreen) ||
+      screenConcepts[0] ||
+      fallbackBlueprint.screenConcepts[0]!
+    );
+  }, [screenConcepts, activeScreen, fallbackBlueprint]);
 
   const mock = currentConcept.mockData;
 

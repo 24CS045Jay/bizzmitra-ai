@@ -17,6 +17,7 @@ import {
   Terminal,
 } from "lucide-react";
 
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { GenerationSequence } from "@/components/GenerationSequence";
@@ -84,26 +85,47 @@ function DataPage() {
     } catch {}
   }, []);
 
-  const blueprint: DatabaseBlueprint = useMemo(
+  const [dynamicBlueprint, setDynamicBlueprint] = useState<any>(null);
+  const [modelLabel, setModelLabel] = useState("Groq Llama 3.3 70B");
+
+  const fallbackBlueprint: DatabaseBlueprint = useMemo(
     () => getDatabaseBlueprint(workspaceContext),
     [workspaceContext]
   );
 
+  const rawBlueprint = dynamicBlueprint || fallbackBlueprint;
+
+  const blueprint: DatabaseBlueprint = useMemo(() => {
+    return {
+      ...fallbackBlueprint,
+      ...rawBlueprint,
+      tables: (rawBlueprint.tables && Array.isArray(rawBlueprint.tables) && rawBlueprint.tables.length > 0)
+        ? rawBlueprint.tables
+        : fallbackBlueprint.tables,
+      apiEndpoints: (rawBlueprint.apiEndpoints && Array.isArray(rawBlueprint.apiEndpoints) && rawBlueprint.apiEndpoints.length > 0)
+        ? rawBlueprint.apiEndpoints
+        : fallbackBlueprint.apiEndpoints,
+      erdDiagram: (rawBlueprint as any).erdDiagram || (rawBlueprint as any).erDiagram || (rawBlueprint as any).er || fallbackBlueprint.erdDiagram,
+      ddlSchema: (rawBlueprint as any).ddlSchema || (rawBlueprint as any).ddl || fallbackBlueprint.ddlSchema,
+    };
+  }, [rawBlueprint, fallbackBlueprint]);
+
   const [selectedTable, setSelectedTable] = useState<TableDef>(
-    blueprint.tables[1] ?? blueprint.tables[0]!
+    blueprint.tables?.[1] ?? blueprint.tables?.[0] ?? fallbackBlueprint.tables[0]!
   );
 
   // Synchronize selected table and active category when domain blueprint switches
   useEffect(() => {
-    if (blueprint.tables.length > 0) {
+    if (blueprint.tables && blueprint.tables.length > 0) {
       setSelectedTable(blueprint.tables[0]!);
     }
     setActiveApiCategory("All");
-  }, [blueprint.domainId]);
+  }, [blueprint.domainId, blueprint.tables]);
 
   const handleCopySql = () => {
     navigator.clipboard.writeText(blueprint.ddlSchema);
     setCopiedSql(true);
+    toast.success("PostgreSQL DDL copied to clipboard!");
     setTimeout(() => setCopiedSql(false), 2000);
   };
 
@@ -123,14 +145,37 @@ function DataPage() {
     setTimeout(() => setCopiedCurlIndex(null), 2000);
   };
 
+  const handleRegenerate = async () => {
+    const tId = toast.loading("Regenerating database & API models with AI...");
+    try {
+      const res = await generateArtifact("data", {
+        businessName: workspaceContext.businessName,
+        industry: workspaceContext.industry,
+      }, { forceFresh: true });
+
+      if (res) {
+        setDynamicBlueprint(res);
+        setModelLabel("Groq Llama 3.3 70B (Fresh)");
+        toast.success("Database & API models regenerated!", { id: tId });
+      }
+    } catch {
+      toast.error("Failed to regenerate data models", { id: tId });
+    }
+  };
+
   const filteredApis =
     activeApiCategory === "All"
-      ? blueprint.apiSpecifications
-      : blueprint.apiSpecifications.filter((api) => api.category === activeApiCategory);
+      ? (blueprint.apiSpecifications || [])
+      : (blueprint.apiSpecifications || []).filter((api) => api.category === activeApiCategory);
 
   return (
     <AppShell>
-      <ArtifactHeader id="data" kicker="Step 07" title="Database & API Designer" />
+      <ArtifactHeader
+        id="data"
+        kicker="Step 07"
+        title="Database & API Designer"
+        onRegenerate={() => void handleRegenerate()}
+      />
 
       {/* Blueprint Context Banner */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs">
@@ -141,13 +186,28 @@ function DataPage() {
           <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
             {workspaceContext.industry}
           </span>
+          <span className="rounded-full bg-sage/15 px-2 py-0.5 font-bold text-sage">
+            {modelLabel}
+          </span>
         </div>
         <Link to="/workspace/process" className="font-medium text-primary hover:underline">
           View BPMN Process Intelligence →
         </Link>
       </div>
 
-      <GenerationSequence steps={GENERATION_STEPS.data} run={() => generateArtifact("data")}>
+      <GenerationSequence
+        steps={GENERATION_STEPS.data}
+        run={async () => {
+          const res: any = await generateArtifact("data", {
+            businessName: workspaceContext.businessName,
+            industry: workspaceContext.industry,
+          });
+          if (res && (res.erDiagram || res.tables)) {
+            setDynamicBlueprint(res);
+          }
+          return res;
+        }}
+      >
         <div className="space-y-6">
           {/* Quick Metrics Bar */}
           <div>

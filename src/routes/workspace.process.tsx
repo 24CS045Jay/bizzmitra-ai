@@ -19,6 +19,7 @@ import {
   Split,
 } from "lucide-react";
 
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { GenerationSequence } from "@/components/GenerationSequence";
@@ -76,7 +77,42 @@ function ProcessPage() {
     } catch {}
   }, []);
 
-  const blueprint = getProcessBlueprint(workspaceContext);
+  const [dynamicBlueprint, setDynamicBlueprint] = useState<any>(null);
+  const [modelLabel, setModelLabel] = useState("Groq Llama 3.3 70B");
+
+  const fallbackBlueprint = getProcessBlueprint(workspaceContext);
+  const rawBlueprint = dynamicBlueprint || fallbackBlueprint;
+
+  const blueprint = {
+    ...fallbackBlueprint,
+    ...rawBlueprint,
+    domainTitle: rawBlueprint.domainTitle || fallbackBlueprint.domainTitle,
+    asIsDiagram: rawBlueprint.asIsDiagram || rawBlueprint.beforeDiagram || rawBlueprint.before || fallbackBlueprint.asIsDiagram,
+    toBeDiagram: rawBlueprint.toBeDiagram || rawBlueprint.afterDiagram || rawBlueprint.after || fallbackBlueprint.toBeDiagram,
+    swimlaneDiagram: rawBlueprint.swimlaneDiagram || rawBlueprint.swimlane || fallbackBlueprint.swimlaneDiagram,
+    decisionTreeDiagram: rawBlueprint.decisionTreeDiagram || rawBlueprint.decisionTree || fallbackBlueprint.decisionTreeDiagram,
+    metrics: (rawBlueprint.metrics && Array.isArray(rawBlueprint.metrics) && rawBlueprint.metrics.length > 0)
+      ? rawBlueprint.metrics.map((m: any, idx: number) => ({
+          label: m.label || fallbackBlueprint.metrics[idx]?.label || `Metric ${idx + 1}`,
+          before: m.before || m.asIs || fallbackBlueprint.metrics[idx]?.before || "Manual",
+          after: m.after || m.toBe || fallbackBlueprint.metrics[idx]?.after || "Automated",
+          improvement: m.improvement || m.delta || fallbackBlueprint.metrics[idx]?.improvement || "80% Faster",
+          icon: m.icon || fallbackBlueprint.metrics[idx]?.icon || "Zap",
+        }))
+      : fallbackBlueprint.metrics,
+    bottlenecks: (rawBlueprint.bottlenecks && Array.isArray(rawBlueprint.bottlenecks) && rawBlueprint.bottlenecks.length > 0)
+      ? rawBlueprint.bottlenecks.map((b: any, idx: number) => ({
+          stage: b.stage || b.title || b.name || fallbackBlueprint.bottlenecks[idx]?.stage || `Phase ${idx + 1}`,
+          problem: b.problem || b.asIsDetail || b.description || fallbackBlueprint.bottlenecks[idx]?.problem || "Manual bottleneck",
+          impact: b.impact || b.businessImpact || b.consequence || fallbackBlueprint.bottlenecks[idx]?.impact || "Operational latency",
+          solution: b.solution || b.toBeDetail || b.remediation || fallbackBlueprint.bottlenecks[idx]?.solution || "Automated workflow",
+          timeSavings: b.timeSavings || b.timeSaved || b.savings || fallbackBlueprint.bottlenecks[idx]?.timeSavings || "80% reduction",
+        }))
+      : fallbackBlueprint.bottlenecks,
+    decisionTiers: (rawBlueprint.decisionTiers && Array.isArray(rawBlueprint.decisionTiers))
+      ? rawBlueprint.decisionTiers
+      : fallbackBlueprint.decisionTiers,
+  };
 
   const getMetricIcon = (icon: string) => {
     switch (icon) {
@@ -93,9 +129,33 @@ function ProcessPage() {
     }
   };
 
+  const handleRegenerate = async () => {
+    const tId = toast.loading("Regenerating process blueprint with AI...");
+    try {
+      const res = await generateArtifact("process", {
+        businessName: workspaceContext.businessName,
+        industry: workspaceContext.industry,
+        problem: workspaceContext.problemStatement || "",
+      }, { forceFresh: true });
+
+      if (res) {
+        setDynamicBlueprint(res);
+        setModelLabel("Groq Llama 3.3 70B (Fresh)");
+        toast.success("Process blueprint regenerated!", { id: tId });
+      }
+    } catch {
+      toast.error("Failed to regenerate process blueprint", { id: tId });
+    }
+  };
+
   return (
     <AppShell>
-      <ArtifactHeader id="process" kicker="Step 05" title="Process Intelligence & BPMN Engine" />
+      <ArtifactHeader
+        id="process"
+        kicker="Step 05"
+        title="Process Intelligence & BPMN Engine"
+        onRegenerate={() => void handleRegenerate()}
+      />
 
       {/* Blueprint Context Banner */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs">
@@ -106,18 +166,34 @@ function ProcessPage() {
           <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
             {workspaceContext.industry}
           </span>
+          <span className="rounded-full bg-sage/15 px-2 py-0.5 font-bold text-sage">
+            {modelLabel}
+          </span>
         </div>
         <Link to="/workspace/architecture" className="font-medium text-primary hover:underline">
           View Technical Architecture →
         </Link>
       </div>
 
-      <GenerationSequence steps={GENERATION_STEPS.process} run={() => generateArtifact("process")}>
+      <GenerationSequence
+        steps={GENERATION_STEPS.process}
+        run={async () => {
+          const res: any = await generateArtifact("process", {
+            businessName: workspaceContext.businessName,
+            industry: workspaceContext.industry,
+            problem: workspaceContext.problemStatement || "",
+          });
+          if (res) {
+            setDynamicBlueprint(res);
+          }
+          return res;
+        }}
+      >
         <div className="space-y-6">
           {/* Top Performance Metrics Banner */}
           <div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {blueprint.metrics.map((metric) => (
+              {blueprint.metrics.map((metric: any) => (
                 <div key={metric.label} className="neu p-4 transition-all hover:scale-[1.01]">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -351,7 +427,7 @@ function ProcessPage() {
               className="space-y-4"
             >
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {blueprint.bottlenecks.map((item) => (
+                {blueprint.bottlenecks.map((item: any) => (
                   <div key={item.stage} className="neu flex flex-col justify-between p-5">
                     <div>
                       <div className="flex items-center justify-between border-b border-border/30 pb-2.5">
@@ -433,7 +509,7 @@ function ProcessPage() {
 
                 {/* 3-Tier Approval Workflow Strip */}
                 <div className="grid gap-3 sm:grid-cols-3 pt-2">
-                  {blueprint.decisionTiers.map((step, idx) => (
+                  {blueprint.decisionTiers.map((step: any, idx: number) => (
                     <div key={idx} className="rounded-xl border border-border/70 bg-surface/60 p-4 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-foreground">{step.tier}</span>
@@ -479,7 +555,7 @@ function ProcessPage() {
                   AI Process Optimization Recommendations
                 </h4>
                 <div className="grid gap-3 sm:grid-cols-2 text-xs">
-                  {blueprint.recommendations.map((rec) => (
+                  {blueprint.recommendations.map((rec: any) => (
                     <div key={rec.title} className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-1">
                       <p className="font-bold text-emerald-600 dark:text-emerald-400">{rec.title}</p>
                       <p className="text-[11px] text-muted-foreground leading-relaxed">

@@ -23,7 +23,10 @@ export function Mermaid({ chart, className }: { chart: string; className?: strin
     setFailed(false);
     setSvg("");
 
-    // Generate a valid, collision-free CSS-safe ID (starts with a letter, alphanumeric only)
+    const safeChart = (chart && typeof chart === "string" && chart.trim().length > 0)
+      ? chart.trim()
+      : "graph TD\n  A[Architecture Model Initialized] --> B[Workflow Nodes Active]";
+
     const uniqueSuffix = Math.random().toString(36).replace(/[^a-z0-9]/g, "").slice(0, 8);
     const renderId = `m${uniqueSuffix}${Date.now().toString(36).replace(/[^a-z0-9]/g, "")}`;
 
@@ -80,7 +83,7 @@ export function Mermaid({ chart, className }: { chart: string; className?: strin
         const prevD = document.getElementById(`d${renderId}`);
         if (prevD) prevD.remove();
 
-        const out = await mermaid.render(renderId, chart);
+        const out = await mermaid.render(renderId, safeChart);
         if (!cancelled && out?.svg) {
           setSvg(out.svg);
           setLoading(false);

@@ -267,8 +267,11 @@ function CRMPage() {
   const handleAdvanceStage = useCallback((id: string, currentStage: string) => {
     const stageList = domainConfig.stages.filter((s) => s !== "All");
     const currentIndex = stageList.indexOf(currentStage);
-    const nextIndex = (currentIndex + 1) % stageList.length;
-    handleUpdateStage(id, stageList[nextIndex]);
+    const nextIndex = (currentIndex + 1) % (stageList.length || 1);
+    const nextStage = stageList[nextIndex];
+    if (nextStage) {
+      handleUpdateStage(id, nextStage);
+    }
   }, [domainConfig.stages, handleUpdateStage]);
 
   // Filtered candidates
@@ -420,8 +423,8 @@ function CRMPage() {
             {(
               [
                 [`Total ${domainConfig.entityPlural}`, candidates.length, Users],
-                ["In Pipeline", candidates.filter((c) => c.stage !== "Rejected" && c.stage !== "Completed" && c.stage !== "Delivered" && c.stage !== "Commissioned").length, Filter],
-                ["Top Rated / Closed", candidates.filter((c) => c.stage === "Offer" || c.stage === "Completed" || c.stage === "Delivered" || c.stage === "Commissioned" || c.rating === 5).length, Check],
+                ["In Pipeline", candidates.filter((c) => (c.stage as string) !== "Rejected" && (c.stage as string) !== "Completed" && (c.stage as string) !== "Delivered" && (c.stage as string) !== "Commissioned").length, Filter],
+                ["Top Rated / Closed", candidates.filter((c) => (c.stage as string) === "Offer" || (c.stage as string) === "Completed" || (c.stage as string) === "Delivered" || (c.stage as string) === "Commissioned" || c.rating === 5).length, Check],
                 ["Avg. Rating", (candidates.reduce((a, c) => a + c.rating, 0) / (candidates.length || 1)).toFixed(1), Star],
               ] as [string, number | string, React.ComponentType<{ className?: string }>][]
             ).map(([label, value, Icon]) => (
