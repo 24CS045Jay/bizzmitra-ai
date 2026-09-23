@@ -402,18 +402,24 @@ export function AppSidebar2({
             const isCompleted =
               storedCtx?.["discoveryCompleted"] === true ||
               (storedCtx?.["discoveryAnswers"] && Array.isArray(storedCtx["discoveryAnswers"]) && storedCtx["discoveryAnswers"].length > 0);
-            const fullCtx = {
+            const bName = (storedCtx?.["businessName"] as string) || currentWs.name || "Custom Workspace";
+            const ind = (storedCtx?.["industry"] as string) || currentWs.industry || "Custom Workspace";
+            const prob = (storedCtx?.["problemStatement"] as string) || currentWs.problem_statement || "";
+            const intakeMode = (storedCtx?.["intakeMode"] as string) || "consult";
+
+            const fullCtx: Record<string, any> = {
               ...(storedCtx || {}),
-              businessName: (storedCtx?.["businessName"] as string) || currentWs.name || "Custom Workspace",
-              problemStatement: (storedCtx?.["problemStatement"] as string) || currentWs.problem_statement || "",
-              industry: (storedCtx?.["industry"] as string) || currentWs.industry || "Custom Workspace",
+              businessName: bName,
+              problemStatement: prob,
+              industry: ind,
+              intakeMode,
               discoveryCompleted: Boolean(isCompleted),
             };
 
             setActiveWs({
-              name: fullCtx.businessName,
-              industry: fullCtx.industry,
-              mode: (fullCtx.intakeMode as any) || "consult",
+              name: bName,
+              industry: ind,
+              mode: intakeMode as any,
               lang: storedLang,
             });
             window.localStorage.setItem("bizzmitra.activeWorkspaceId", currentWs.id);

@@ -410,76 +410,81 @@ export function RoadmapPage() {
               </div>
             </div>
 
-            {/* Week Axis Header - Dynamically sized grid columns */}
-            <div className="mt-6 border-b border-border/40 pb-2">
-              <div
-                className="grid text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
-                style={{ gridTemplateColumns: `repeat(${blueprint.targetTimelineWeeks}, minmax(0, 1fr))` }}
-              >
-                {Array.from({ length: blueprint.targetTimelineWeeks }).map((_, i) => (
-                  <div key={i}>W{i + 1}</div>
-                ))}
-              </div>
-            </div>
-
-            {/* Phase Bars */}
-            <div className="mt-4 space-y-4">
-              {blueprint.phases.map((phase: any, idx: number) => {
-                const isSelected = idx === activePhaseIndex;
-                const leftPercent = (phase.startWeek / blueprint.targetTimelineWeeks) * 100;
-                const widthPercent = (phase.durationWeekCount / blueprint.targetTimelineWeeks) * 100;
-
-                return (
+            {/* Scrollable Gantt Timeline Viewport (Touch Pan on Mobile) */}
+            <div className="w-full overflow-x-auto touch-pan-x pb-2 scrollbar-none">
+              <div className="min-w-[580px] sm:min-w-0">
+                {/* Week Axis Header - Dynamically sized grid columns */}
+                <div className="mt-6 border-b border-border/40 pb-2">
                   <div
-                    key={phase.id}
-                    onClick={() => setActivePhaseIndex(idx)}
-                    className={`group cursor-pointer rounded-xl p-3 transition ${
-                      isSelected ? "neu-inset ring-1 ring-primary/40" : "hover:bg-muted/40"
-                    }`}
+                    className="grid text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+                    style={{ gridTemplateColumns: `repeat(${blueprint.targetTimelineWeeks}, minmax(0, 1fr))` }}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`size-2 rounded-full ${
-                            phase.status === "completed"
-                              ? "bg-emerald-500"
-                              : phase.status === "in-progress"
-                                ? "bg-primary animate-pulse"
-                                : "bg-muted-foreground"
-                          }`}
-                        />
-                        <span className="text-xs font-bold">
-                          Phase {phase.phaseNumber}: {phase.name}
-                        </span>
-                        <span className="text-[10px] rounded-full bg-accent px-2 py-0.5 text-muted-foreground">
-                          {phase.durationWeeks} · {phase.codename}
-                        </span>
-                      </div>
-                      <span className="text-[11px] font-medium text-muted-foreground">
-                        {phase.milestones.filter((m: any) => completedMilestones[m.id]).length} /{" "}
-                        {phase.milestones.length} Milestones
-                      </span>
-                    </div>
-
-                    {/* Bar track */}
-                    <div className="relative mt-2.5 h-3.5 w-full rounded-full bg-muted/60">
-                      <motion.div
-                        className={`absolute top-0 h-full rounded-full ${
-                          isSelected
-                            ? "bg-primary shadow-sm"
-                            : phase.status === "completed"
-                              ? "bg-emerald-500"
-                              : "bg-primary/70"
-                        }`}
-                        style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
-                        initial={{ opacity: 0, scaleX: 0 }}
-                        animate={{ opacity: 1, scaleX: 1 }}
-                        transition={{ duration: 0.6, ease: "easeOut" }}
-                      />
-                    </div>
+                    {Array.from({ length: blueprint.targetTimelineWeeks }).map((_, i) => (
+                      <div key={i}>W{i + 1}</div>
+                    ))}
                   </div>
-                );
-              })}
+                </div>
+
+                {/* Phase Bars */}
+                <div className="mt-4 space-y-4">
+                  {blueprint.phases.map((phase: any, idx: number) => {
+                    const isSelected = idx === activePhaseIndex;
+                    const leftPercent = (phase.startWeek / blueprint.targetTimelineWeeks) * 100;
+                    const widthPercent = (phase.durationWeekCount / blueprint.targetTimelineWeeks) * 100;
+
+                    return (
+                      <div
+                        key={phase.id}
+                        onClick={() => setActivePhaseIndex(idx)}
+                        className={`group cursor-pointer rounded-xl p-3 transition ${
+                          isSelected ? "neu-inset ring-1 ring-primary/40" : "hover:bg-muted/40"
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`size-2 rounded-full ${
+                                phase.status === "completed"
+                                  ? "bg-emerald-500"
+                                  : phase.status === "in-progress"
+                                    ? "bg-primary animate-pulse"
+                                    : "bg-muted-foreground"
+                              }`}
+                            />
+                            <span className="text-xs font-bold">
+                              Phase {phase.phaseNumber}: {phase.name}
+                            </span>
+                            <span className="text-[10px] rounded-full bg-accent px-2 py-0.5 text-muted-foreground">
+                              {phase.durationWeeks} · {phase.codename}
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-medium text-muted-foreground">
+                            {phase.milestones.filter((m: any) => completedMilestones[m.id]).length} /{" "}
+                            {phase.milestones.length} Milestones
+                          </span>
+                        </div>
+
+                        {/* Bar track */}
+                        <div className="relative mt-2.5 h-3.5 w-full rounded-full bg-muted/60">
+                          <motion.div
+                            className={`absolute top-0 h-full rounded-full ${
+                              isSelected
+                                ? "bg-primary shadow-sm"
+                                : phase.status === "completed"
+                                  ? "bg-emerald-500"
+                                  : "bg-primary/70"
+                            }`}
+                            style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
+                            initial={{ opacity: 0, scaleX: 0 }}
+                            animate={{ opacity: 1, scaleX: 1 }}
+                            transition={{ duration: 0.6, ease: "easeOut" }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </Reveal>
 

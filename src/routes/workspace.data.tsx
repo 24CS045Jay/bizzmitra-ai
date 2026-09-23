@@ -545,7 +545,7 @@ function DataPage() {
                         >
                           {api.method}
                         </span>
-                        <code className="font-mono text-sm font-semibold text-foreground">
+                        <code className="font-mono text-sm font-semibold text-foreground break-all sm:break-normal">
                           {api.path}
                         </code>
                         <span className="rounded bg-muted/60 px-2 py-0.5 text-[10px] uppercase font-semibold text-muted-foreground">

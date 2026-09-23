@@ -33,6 +33,8 @@ export const EXAMPLE_CHIPS = [
 ];
 
 export type DiscoveryQuestionItem = {
+  id?: string;
+  questionId?: string;
   question: string;
   hint: string;
   whyWeAsk: string;
