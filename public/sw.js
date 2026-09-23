@@ -8,11 +8,20 @@ const STATIC_ASSETS = [
   "/apple-touch-icon.png",
 ];
 
-// Install: pre-cache critical app shell
+// Install: pre-cache critical app shell safely
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.allSettled(
+        STATIC_ASSETS.map(async (asset) => {
+          try {
+            const res = await fetch(asset);
+            if (res && res.status === 200) {
+              await cache.put(asset, res);
+            }
+          } catch {}
+        })
+      );
     })
   );
   self.skipWaiting();

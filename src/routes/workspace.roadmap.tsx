@@ -74,13 +74,36 @@ export function RoadmapPage() {
     } catch {}
   }, []);
 
-  const blueprint = useMemo(() => getRoadmapForWorkspace(workspaceContext), [workspaceContext]);
+  const [dynamicBlueprint, setDynamicBlueprint] = useState<any>(null);
+  const [modelLabel, setModelLabel] = useState("Groq Llama 3.3 70B");
+
+  const fallbackBlueprint = useMemo(() => getRoadmapForWorkspace(workspaceContext), [workspaceContext]);
+  const rawBlueprint = dynamicBlueprint || fallbackBlueprint;
+
+  const blueprint = useMemo(() => {
+    return {
+      ...fallbackBlueprint,
+      ...rawBlueprint,
+      phases: (rawBlueprint.phases && Array.isArray(rawBlueprint.phases) && rawBlueprint.phases.length > 0)
+        ? rawBlueprint.phases.map((p: any, idx: number) => ({
+            ...p,
+            milestones: Array.isArray(p.milestones) ? p.milestones : (fallbackBlueprint.phases[idx]?.milestones || []),
+            teamResourcing: Array.isArray(p.teamResourcing) ? p.teamResourcing : (fallbackBlueprint.phases[idx]?.teamResourcing || []),
+            criticalDeliverables: Array.isArray(p.criticalDeliverables) ? p.criticalDeliverables : (fallbackBlueprint.phases[idx]?.criticalDeliverables || []),
+          }))
+        : fallbackBlueprint.phases,
+      riskRegister: (rawBlueprint.riskRegister && Array.isArray(rawBlueprint.riskRegister) && rawBlueprint.riskRegister.length > 0)
+        ? rawBlueprint.riskRegister
+        : fallbackBlueprint.riskRegister,
+    };
+  }, [rawBlueprint, fallbackBlueprint]);
+
   const [activePhaseIndex, setActivePhaseIndex] = useState(0);
 
   const [completedMilestones, setCompletedMilestones] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
-    blueprint.phases.forEach((p) => {
-      p.milestones.forEach((m) => {
+    (blueprint.phases || []).forEach((p: any) => {
+      (p.milestones || []).forEach((m: any) => {
         initial[m.id] = m.completed;
       });
     });
@@ -90,14 +113,14 @@ export function RoadmapPage() {
   // Re-synchronize milestones state whenever the blueprint/scenario changes
   useEffect(() => {
     const initial: Record<string, boolean> = {};
-    blueprint.phases.forEach((p) => {
-      p.milestones.forEach((m) => {
+    (blueprint.phases || []).forEach((p: any) => {
+      (p.milestones || []).forEach((m: any) => {
         initial[m.id] = m.completed;
       });
     });
     setCompletedMilestones(initial);
     setActivePhaseIndex(0);
-  }, [blueprint.workspaceId, blueprint.scenarioName]);
+  }, [blueprint.workspaceId, blueprint.scenarioName, dynamicBlueprint]);
 
   const [riskFilter, setRiskFilter] = useState<"All" | "Technical" | "Adoption" | "Security" | "Timeline">("All");
   const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
@@ -108,9 +131,9 @@ export function RoadmapPage() {
     [blueprint, workspaceContext],
   );
 
-  const activePhase = (blueprint.phases[activePhaseIndex] ?? blueprint.phases[0])!;
+  const activePhase = (blueprint.phases?.[activePhaseIndex] ?? blueprint.phases?.[0] ?? fallbackBlueprint.phases[0])!;
 
-  const totalMilestones = blueprint.phases.reduce((acc, p) => acc + p.milestones.length, 0);
+  const totalMilestones = (blueprint.phases || []).reduce((acc: number, p: any) => acc + (p.milestones?.length || 0), 0);
   const doneMilestones = Object.values(completedMilestones).filter(Boolean).length;
   const progressPercent = totalMilestones > 0 ? Math.round((doneMilestones / totalMilestones) * 100) : 0;
 
@@ -125,14 +148,14 @@ export function RoadmapPage() {
   const copyRoadmap = () => {
     const text = `# ${blueprint.scenarioName} — Implementation Roadmap\n\nTimeline: ${blueprint.targetTimelineWeeks} Weeks | Effort: ${blueprint.totalPersonDays} Person-Days | Go-Live: ${blueprint.estimatedGoLive}\nConfidence: ${blueprint.confidenceScore}%\n\nExecutive Summary:\n${blueprint.executiveSummary}\n\n${blueprint.phases
       .map(
-        (p) =>
+        (p: any) =>
           `## Phase ${p.phaseNumber}: ${p.name} (${p.durationWeeks}) — ${p.codename}\nObjective: ${p.objective}\n\n### Milestones:\n${p.milestones
-            .map((m) => `- [${completedMilestones[m.id] ? "X" : " "}] ${m.title} (${m.effortDays}d, ${m.category}): ${m.deliverable}`)
-            .join("\n")}\n\n### Resourcing:\n${p.teamResourcing.map((r) => `- ${r.role} (${r.fte} FTE): ${r.responsibilities}`).join("\n")}\n\n### Key Deliverables:\n${p.criticalDeliverables.map((d) => `- ${d}`).join("\n")}`
+            .map((m: any) => `- [${completedMilestones[m.id] ? "X" : " "}] ${m.title} (${m.effortDays}d, ${m.category}): ${m.deliverable}`)
+            .join("\n")}\n\n### Resourcing:\n${p.teamResourcing.map((r: any) => `- ${r.role} (${r.fte} FTE): ${r.responsibilities}`).join("\n")}\n\n### Key Deliverables:\n${p.criticalDeliverables.map((d: any) => `- ${d}`).join("\n")}`
       )
       .join("\n\n")}\n\n## Risk Register:\n${blueprint.riskRegister
       .map(
-        (r) =>
+        (r: any) =>
           `### ${r.title} [${r.category} | Likelihood: ${r.likelihood} | Impact: ${r.impact}]\n- Owner: ${r.owner}\n- Consequence: ${r.consequence}\n- Mitigation: ${r.mitigationStrategy}`
       )
       .join("\n\n")}`;
@@ -143,9 +166,9 @@ export function RoadmapPage() {
   const downloadRoadmap = () => {
     const text = `# ${blueprint.scenarioName} — Implementation Roadmap\n\nTimeline: ${blueprint.targetTimelineWeeks} Weeks | Effort: ${blueprint.totalPersonDays} Person-Days | Go-Live: ${blueprint.estimatedGoLive}\nConfidence: ${blueprint.confidenceScore}%\n\nExecutive Summary:\n${blueprint.executiveSummary}\n\n${blueprint.phases
       .map(
-        (p) =>
+        (p: any) =>
           `## Phase ${p.phaseNumber}: ${p.name} (${p.durationWeeks}) — ${p.codename}\nObjective: ${p.objective}\n\n### Milestones:\n${p.milestones
-            .map((m) => `- [${completedMilestones[m.id] ? "X" : " "}] ${m.title} (${m.effortDays}d, ${m.category}): ${m.deliverable}`)
+            .map((m: any) => `- [${completedMilestones[m.id] ? "X" : " "}] ${m.title} (${m.effortDays}d, ${m.category}): ${m.deliverable}`)
             .join("\n")}`
       )
       .join("\n\n")}`;
@@ -161,8 +184,27 @@ export function RoadmapPage() {
 
   const filteredRisks = useMemo(() => {
     if (riskFilter === "All") return blueprint.riskRegister;
-    return blueprint.riskRegister.filter((r) => r.category === riskFilter);
+    return blueprint.riskRegister.filter((r: any) => r.category === riskFilter);
   }, [riskFilter, blueprint.riskRegister]);
+
+  const handleRegenerate = async () => {
+    const tId = toast.loading("Regenerating 12-week roadmap with AI...");
+    try {
+      const res = await generateArtifact("roadmap", {
+        businessName: workspaceContext?.businessName || workspaceContext?.name || "",
+        industry: workspaceContext?.industry || "",
+        problem: workspaceContext?.problemStatement || "",
+      }, { forceFresh: true });
+
+      if (res) {
+        setDynamicBlueprint(res);
+        setModelLabel("Groq Llama 3.3 70B (Fresh)");
+        toast.success("Roadmap regenerated with AI!", { id: tId });
+      }
+    } catch {
+      toast.error("Failed to regenerate roadmap", { id: tId });
+    }
+  };
 
   return (
     <AppShell>
@@ -170,6 +212,7 @@ export function RoadmapPage() {
         id="roadmap"
         kicker="Implementation Engine · Step 08"
         title="Delivery Roadmap & Sprint Planning"
+        onRegenerate={() => void handleRegenerate()}
       />
 
       {/* Blueprint Context Banner */}
@@ -183,6 +226,9 @@ export function RoadmapPage() {
           <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
             {workspaceContext?.industry || "Custom Domain"}
           </span>
+          <span className="rounded-full bg-sage/15 px-2 py-0.5 font-bold text-sage">
+            {modelLabel}
+          </span>
         </div>
         <div className="flex items-center gap-3">
           <Link to="/workspace/architecture" className="font-medium text-muted-foreground hover:text-primary transition-colors">
@@ -194,7 +240,20 @@ export function RoadmapPage() {
         </div>
       </div>
 
-      <GenerationSequence steps={GENERATION_STEPS.roadmap} run={() => generateArtifact("roadmap")}>
+      <GenerationSequence
+        steps={GENERATION_STEPS.roadmap}
+        run={async () => {
+          const res: any = await generateArtifact("roadmap", {
+            businessName: workspaceContext?.businessName || workspaceContext?.name || "",
+            industry: workspaceContext?.industry || "",
+            problem: workspaceContext?.problemStatement || "",
+          });
+          if (res && (res.phases || res.ganttDiagram)) {
+            setDynamicBlueprint(res);
+          }
+          return res;
+        }}
+      >
         <div className="space-y-8 pb-16">
           {/* Top Summary Banner */}
           <Reveal className="neu p-6 md:p-8">
@@ -358,7 +417,7 @@ export function RoadmapPage() {
 
             {/* Phase Bars */}
             <div className="mt-4 space-y-4">
-              {blueprint.phases.map((phase, idx) => {
+              {blueprint.phases.map((phase: any, idx: number) => {
                 const isSelected = idx === activePhaseIndex;
                 const leftPercent = (phase.startWeek / blueprint.targetTimelineWeeks) * 100;
                 const widthPercent = (phase.durationWeekCount / blueprint.targetTimelineWeeks) * 100;
@@ -390,7 +449,7 @@ export function RoadmapPage() {
                         </span>
                       </div>
                       <span className="text-[11px] font-medium text-muted-foreground">
-                        {phase.milestones.filter((m) => completedMilestones[m.id]).length} /{" "}
+                        {phase.milestones.filter((m: any) => completedMilestones[m.id]).length} /{" "}
                         {phase.milestones.length} Milestones
                       </span>
                     </div>
@@ -423,7 +482,7 @@ export function RoadmapPage() {
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mr-1">
                 Active Phase:
               </span>
-              {blueprint.phases.map((p, idx) => (
+              {blueprint.phases.map((p: any, idx: number) => (
                 <button
                   key={p.id}
                   type="button"
@@ -474,7 +533,7 @@ export function RoadmapPage() {
 
                   {/* Milestones List */}
                   <div className="mt-5 space-y-3">
-                    {activePhase.milestones.map((m) => {
+                    {activePhase.milestones.map((m: any) => {
                       const isDone = !!completedMilestones[m.id];
                       return (
                         <div
@@ -531,7 +590,7 @@ export function RoadmapPage() {
                   </p>
 
                   <div className="mt-4 space-y-3">
-                    {activePhase.teamResourcing.map((res) => (
+                    {activePhase.teamResourcing.map((res: any) => (
                       <div key={res.role} className="neu-inset p-3">
                         <div className="flex items-center justify-between text-xs font-bold">
                           <span>{res.role}</span>
@@ -549,7 +608,7 @@ export function RoadmapPage() {
                   <div className="mt-6 border-t border-border/40 pt-4">
                     <h4 className="text-xs font-bold">Key Deliverables:</h4>
                     <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
-                      {activePhase.criticalDeliverables.map((d, i) => (
+                      {activePhase.criticalDeliverables.map((d: any, i: number) => (
                         <li key={i} className="flex items-start gap-2">
                           <span className="mt-1 size-1.5 rounded-full bg-primary" />
                           <span>{d}</span>
@@ -594,7 +653,7 @@ export function RoadmapPage() {
 
             {/* Risk Grid */}
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {filteredRisks.map((risk) => (
+              {filteredRisks.map((risk: any) => (
                 <div key={risk.id} className="neu-inset p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <h4 className="text-xs font-bold leading-snug">{risk.title}</h4>
@@ -659,14 +718,14 @@ export function RoadmapPage() {
         isOpen={isScenarioModalOpen}
         onClose={() => setIsScenarioModalOpen(false)}
         currentBlueprint={blueprint}
-        workspaceId={workspaceContext?.id}
+        workspaceId={workspaceContext?.id || ""}
       />
 
       {/* Share Blueprint Modal */}
       <ShareBlueprintModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-        blueprintId={workspaceContext?.id}
+        blueprintId={workspaceContext?.id || ""}
         blueprintName={blueprint.scenarioName}
       />
     </AppShell>

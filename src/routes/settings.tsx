@@ -351,12 +351,6 @@ function SettingsPage() {
 
     const priceFormatted = `₹${priceRupees.toLocaleString("en-IN")}`;
 
-    if (!razorpayKey && !getRazorpayKeyId()) {
-      setIsEditingKey(true);
-      toast.warning("Please configure your Razorpay Key ID (rzp_test_... or rzp_live_...) to initiate payment.");
-      return;
-    }
-
     try {
       await initiateRazorpayPayment({
         amountInRupees: priceRupees,

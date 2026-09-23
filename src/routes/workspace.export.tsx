@@ -110,7 +110,8 @@ export function ExportCenterPage() {
   };
 
   const handleDownloadCsv = () => {
-    const { filename, content } = generateDomainCsv(workspaceContext);
+    const content = generateDomainCsv(workspaceContext);
+    const filename = `${scenarioName.replace(/\s+/g, "_")}_Data.csv`;
     downloadFile(filename, content, "text/csv");
     toast.success(`Downloaded Domain Master Dataset (${filename})`);
   };
@@ -330,7 +331,7 @@ export function ExportCenterPage() {
                 <Zap className="size-3.5 text-amber-500" />
                 Delivery Velocity
               </div>
-              <p className="mt-1 font-display text-xl font-bold">{roadmap.targetTimelineWeeks || roadmap.totalWeeks || 8} Weeks</p>
+              <p className="mt-1 font-display text-xl font-bold">{(roadmap as any).targetTimelineWeeks || (roadmap as any).totalWeeks || 8} Weeks</p>
               <p className="text-[11px] text-muted-foreground">{roadmap.totalPersonDays || 70} Person-days planned</p>
             </div>
           </div>

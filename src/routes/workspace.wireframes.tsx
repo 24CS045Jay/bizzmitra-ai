@@ -182,75 +182,59 @@ function WireframesPage() {
     };
   }, []);
 
+  const [dynamicBlueprint, setDynamicBlueprint] = useState<any>(null);
+  const [modelLabel, setModelLabel] = useState("Groq Llama 3.3 70B");
+
   // Compute the dynamically synthesized blueprint
-  const blueprint = getWireframeBlueprint(workspaceContext);
+  const fallbackBlueprint = getWireframeBlueprint(workspaceContext);
+  const blueprint = dynamicBlueprint || fallbackBlueprint;
 
-  // Apply custom problem statement & regenerate
-  const handleApplyProblem = (name: string, ind: string, statement: string) => {
-    const updated = {
-      businessName: name.trim() || "Enterprise Workspace",
-      industry: ind.trim() || "Digital Operations",
-      problemStatement: statement.trim(),
-    };
-
-    setWorkspaceContext(updated);
-    setCustomBusinessName(updated.businessName);
-    setCustomIndustry(updated.industry);
-    setCustomProblem(updated.problemStatement);
-
+  const handleCopySpec = () => {
     try {
-      window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(updated));
-      window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
-    } catch {}
-
-    toast.success(`Wireframes synthesized for ${updated.businessName}!`, {
-      description: `Domain: ${updated.industry} • 4 interactive screens regenerated.`,
-    });
-    setIsEditorOpen(false);
+      const spec = JSON.stringify(blueprint, null, 2);
+      navigator.clipboard.writeText(spec);
+      setCopiedSpec(true);
+      toast.success("Copied wireframe specs to clipboard!");
+      setTimeout(() => setCopiedSpec(false), 2000);
+    } catch {
+      toast.error("Failed to copy specs");
+    }
   };
 
-  // Filter inventory
+  const handleApplyProblem = (bName: string, ind: string, prob: string) => {
+    setWorkspaceContext({
+      businessName: bName || "Enterprise Workspace",
+      industry: ind || "Cross-Industry",
+      problemStatement: prob,
+    });
+    setDynamicBlueprint(null);
+    setIsEditorOpen(false);
+    toast.success("Synthesizing wireframes for new problem context...");
+  };
+
+  const inventoryList = blueprint.screenInventory || [];
   const filteredInventory =
     inventoryFilter === "all"
-      ? blueprint.inventory
-      : blueprint.inventory.filter((item) => item.screenTarget === inventoryFilter);
+      ? inventoryList
+      : inventoryList.filter((s: any) => s.screenTarget === inventoryFilter);
 
-  // Copy full UX specification to clipboard
-  const handleCopySpec = () => {
-    const spec = `# ${blueprint.domainTitle}
-## UX Architecture & Screen Concepts Specification
+  const handleRegenerate = async () => {
+    const tId = toast.loading("Regenerating UX wireframes with AI...");
+    try {
+      const res = await generateArtifact("ux", {
+        businessName: workspaceContext.businessName,
+        industry: workspaceContext.industry,
+        problem: workspaceContext.problemStatement,
+      }, { forceFresh: true });
 
-**Target Industry:** ${workspaceContext.industry}
-**Problem Statement:** ${workspaceContext.problemStatement || "Operational Workflow Optimization"}
-
-### Interactive Screen Concepts
-${blueprint.screenConcepts
-  .map(
-    (s, i) => `
-#### ${i + 1}. ${s.title} (${s.category})
-- **Description:** ${s.description}
-- **Key UX Highlights:**
-${s.uxHighlights.map((h) => `  - ${h}`).join("\n")}
-- **Primary KPIs:**
-${s.mockData.kpis.map((k) => `  - ${k.label}: ${k.val} (${k.change})`).join("\n")}
-`
-  )
-  .join("\n")}
-
-### Component Inventory
-${blueprint.inventory.map((inv) => `- **[${inv.id}] ${inv.name}**: ${inv.note} (Target: ${inv.screenTarget})`).join("\n")}
-
-### Navigation Flowchart (Mermaid)
-\`\`\`mermaid
-${blueprint.navFlowDiagram}
-\`\`\`
-`;
-
-    void navigator.clipboard.writeText(spec).then(() => {
-      setCopiedSpec(true);
-      toast.success("UX Architecture Specification copied to clipboard!");
-      setTimeout(() => setCopiedSpec(false), 2000);
-    });
+      if (res) {
+        setDynamicBlueprint(res);
+        setModelLabel("Groq Llama 3.3 70B (Fresh)");
+        toast.success("UX Wireframes regenerated with AI!", { id: tId });
+      }
+    } catch {
+      toast.error("Failed to regenerate UX wireframes", { id: tId });
+    }
   };
 
   return (
@@ -259,6 +243,7 @@ ${blueprint.navFlowDiagram}
         id="wireframes"
         kicker="Step 06 • AI UX Designer"
         title="Interactive Wireframes & Screen Concepts"
+        onRegenerate={() => void handleRegenerate()}
       />
 
       {/* Blueprint Context Banner & Problem Statement Bar */}
@@ -403,7 +388,20 @@ ${blueprint.navFlowDiagram}
         )}
       </div>
 
-      <GenerationSequence steps={GENERATION_STEPS.ux} run={() => generateArtifact("ux")}>
+      <GenerationSequence
+        steps={GENERATION_STEPS.ux}
+        run={async () => {
+          const res: any = await generateArtifact("ux", {
+            businessName: workspaceContext.businessName,
+            industry: workspaceContext.industry,
+            problem: workspaceContext.problemStatement,
+          });
+          if (res && (res.screens || res.flow)) {
+            setDynamicBlueprint(res);
+          }
+          return res;
+        }}
+      >
         <div className="space-y-8">
           {/* Main Feature: Interactive Multi-Device Wireframe Visualizer */}
           <div>
@@ -442,7 +440,7 @@ ${blueprint.navFlowDiagram}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredInventory.map((w) => (
+              {filteredInventory.map((w: any) => (
                 <div
                   key={w.id}
                   className="neu-sm p-4 rounded-xl border border-border/70 bg-surface/50 space-y-2 hover:border-primary/40 transition-colors"

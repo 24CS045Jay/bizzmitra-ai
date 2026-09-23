@@ -139,7 +139,7 @@ export function exportToWordDocHtml(projectName: string, workspaceContext?: any)
 
   <h2>4. Financial Model & Projected ROI</h2>
   <ul>
-    <li><strong>Implementation CapEx:</strong> ~${roi.summary.implementationCost} (${roadmap.targetTimelineWeeks || roadmap.totalWeeks || 8}-week rollout)</li>
+    <li><strong>Implementation CapEx:</strong> ~${roi.summary.implementationCost} (${(roadmap as any).targetTimelineWeeks || (roadmap as any).totalWeeks || 8}-week rollout)</li>
     <li><strong>Projected Annual Operational Savings:</strong> ~${roi.summary.annualSavings} per year</li>
     <li><strong>Net Payback Horizon:</strong> ${roi.summary.paybackMonths} months post-deployment</li>
     <li><strong>3-Year Cumulative ROI Multiple:</strong> ${roi.summary.threeYearRoi}%</li>
@@ -188,7 +188,7 @@ export function exportToExcelWorkbook(projectName: string, workspaceContext?: an
   const roi = getRoiModelForWorkspace(ctx);
   const dbBlueprint = getDatabaseBlueprint(ctx);
 
-  const taskXmlRows = (roadmap.tasks || []).map((t: any) => `
+  const taskXmlRows = (((roadmap as any).tasks || []) as any[]).map((t: any) => `
    <Row>
     <Cell><Data ss:Type="String">${t.id}</Data></Cell>
     <Cell><Data ss:Type="String">${t.title.replace(/&/g, "&amp;")}</Data></Cell>
@@ -197,6 +197,7 @@ export function exportToExcelWorkbook(projectName: string, workspaceContext?: an
     <Cell><Data ss:Type="String">${t.phase.toUpperCase()}</Data></Cell>
     <Cell><Data ss:Type="String">${t.status}</Data></Cell>
    </Row>`).join("");
+
 
   const financialXmlRows = (roi.annualSavingsBreakdown || []).map((item: any) => `
    <Row>
@@ -360,7 +361,7 @@ export function exportToPowerPointDeck(projectName: string, workspaceContext?: a
       ${phaseBulletList}
     </ul>
     <div class="metric-grid">
-      <div class="metric-card"><span>Target Go-Live</span><p>${roadmap.targetTimelineWeeks || roadmap.totalWeeks || 8} Weeks</p></div>
+      <div class="metric-card"><span>Target Go-Live</span><p>${(roadmap as any).targetTimelineWeeks || (roadmap as any).totalWeeks || 8} Weeks</p></div>
       <div class="metric-card"><span>Person-Days</span><p>${roadmap.totalPersonDays || 70} Days</p></div>
       <div class="metric-card"><span>Confidence Score</span><p>${roadmap.confidenceScore || 92}%</p></div>
     </div>

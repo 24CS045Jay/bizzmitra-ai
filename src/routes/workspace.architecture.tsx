@@ -20,7 +20,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
@@ -91,16 +91,42 @@ function ArchitecturePage() {
     } catch {}
   }, []);
 
-  const blueprint = getArchitectureBlueprint(workspaceContext);
+  const [dynamicBlueprint, setDynamicBlueprint] = useState<any>(null);
+  const [modelLabel, setModelLabel] = useState("Groq Llama 3.3 70B");
+
+  const fallbackBlueprint = useMemo(() => getArchitectureBlueprint(workspaceContext), [workspaceContext]);
+  const rawBlueprint = dynamicBlueprint || fallbackBlueprint;
+
+  const blueprint = useMemo(() => {
+    return {
+      ...fallbackBlueprint,
+      ...rawBlueprint,
+      summary: {
+        ...(fallbackBlueprint.summary || {}),
+        ...(rawBlueprint.summary || {}),
+        cloudProvider: rawBlueprint.summary?.cloudProvider || fallbackBlueprint.summary?.cloudProvider || "Cloudflare Edge & AWS Multi-AZ",
+      },
+      components: (rawBlueprint.components && Array.isArray(rawBlueprint.components) && rawBlueprint.components.length > 0)
+        ? rawBlueprint.components
+        : fallbackBlueprint.components,
+      keyDecisions: (rawBlueprint.keyDecisions && Array.isArray(rawBlueprint.keyDecisions) && rawBlueprint.keyDecisions.length > 0)
+        ? rawBlueprint.keyDecisions
+        : fallbackBlueprint.keyDecisions,
+      hldDiagram: rawBlueprint.hldDiagram || rawBlueprint.hld || fallbackBlueprint.hldDiagram,
+      lldDiagram: rawBlueprint.lldDiagram || rawBlueprint.lld || fallbackBlueprint.lldDiagram,
+      topologyDiagram: rawBlueprint.topologyDiagram || fallbackBlueprint.topologyDiagram,
+      securitySlaDiagram: rawBlueprint.securitySlaDiagram || fallbackBlueprint.securitySlaDiagram,
+    };
+  }, [rawBlueprint, fallbackBlueprint]);
 
   const activeDiagram =
     tab === "hld"
-      ? blueprint.hldDiagram
+      ? (blueprint.hldDiagram || blueprint.hld)
       : tab === "lld"
-      ? blueprint.lldDiagram
+      ? (blueprint.lldDiagram || blueprint.lld)
       : tab === "components"
-      ? blueprint.topologyDiagram
-      : blueprint.securitySlaDiagram;
+      ? (blueprint.topologyDiagram || blueprint.hldDiagram || blueprint.hld)
+      : (blueprint.securitySlaDiagram || blueprint.hldDiagram || blueprint.hld);
 
   const handleCopyMermaid = () => {
     navigator.clipboard.writeText(activeDiagram);
@@ -109,9 +135,33 @@ function ArchitecturePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleRegenerate = async () => {
+    const tId = toast.loading("Regenerating architecture blueprint with AI...");
+    try {
+      const res = await generateArtifact("architecture", {
+        businessName: workspaceContext.businessName,
+        industry: workspaceContext.industry,
+        problem: workspaceContext.problemStatement,
+      }, { forceFresh: true });
+
+      if (res) {
+        setDynamicBlueprint(res);
+        setModelLabel("Groq Llama 3.3 70B (Fresh)");
+        toast.success("Architecture blueprint regenerated!", { id: tId });
+      }
+    } catch {
+      toast.error("Failed to regenerate architecture", { id: tId });
+    }
+  };
+
   return (
     <AppShell>
-      <ArtifactHeader id="architecture" kicker="Step 04" title="Technical Architecture" />
+      <ArtifactHeader
+        id="architecture"
+        kicker="Step 04"
+        title="Technical Architecture"
+        onRegenerate={() => void handleRegenerate()}
+      />
 
       {/* Blueprint Context Banner */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs">
@@ -121,6 +171,9 @@ function ArchitecturePage() {
           <span className="font-bold text-foreground">{workspaceContext.businessName}</span>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
             {workspaceContext.industry}
+          </span>
+          <span className="rounded-full bg-sage/15 px-2 py-0.5 font-bold text-sage">
+            {modelLabel}
           </span>
         </div>
         <Link to="/workspace/solution" className="font-medium text-primary hover:underline">
@@ -135,7 +188,7 @@ function ArchitecturePage() {
             <Server className="size-3 text-primary" /> Cloud Infrastructure
           </p>
           <p className="font-semibold text-xs text-foreground mt-1 truncate">
-            {blueprint.summary.cloudProvider}
+            {blueprint.summary?.cloudProvider || "Cloudflare Edge & AWS"}
           </p>
         </div>
         <div className="neu-sm p-3 rounded-xl">
@@ -143,7 +196,7 @@ function ArchitecturePage() {
             <Database className="size-3 text-sky-500" /> Primary Persistence
           </p>
           <p className="font-semibold text-xs text-foreground mt-1 truncate">
-            {blueprint.summary.dbEngine}
+            {blueprint.summary?.dbEngine || "PostgreSQL 16 (Supabase)"}
           </p>
         </div>
         <div className="neu-sm p-3 rounded-xl">
@@ -151,7 +204,7 @@ function ArchitecturePage() {
             <Zap className="size-3 text-amber-500" /> Concurrency Target
           </p>
           <p className="font-semibold text-xs text-foreground mt-1 truncate">
-            {blueprint.summary.concurrencyTarget}
+            {blueprint.summary?.concurrencyTarget || "5,000+ Req / sec"}
           </p>
         </div>
         <div className="neu-sm p-3 rounded-xl">
@@ -159,14 +212,24 @@ function ArchitecturePage() {
             <ShieldCheck className="size-3 text-emerald-500" /> Availability Guarantee
           </p>
           <p className="font-semibold text-xs text-foreground mt-1 truncate">
-            {blueprint.summary.primarySla}
+            {blueprint.summary?.primarySla || "99.95% Availability"}
           </p>
         </div>
       </div>
 
       <GenerationSequence
         steps={GENERATION_STEPS.architecture}
-        run={() => generateArtifact("architecture")}
+        run={async () => {
+          const res: any = await generateArtifact("architecture", {
+            businessName: workspaceContext.businessName,
+            industry: workspaceContext.industry,
+            problem: workspaceContext.problemStatement,
+          });
+          if (res && (res.hldDiagram || res.hld)) {
+            setDynamicBlueprint(res);
+          }
+          return res;
+        }}
       >
         <div className="space-y-6">
           {/* ═══ Header Tabs & Action Bar ═══ */}
@@ -253,7 +316,7 @@ function ArchitecturePage() {
                   Click any node below to inspect tech stack, security policies & scaling SLAs:
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {blueprint.components.map((c) => (
+                  {blueprint.components.map((c: any) => (
                     <button
                       key={c.id}
                       onClick={() => setSelectedComponent(c)}
@@ -342,7 +405,7 @@ function ArchitecturePage() {
                   Node Specification Cards (Click to inspect complete technical contract):
                 </h3>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {blueprint.components.map((c) => (
+                  {blueprint.components.map((c: any) => (
                     <motion.div
                       key={c.id}
                       whileHover={{ y: -3 }}
@@ -371,7 +434,7 @@ function ArchitecturePage() {
 
                       <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs">
                         <div className="flex flex-wrap gap-1">
-                          {c.techStack.slice(0, 2).map((t) => (
+                          {c.techStack.slice(0, 2).map((t: any) => (
                             <span
                               key={t}
                               className="rounded bg-accent/60 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground"
@@ -445,7 +508,7 @@ function ArchitecturePage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
-                      {blueprint.components.map((c) => (
+                      {blueprint.components.map((c: any) => (
                         <tr
                           key={c.id}
                           onClick={() => setSelectedComponent(c)}
@@ -480,7 +543,7 @@ function ArchitecturePage() {
           <div className="neu p-6">
             <h2 className="font-display text-base font-bold">Key Architectural Decisions</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {blueprint.keyDecisions.map((item) => (
+              {blueprint.keyDecisions.map((item: any) => (
                 <div key={item.title} className="neu-inset p-4 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-foreground">{item.title}</p>

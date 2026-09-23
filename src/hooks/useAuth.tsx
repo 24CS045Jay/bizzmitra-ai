@@ -122,8 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           void supabase.from("profiles").upsert({
             id: s.user.id,
             full_name:
-              s.user.user_metadata?.full_name ||
-              s.user.user_metadata?.name ||
+              (s.user.user_metadata as any)?.["full_name"] ||
+              (s.user.user_metadata as any)?.["name"] ||
               s.user.email?.split("@")[0] ||
               "User",
           });
@@ -143,8 +143,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           void supabase.from("profiles").upsert({
             id: data.session.user.id,
             full_name:
-              data.session.user.user_metadata?.full_name ||
-              data.session.user.user_metadata?.name ||
+              (data.session.user.user_metadata as any)?.["full_name"] ||
+              (data.session.user.user_metadata as any)?.["name"] ||
               data.session.user.email?.split("@")[0] ||
               "User",
           });
