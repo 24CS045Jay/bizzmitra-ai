@@ -894,6 +894,40 @@ Return strictly valid JSON with this structure:
 Synthesize the operational process intelligence for ${bName}:
 ${baseContextPrompt}
 
+CRITICAL INSTRUCTION FOR PROCESS METRICS (DO NOT RETURN GENERIC NUMBERS OR LOGISTICS DRIVER TAT UNLESS IT IS STRICTLY A LOGISTICS FLEET):
+You MUST calculate exactly 4 highly tailored, realistic, domain-specific operational process efficiency metrics comparing As-Is (before) vs To-Be (after) specifically relevant to ${bName}'s operations, industry (${ind}), and problem:
+Examples:
+- If Cold-Chain Logistics / Fleet:
+  - "Perishable Spoilage Rate": before "18.5% Spoilage", after "1.8% Spoilage", improvement: "90% Waste Reduction", icon: "Clock"
+  - "Driver Dispatch TAT": before "45 Minutes", after "30 Seconds", improvement: "98% Faster", icon: "Zap"
+  - "Proof-of-Delivery Cycle Time": before "7.2 Days", after "Instant (Live)", improvement: "100% Real-Time", icon: "Timer"
+  - "Reefer Telemetry Ingestion Latency": before "4.5 Hours", after "Sub-second", improvement: "Real-time Alerts", icon: "Users"
+- If E-commerce / Amazon FBA:
+  - "Amazon Restock Cycle Time": before "14.2 Days", after "1.8 Days", improvement: "87% Faster", icon: "Clock"
+  - "Aged Inventory Surcharges": before "₹18.5L / yr", after "₹1.2L / yr", improvement: "93% Savings", icon: "Zap"
+  - "Stockout Reconciliation Latency": before "48 Hours", after "Instant (Live)", improvement: "100% Real-Time", icon: "Timer"
+  - "Listing Suppression SLA Rate": before "16.8%", after "0.4%", improvement: "98% Retention", icon: "Users"
+- If FinTech / Lending:
+  - "Loan Underwriting Turnaround": before "4.5 Days", after "15 Minutes", improvement: "98% Faster", icon: "Clock"
+  - "e-KYC Document Verification": before "24 Hours", after "Instant (OCR)", improvement: "100% Real-Time", icon: "Zap"
+  - "Credit Bureau Analysis Time": before "6.2 Hours", after "30 Seconds", improvement: "99% Reduction", icon: "Timer"
+  - "Default Risk Pre-Screening Accuracy": before "79.4%", after "99.2%", improvement: "+20% Accuracy", icon: "Users"
+- If Healthcare / Diagnostics:
+  - "Phlebotomy Specimen Intake TAT": before "2.5 Hours", after "3 Minutes", improvement: "98% Reduction", icon: "Clock"
+  - "Analyzer LIMS Transcription Lag": before "18.4 Hours", after "Instant (HL7)", improvement: "Zero Manual Typing", icon: "Zap"
+  - "Critical Panic Value Reporting": before "4.2 Hours", after "45 Seconds", improvement: "Instant Alert", icon: "Timer"
+  - "Patient Report Delivery Cycle": before "24-48 Hours", after "2.5 Hours", improvement: "90% Faster", icon: "Users"
+- If Manufacturing / Industrial:
+  - "Shift Changeover Handover TAT": before "75 Minutes", after "12 Minutes", improvement: "84% Faster", icon: "Clock"
+  - "Machine Telemetry Alarm Response": before "35 Minutes", after "10 Seconds", improvement: "99% Faster", icon: "Zap"
+  - "Batch QA Inspection Latency": before "5.5 Hours", after "25 Minutes", improvement: "92% Reduction", icon: "Timer"
+  - "Scrap & Rework Rate": before "12.8%", after "1.2%", improvement: "91% Yield Boost", icon: "Users"
+- If CleanTech / Solar:
+  - "Inverter Fault Detection Latency": before "4.5 Hours", after "1.2 Seconds", improvement: "99% Faster", icon: "Clock"
+  - "String Degradation Diagnostic Time": before "3 Days", after "10 Minutes", improvement: "99% Faster", icon: "Zap"
+  - "Daily Generation Yield Loss": before "12.8%", after "1.4%", improvement: "89% Yield Saved", icon: "Timer"
+  - "Grid Dispatch Compliance Rate": before "82.4%", after "99.8%", improvement: "100% SLA Met", icon: "Users"
+
 Return strictly valid JSON with this structure:
 {
   "domainId": "custom-proc-${ind.toLowerCase().replace(/[^a-z0-9]/g, "-")}",
@@ -908,25 +942,25 @@ Return strictly valid JSON with this structure:
   "swimlane": "graph TB\\n  subgraph Customer\\n    C1[Submit Request]\\n  end\\n  subgraph Operations\\n    O1[Review Exceptions]\\n  end\\n  subgraph AIEngine[AI Engine]\\n    A1[Auto Parse & Validate]\\n  end\\n  C1 --> A1 --> O1",
   "decisionTreeDiagram": "graph TD\\n  In[Request Received] --> Val{Valid & Complete?}\\n  Val -->|Yes| Auto[Auto-Approve & Route]\\n  Val -->|No| Triage[Flag for Supervisor Review]",
   "metrics": [
-    { "label": "End-to-End Cycle Time", "before": "24-48 Hours", "after": "3-5 Minutes", "improvement": "95% Faster", "icon": "Clock" },
-    { "label": "Manual Error Rate", "before": "18.2%", "after": "0.3%", "improvement": "98% Reduction", "icon": "Zap" },
-    { "label": "Reclaimed Admin Hours", "before": "0 hrs/wk", "after": "40 hrs/wk", "improvement": "+40 hrs/wk", "icon": "Timer" },
-    { "label": "User Satisfaction", "before": "62% CSAT", "after": "95% CSAT", "improvement": "+33%", "icon": "Users" }
+    { "label": "string (Specific domain metric name)", "before": "string (As-Is baseline)", "after": "string (To-Be automated)", "improvement": "string (Delta % or speed)", "icon": "Clock" },
+    { "label": "string", "before": "string", "after": "string", "improvement": "string", "icon": "Zap" },
+    { "label": "string", "before": "string", "after": "string", "improvement": "string", "icon": "Timer" },
+    { "label": "string", "before": "string", "after": "string", "improvement": "string", "icon": "Users" }
   ],
   "bottlenecks": [
     {
-      "stage": "Manual Data Entry & Ingestion",
-      "problem": "Manual entry into disconnected spreadsheets causes frequent errors.",
-      "impact": "4-6 hours lost daily per operator.",
-      "solution": "Automated ingestion pipeline with instant schema validation.",
-      "timeSavings": "90% time saved"
+      "stage": "string",
+      "problem": "string",
+      "impact": "string",
+      "solution": "string",
+      "timeSavings": "string"
     },
     {
-      "stage": "Multi-Hop Approval Lag",
-      "problem": "Approvals stuck in email inboxes for days.",
-      "impact": "Customer SLA violations and drop-offs.",
-      "solution": "Rules-based automated approval workflows with auto-escalation.",
-      "timeSavings": "85% reduction"
+      "stage": "string",
+      "problem": "string",
+      "impact": "string",
+      "solution": "string",
+      "timeSavings": "string"
     }
   ],
   "decisionTiers": [

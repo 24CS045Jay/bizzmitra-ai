@@ -14,6 +14,8 @@ import {
   WIREFRAMES,
 } from "../demo-data";
 
+import { PROCESS_METRICS } from "../process-data";
+
 export type ArtifactKind =
   | "framing"
   | "solution"
@@ -29,7 +31,7 @@ export const PAYLOADS: Record<ArtifactKind, unknown> = {
   framing: PROBLEM_FRAMING,
   solution: SOLUTION,
   architecture: { hld: HLD_DIAGRAM, lld: LLD_DIAGRAM },
-  process: { before: BPMN_BEFORE, after: BPMN_AFTER, swimlane: SWIMLANE_DIAGRAM },
+  process: { before: BPMN_BEFORE, after: BPMN_AFTER, swimlane: SWIMLANE_DIAGRAM, metrics: PROCESS_METRICS },
   ux: { screens: WIREFRAMES, flow: NAV_FLOW_DIAGRAM },
   data: { er: ER_DIAGRAM, endpoints: API_ENDPOINTS },
   roadmap: { phases: ROADMAP },

@@ -24,6 +24,7 @@ import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { GenerationSequence } from "@/components/GenerationSequence";
 import { Mermaid } from "@/components/Mermaid";
+import { supabase } from "@/integrations/supabase/client";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import { getProcessBlueprint } from "@/lib/process-data";
 import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
@@ -64,20 +65,64 @@ function ProcessPage() {
   });
 
   useEffect(() => {
-    function loadContext() {
+    async function loadContext() {
+      let bName = "TalentCraft HR Consultancy";
+      let ind = "HR & Recruitment Services";
+      let prob = "";
+
       try {
         const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
         if (raw) {
           const parsed = JSON.parse(raw);
-          setWorkspaceContext({
-            businessName: parsed.businessName || "TalentCraft HR Consultancy",
-            industry: parsed.industry || "HR & Recruitment Services",
-            problemStatement: parsed.problemStatement || "",
-          });
+          bName = parsed.businessName || bName;
+          ind = parsed.industry || ind;
+          prob = parsed.problemStatement || parsed.summary || prob;
         }
       } catch {}
-      setDynamicBlueprint(null);
+
+      const wsId = typeof window !== "undefined"
+        ? window.localStorage.getItem("bizzmitra.activeWorkspaceId")
+        : null;
+
+      if (wsId && !wsId.startsWith("ws-")) {
+        try {
+          const { data: ws } = await supabase
+            .from("workspaces")
+            .select("problem_statement, name, industry")
+            .eq("id", wsId)
+            .maybeSingle();
+
+          if (ws) {
+            if (ws.name) bName = ws.name;
+            if (ws.industry) ind = ws.industry;
+            if (ws.problem_statement) prob = ws.problem_statement;
+          }
+
+          // Check if an existing process artifact is already persisted
+          const { data: art } = await supabase
+            .from("artifacts")
+            .select("content")
+            .eq("workspace_id", wsId)
+            .eq("module_type", "process")
+            .order("version", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (art?.content) {
+            setDynamicBlueprint(art.content);
+          }
+        } catch (e) {
+          console.warn("[ProcessPage] Supabase load error:", e);
+        }
+      }
+
+      setWorkspaceContext({
+        businessName: bName,
+        industry: ind,
+        problemStatement: prob,
+      });
     }
+
     loadContext();
 
     window.addEventListener("bizzmitra:workspace-updated", loadContext);
@@ -200,8 +245,8 @@ function ProcessPage() {
           {/* Top Performance Metrics Banner */}
           <div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {blueprint.metrics.map((metric: any) => (
-                <div key={metric.label} className="neu p-4 transition-all hover:scale-[1.01]">
+              {blueprint.metrics.slice(0, 4).map((metric: any, idx: number) => (
+                <div key={`${metric.label}-${idx}`} className="neu p-4 transition-all hover:scale-[1.01]">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       {metric.label}

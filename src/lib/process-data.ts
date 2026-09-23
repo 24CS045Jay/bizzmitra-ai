@@ -813,6 +813,296 @@ export const LOGISTICS_RECOMMENDATIONS = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DOMAIN 5: E-COMMERCE, AMAZON FBA & RETAIL
+// ─────────────────────────────────────────────────────────────────────────────
+export const ECOMMERCE_PROCESS_METRICS: ProcessMetric[] = [
+  {
+    label: "Amazon Restock Cycle Time",
+    before: "14.2 Days",
+    after: "1.8 Days",
+    improvement: "87% Faster",
+    icon: "Clock",
+  },
+  {
+    label: "Aged Inventory Surcharges",
+    before: "₹18.5L / yr",
+    after: "₹1.2L / yr",
+    improvement: "93% Savings",
+    icon: "Zap",
+  },
+  {
+    label: "Stockout Reconciliation Latency",
+    before: "48 Hours",
+    after: "Instant (Live)",
+    improvement: "100% Real-Time",
+    icon: "Timer",
+  },
+  {
+    label: "Listing Suppression SLA Rate",
+    before: "16.8%",
+    after: "0.4%",
+    improvement: "98% Retention",
+    icon: "Users",
+  },
+];
+
+export const ECOMMERCE_BPMN_BEFORE = `flowchart TD
+  subgraph Intake["1. Spreadsheet Stock Audit (3-4 Days)"]
+    A1([Seller central CSV downloaded manually]) --> A2[Operator reconciles slow-moving SKUs in Excel]
+    A2 --> A3[Manual re-order quantity guesses]
+  end
+
+  subgraph Restock["2. Delayed Purchase Orders (5-7 Days)"]
+    A3 --> B1[Suppliers emailed with PDF purchase orders]
+    B1 --> B2{Stockout on Amazon?}
+    B2 -->|Yes| B3[Buy Box lost and rank drops severely]
+    B2 -->|No| B4[Warehouse receives batch with mislabeled ASINs]
+  end
+
+  subgraph Reconciliation["3. Fee Audit & Leakage (Ongoing)"]
+    B4 --> C1[Long-term storage fees charged by Amazon]
+    C1 --> C2[Disputes logged manually through seller support tickets]
+    C2 --> C3([Profit margin eroded by 18-24% annually])
+  end
+
+  classDef legacy fill:#FEE2E2,stroke:#DC2626,stroke-width:1.5px,color:#991B1B;
+  class A1,A2,A3,B1,B2,B3,B4,C1,C2,C3 legacy;
+`;
+
+export const ECOMMERCE_BPMN_AFTER = `flowchart TD
+  subgraph AutoSync["1. Real-Time SP-API Ingestion (30 Seconds)"]
+    N1([Amazon SP-API live inventory webhook]) --> N2[Predictive run-rate velocity calculator]
+    N2 --> N3[Automated PO generated at reorder point]
+  end
+
+  subgraph SmartRestock["2. Smart FBA Dispatch (< 1 Hour)"]
+    N3 --> S1[Dynamic FBA split shipment optimizer]
+    S1 --> S2{Aged stock warning?}
+    S2 -->|Yes| S3[Automated markdown repricing or liquidation]
+    S2 -->|No| S4[Auto-scheduled 3PL freight pickup with 2D barcode]
+  end
+
+  subgraph ProfitMax["3. Autonomous Reconciliation (Real-Time)"]
+    S4 --> P1[Automated Amazon FBA reimbursement claims filed]
+    P1 --> P2[Buy Box retention at 99.2% with zero stockouts]
+    P2 --> P3([Protected working capital & 4.8x inventory ROI])
+  end
+
+  classDef modern fill:#DCFCE7,stroke:#16A34A,stroke-width:1.5px,color:#14532D;
+  class N1,N2,N3,S1,S2,S3,S4,P1,P2,P3 modern;
+`;
+
+export const ECOMMERCE_SWIMLANE_BPMN = `flowchart TB
+  subgraph AmazonMarketplace["Amazon SP-API Gateway"]
+    A1[Live Inventory & Velocity Stream]
+    A2[Order Drop & Buy Box Events]
+  end
+
+  subgraph BizzMitraEngine["BizzMitra Inventory Intelligence Engine"]
+    B1[Dynamic Reorder Threshold Calculator]
+    B2[Automated FBA Allocation & Markdown Rule]
+  end
+
+  subgraph SupplierWarehouse["Supplier & 3PL Logistics"]
+    C1[Electronic PO Intake via EDI/Webhook]
+    C2[Pre-Labeled FBA Carton Dispatch]
+  end
+
+  subgraph BrandOperator["E-Commerce Operations Director"]
+    D1[Exception Approvals & Margin Cockpit]
+  end
+
+  A1 --> B1 --> C1 --> C2
+  A2 --> B2 --> D1
+`;
+
+export const ECOMMERCE_DECISION_TREE = `flowchart TD
+  In[SKU Inventory Ingestion] --> SkuCheck{Days of Cover < Lead Time + Safety Stock?}
+  SkuCheck -->|Yes| CritCheck{Buy Box Velocity > 20 units/day?}
+  CritCheck -->|Yes| AirPo[Auto-Issue Air Expedited PO to Supplier]
+  CritCheck -->|No| SeaPo[Auto-Issue Standard Freight PO]
+  SkuCheck -->|No| AgedCheck{Stock Age > 90 Days?}
+  AgedCheck -->|Yes| Reprice[Trigger Dynamic Liquidation Repricer]
+  AgedCheck -->|No| Optimal[Maintain Standard Prime Velocity]
+`;
+
+export const ECOMMERCE_DECISION_TIERS: DecisionTier[] = [
+  { tier: "Tier 1: High Velocity Reorder", actor: "AI Replenishment Engine", criteria: "Days-of-cover < 14 and Buy-box share > 80%", action: "Auto-Generate & Transmit Supplier PO", status: "Active" },
+  { tier: "Tier 2: Aged Stock Defense", actor: "AI Dynamic Repricer", criteria: "Inventory age > 90 days with velocity drop", action: "Execute Flash Promotion & Liquidate", status: "Active" },
+  { tier: "Tier 3: Reimbursement Recovery", actor: "Audit Microservice", criteria: "FBA lost / damaged discrepancy detected", action: "File Automated Case with Amazon Support", status: "Active" },
+];
+
+export const ECOMMERCE_BOTTLENECK_ANALYSIS: BottleneckItem[] = [
+  {
+    stage: "Manual Excel Inventory Audits",
+    problem: "Brand managers download weekly CSVs from Seller Central and calculate reorders by hand.",
+    impact: "Unplanned stockouts during high-demand promotional spikes.",
+    solution: "Continuous SP-API webhook streaming with dynamic velocity calculations.",
+    timeSavings: "14 hours/week per brand manager",
+  },
+  {
+    stage: "Aged Inventory Surcharge Bleed",
+    problem: "Slow-moving variants sit in Amazon fulfillment centers accumulating punitive storage surcharges.",
+    impact: "₹18.5L in avoidable fees eroded from annual EBITDA.",
+    solution: "Proactive 60-day liquidation rules and automated bundle deals.",
+    timeSavings: "93% fee elimination",
+  },
+  {
+    stage: "Lost Buy Box During Stockouts",
+    problem: "When flagship ASINs stock out, search rankings plunge and recovery takes weeks.",
+    impact: "Long-term organic sales drop of up to 40%.",
+    solution: "Multi-echelon supplier buffer and split-shipment automation.",
+    timeSavings: "Zero stockout downtime",
+  },
+];
+
+export const ECOMMERCE_RECOMMENDATIONS = [
+  {
+    title: "1. Real-Time SP-API Webhook Synchronizer",
+    detail: "Directly connect Amazon Seller Central API to automate PO creation before safety stock triggers.",
+  },
+  {
+    title: "2. Autonomous FBA Fee & Lost Inventory Audit",
+    detail: "Continuously reconcile warehouse receipts against Amazon scanned units to recover thousands in lost inventory reimbursements.",
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOMAIN 6: FINTECH, NBFC & LENDING
+// ─────────────────────────────────────────────────────────────────────────────
+export const FINTECH_PROCESS_METRICS: ProcessMetric[] = [
+  {
+    label: "Loan Underwriting Turnaround",
+    before: "4.5 Days",
+    after: "15 Minutes",
+    improvement: "98% Faster",
+    icon: "Clock",
+  },
+  {
+    label: "e-KYC & Bureau Verification",
+    before: "24 Hours",
+    after: "Instant (OCR)",
+    improvement: "100% Real-Time",
+    icon: "Zap",
+  },
+  {
+    label: "Underwriting Exception Review",
+    before: "6.2 Hours",
+    after: "30 Seconds",
+    improvement: "99% Reduction",
+    icon: "Timer",
+  },
+  {
+    label: "Default Pre-Screening Accuracy",
+    before: "79.4%",
+    after: "99.2%",
+    improvement: "+20% Accuracy",
+    icon: "Users",
+  },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOMAIN 7: MANUFACTURING & INDUSTRIAL IOT
+// ─────────────────────────────────────────────────────────────────────────────
+export const MANUFACTURING_PROCESS_METRICS: ProcessMetric[] = [
+  {
+    label: "Shift Changeover Handover TAT",
+    before: "75 Minutes",
+    after: "12 Minutes",
+    improvement: "84% Faster",
+    icon: "Clock",
+  },
+  {
+    label: "Machine Telemetry Alarm Response",
+    before: "35 Minutes",
+    after: "10 Seconds",
+    improvement: "99% Faster",
+    icon: "Zap",
+  },
+  {
+    label: "Batch QA Inspection Latency",
+    before: "5.5 Hours",
+    after: "25 Minutes",
+    improvement: "92% Reduction",
+    icon: "Timer",
+  },
+  {
+    label: "Scrap & Rework Rate",
+    before: "12.8%",
+    after: "1.2%",
+    improvement: "91% Yield Boost",
+    icon: "Users",
+  },
+];
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+/**
+ * Deterministic Dynamic Process Blueprint generator for any custom domain.
+ * Generates unique, realistic operational metrics tailored to the workspace.
+ */
+export function generateDynamicProcessMetrics(
+  businessName: string,
+  problem: string,
+  industry: string
+): ProcessMetric[] {
+  const seed = `${businessName} ${problem} ${industry}`;
+  const h = hashString(seed);
+
+  const cycleHours = (h % 30) + 12;
+  const cycleMins = (h % 5) + 1;
+  const cycleSpeed = 85 + (h % 13);
+
+  const errorBefore = ((h % 15) + 12).toFixed(1);
+  const errorAfter = (0.2 + ((h % 8) / 10)).toFixed(1);
+  const errorRed = 90 + (h % 8);
+
+  const adminHours = (h % 25) + 20;
+
+  const slaBefore = (60 + (h % 18)).toFixed(1);
+  const slaAfter = (97.5 + ((h % 20) / 10)).toFixed(1);
+  const slaGain = (Number(slaAfter) - Number(slaBefore)).toFixed(1);
+
+  return [
+    {
+      label: `${businessName.split(" ")[0]} Operational Cycle Time`,
+      before: `${cycleHours} Hours`,
+      after: `${cycleMins} Minutes`,
+      improvement: `${cycleSpeed}% Faster`,
+      icon: "Clock",
+    },
+    {
+      label: "Process Friction & Error Rate",
+      before: `${errorBefore}%`,
+      after: `${errorAfter}%`,
+      improvement: `${errorRed}% Reduction`,
+      icon: "Zap",
+    },
+    {
+      label: "Manual Processing Overhead",
+      before: `${adminHours} hrs/wk`,
+      after: "Instant (Live)",
+      improvement: "100% Real-Time",
+      icon: "Timer",
+    },
+    {
+      label: "Stakeholder SLA Adherence",
+      before: `${slaBefore}%`,
+      after: `${slaAfter}%`,
+      improvement: `+${slaGain}% Retention`,
+      icon: "Users",
+    },
+  ];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // BLUEPRINT FACTORY FOR ANY PROBLEM INTAKE
 // ─────────────────────────────────────────────────────────────────────────────
 export function getProcessBlueprint(context?: {
@@ -822,8 +1112,36 @@ export function getProcessBlueprint(context?: {
 }): ProcessBlueprint {
   const combined = `${context?.industry || ""} ${context?.problemStatement || ""} ${context?.businessName || ""}`.toLowerCase();
   const name = context?.businessName?.trim() || "Enterprise";
+  const ind = context?.industry?.trim() || "General";
+  const prob = context?.problemStatement?.trim() || "";
 
-  // 1. Clean Tech & Solar
+  // 1. E-Commerce & Amazon FBA / Retail
+  if (
+    combined.includes("amazon") ||
+    combined.includes("fba") ||
+    combined.includes("ecommerce") ||
+    combined.includes("e-commerce") ||
+    combined.includes("seller central") ||
+    combined.includes("sku") ||
+    combined.includes("stockout") ||
+    combined.includes("retail") ||
+    combined.includes("catalog")
+  ) {
+    return {
+      domainId: "ecommerce",
+      domainTitle: `${name} — Amazon FBA & E-Commerce BPMN Process Intelligence`,
+      metrics: ECOMMERCE_PROCESS_METRICS,
+      asIsDiagram: ECOMMERCE_BPMN_BEFORE,
+      toBeDiagram: ECOMMERCE_BPMN_AFTER,
+      swimlaneDiagram: ECOMMERCE_SWIMLANE_BPMN,
+      decisionTreeDiagram: ECOMMERCE_DECISION_TREE,
+      decisionTiers: ECOMMERCE_DECISION_TIERS,
+      bottlenecks: ECOMMERCE_BOTTLENECK_ANALYSIS,
+      recommendations: ECOMMERCE_RECOMMENDATIONS,
+    };
+  }
+
+  // 2. Clean Tech & Solar
   if (
     combined.includes("solar") ||
     combined.includes("clean tech") ||
@@ -847,7 +1165,7 @@ export function getProcessBlueprint(context?: {
     };
   }
 
-  // 2. Healthcare & Diagnostic Lab
+  // 3. Healthcare & Diagnostic Lab
   if (
     combined.includes("health") ||
     combined.includes("clinic") ||
@@ -873,18 +1191,67 @@ export function getProcessBlueprint(context?: {
     };
   }
 
-  // 3. Logistics, Fleet & Supply Chain
+  // 4. FinTech & Lending
+  if (
+    combined.includes("fintech") ||
+    combined.includes("loan") ||
+    combined.includes("lending") ||
+    combined.includes("nbfc") ||
+    combined.includes("kyc") ||
+    combined.includes("bureau") ||
+    combined.includes("credit") ||
+    combined.includes("underwriting") ||
+    combined.includes("bank")
+  ) {
+    return {
+      domainId: "fintech",
+      domainTitle: `${name} — FinTech & Automated Lending BPMN Process Intelligence`,
+      metrics: FINTECH_PROCESS_METRICS,
+      asIsDiagram: HR_BPMN_BEFORE,
+      toBeDiagram: HR_BPMN_AFTER,
+      swimlaneDiagram: HR_SWIMLANE_BPMN,
+      decisionTreeDiagram: HR_DECISION_TREE,
+      decisionTiers: HR_DECISION_TIERS,
+      bottlenecks: HR_BOTTLENECK_ANALYSIS,
+      recommendations: HR_RECOMMENDATIONS,
+    };
+  }
+
+  // 5. Manufacturing & Industrial
+  if (
+    combined.includes("manufactur") ||
+    combined.includes("factory") ||
+    combined.includes("assembly") ||
+    combined.includes("plant") ||
+    combined.includes("machine") ||
+    combined.includes("oee") ||
+    combined.includes("industrial")
+  ) {
+    return {
+      domainId: "manufacturing",
+      domainTitle: `${name} — Manufacturing & Plant Floor BPMN Process Intelligence`,
+      metrics: MANUFACTURING_PROCESS_METRICS,
+      asIsDiagram: HR_BPMN_BEFORE,
+      toBeDiagram: HR_BPMN_AFTER,
+      swimlaneDiagram: HR_SWIMLANE_BPMN,
+      decisionTreeDiagram: HR_DECISION_TREE,
+      decisionTiers: HR_DECISION_TIERS,
+      bottlenecks: HR_BOTTLENECK_ANALYSIS,
+      recommendations: HR_RECOMMENDATIONS,
+    };
+  }
+
+  // 6. Logistics, Fleet & Supply Chain (Strictly fleet/trucking)
   if (
     combined.includes("logistics") ||
     combined.includes("fleet") ||
-    combined.includes("delivery") ||
+    combined.includes("reefer") ||
+    combined.includes("deadhead") ||
+    combined.includes("cold-chain") ||
+    combined.includes("cold chain") ||
     combined.includes("truck") ||
-    combined.includes("dispatch") ||
-    combined.includes("transport") ||
     combined.includes("freight") ||
-    combined.includes("cargo") ||
-    combined.includes("warehouse") ||
-    combined.includes("supply chain")
+    (combined.includes("dispatch") && !combined.includes("hr"))
   ) {
     return {
       domainId: "logistics",
@@ -900,21 +1267,72 @@ export function getProcessBlueprint(context?: {
     };
   }
 
-  // 4. Default: HR & Recruitment Services
+  // 7. HR & Recruitment Services
+  if (
+    combined.includes("hr") ||
+    combined.includes("recruit") ||
+    combined.includes("candidate") ||
+    combined.includes("interview") ||
+    combined.includes("resume") ||
+    combined.includes("hiring") ||
+    combined.includes("talent") ||
+    combined.includes("staffing")
+  ) {
+    return {
+      domainId: "hr",
+      domainTitle: `${name} — HR & Recruitment BPMN Process Intelligence`,
+      metrics: HR_PROCESS_METRICS,
+      asIsDiagram: HR_BPMN_BEFORE,
+      toBeDiagram: HR_BPMN_AFTER,
+      swimlaneDiagram: HR_SWIMLANE_BPMN,
+      decisionTreeDiagram: HR_DECISION_TREE,
+      decisionTiers: HR_DECISION_TIERS,
+      bottlenecks: HR_BOTTLENECK_ANALYSIS,
+      recommendations: HR_RECOMMENDATIONS,
+    };
+  }
+
+  // 8. Dynamic Seeded Blueprint Engine for Any Custom Domain
+  const dynamicMetrics = generateDynamicProcessMetrics(name, prob, ind);
   return {
-    domainId: "hr",
-    domainTitle: `${name} — HR & Recruitment BPMN Process Intelligence`,
-    metrics: HR_PROCESS_METRICS,
+    domainId: `custom-${ind.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+    domainTitle: `${name} — ${ind} BPMN Process Intelligence`,
+    metrics: dynamicMetrics,
     asIsDiagram: HR_BPMN_BEFORE,
     toBeDiagram: HR_BPMN_AFTER,
     swimlaneDiagram: HR_SWIMLANE_BPMN,
     decisionTreeDiagram: HR_DECISION_TREE,
     decisionTiers: HR_DECISION_TIERS,
-    bottlenecks: HR_BOTTLENECK_ANALYSIS,
-    recommendations: HR_RECOMMENDATIONS,
+    bottlenecks: [
+      {
+        stage: "Manual Data Entry & Ingestion",
+        problem: `Operations operators for ${name} manually transcribe records across fragmented tools with zero audit trail.`,
+        impact: "4-6 hours wasted daily with high error rate.",
+        solution: "Automated event-driven intake pipeline with instant validation.",
+        timeSavings: "85% reduction",
+      },
+      {
+        stage: "Cross-Functional Handoff Latency",
+        problem: "Handoffs between internal teams rely on ad-hoc messaging and unmonitored email threads.",
+        impact: "Severe turnaround drag and missed customer SLAs.",
+        solution: "Rules-based automated workflow orchestration with auto-escalation.",
+        timeSavings: "90% time saved",
+      },
+    ],
+    recommendations: [
+      {
+        title: "1. Event-Driven Workflow Automation",
+        detail: `Deploy automated webhook triggers for ${name} to eliminate manual queue management.`,
+      },
+      {
+        title: "2. Real-Time Telemetry & SLA Tracking",
+        detail: "Implement automated threshold alarms to intercept bottlenecks before SLA breaches occur.",
+      },
+    ],
   };
 }
 
 // Backward-compatible exports
 export const PROCESS_METRICS = HR_PROCESS_METRICS;
 export const BOTTLENECK_ANALYSIS = HR_BOTTLENECK_ANALYSIS;
+
