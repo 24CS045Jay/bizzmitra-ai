@@ -17,6 +17,7 @@ import {
   Layers,
   RefreshCw,
   FileCode2,
+  LogOut,
 } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
@@ -115,7 +116,7 @@ const DOMAIN_PRESETS = [
 ];
 
 function SettingsPage() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation();
   const [fullName, setFullName] = useState("");
@@ -398,22 +399,38 @@ function SettingsPage() {
       </Reveal>
 
       <Stagger className="mt-8 grid gap-4 lg:grid-cols-2 w-full max-w-full">
-        <StaggerItem className="neu p-4 sm:p-6 min-w-0 overflow-hidden w-full">
-          <h2 className="font-display text-lg font-bold">{t("settings.profile", "Profile")}</h2>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="shrink-0 text-muted-foreground">Email</dt>
-              <dd className="truncate font-medium min-w-0 text-right">{user?.email ?? "—"}</dd>
+        <StaggerItem className="neu p-4 sm:p-6 min-w-0 overflow-hidden w-full flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-lg font-bold">{t("settings.profile", "Profile")}</h2>
+              <button
+                type="button"
+                onClick={async () => {
+                  toast.info("Signing out...");
+                  await signOut();
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-destructive/20 bg-destructive/10 px-2.5 py-1 text-xs font-semibold text-destructive hover:bg-destructive hover:text-white transition-all active:scale-95"
+                title="Sign out of current account"
+              >
+                <LogOut className="size-3" />
+                <span>Sign Out</span>
+              </button>
             </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Current Plan</dt>
-              <dd className="font-medium text-primary font-semibold">{wallet.tier}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted-foreground">Seats</dt>
-              <dd className="font-medium">1 of 5 active</dd>
-            </div>
-          </dl>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="shrink-0 text-muted-foreground">Email</dt>
+                <dd className="truncate font-medium min-w-0 text-right">{user?.email ?? "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Current Plan</dt>
+                <dd className="font-medium text-primary font-semibold">{wallet.tier}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Seats</dt>
+                <dd className="font-medium">1 of 5 active</dd>
+              </div>
+            </dl>
+          </div>
           <div className="mt-5 flex gap-2">
             <input
               value={fullName}
@@ -865,6 +882,47 @@ function SettingsPage() {
                 {f}
               </span>
             ))}
+          </div>
+        </StaggerItem>
+
+        {/* Session & Account Security / Sign Out Card */}
+        <StaggerItem className="neu p-4 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden w-full border-border/80">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 place-items-center rounded-xl bg-destructive/10 text-destructive">
+                <LogOut className="size-5" />
+              </div>
+              <div>
+                <h2 className="font-display text-lg font-bold">Session & Account Security</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Manage your active authentication session and sign out of your account on this device.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                toast.info("Signing out of BizzMitra...");
+                await signOut();
+              }}
+              className="neu-press flex items-center gap-2 rounded-xl bg-destructive/10 hover:bg-destructive hover:text-white text-destructive border border-destructive/20 px-4 py-2.5 text-xs font-bold transition-all shadow-xs active:scale-95"
+            >
+              <LogOut className="size-3.5" />
+              <span>Sign Out of Account</span>
+            </button>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/50 p-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-muted-foreground">
+                Active session for <strong className="text-foreground">{user?.email || "Authenticated User"}</strong>
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span className="font-mono">Status: Authenticated</span>
+            </div>
           </div>
         </StaggerItem>
       </Stagger>
