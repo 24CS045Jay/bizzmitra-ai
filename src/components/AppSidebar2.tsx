@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { isStageUnlocked, getUnlockedStages, WORKSPACE_STAGES, completeDiscoveryAndUnlockAll } from "@/lib/workspace-stage-gate";
 import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
 import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
+import { WorkspaceDropdownSwitcher } from "@/components/WorkspaceDropdownSwitcher";
 
 interface SubMenuItem {
   label: string;
@@ -347,11 +348,33 @@ export function AppSidebar2({
     const handleStagesUpdate = () => {
       setUnlockedStages(getUnlockedStages());
     };
+    const handleWsUpdate = () => {
+      const storedLang = window.localStorage.getItem("bizzmitra.language") || "en";
+      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          setActiveWs({
+            name: parsed.businessName || "Custom Workspace",
+            industry: parsed.industry || "Custom Workspace",
+            mode: parsed.intakeMode || "consult",
+            lang: storedLang,
+          });
+        } catch {}
+      }
+    };
+
     window.addEventListener("bizzmitra:stages-updated", handleStagesUpdate);
+    window.addEventListener("bizzmitra:workspace-updated", handleWsUpdate);
+    window.addEventListener("bizzmitra:workspace-changed", handleWsUpdate);
     window.addEventListener("storage", handleStagesUpdate);
+    window.addEventListener("storage", handleWsUpdate);
     return () => {
       window.removeEventListener("bizzmitra:stages-updated", handleStagesUpdate);
+      window.removeEventListener("bizzmitra:workspace-updated", handleWsUpdate);
+      window.removeEventListener("bizzmitra:workspace-changed", handleWsUpdate);
       window.removeEventListener("storage", handleStagesUpdate);
+      window.removeEventListener("storage", handleWsUpdate);
     };
   }, []);
 
@@ -394,7 +417,7 @@ export function AppSidebar2({
         .then(({ data: wsList }) => {
           if (wsList && wsList.length > 0 && wsList[0]) {
             const wsId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
-            const currentWs = wsList.find((w) => w.id === wsId) || wsList[0];
+            const currentWs = (wsId && wsList.find((w) => w.id === wsId)) || wsList[0];
             const storedCtx =
               currentWs.workspace_context && typeof currentWs.workspace_context === "object"
                 ? (currentWs.workspace_context as Record<string, unknown>)
@@ -423,6 +446,7 @@ export function AppSidebar2({
               lang: storedLang,
             });
             window.localStorage.setItem("bizzmitra.activeWorkspaceId", currentWs.id);
+            window.localStorage.setItem("bizzmitra.activeWorkspaceName", bName);
             window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(fullCtx));
             if (isCompleted) {
               completeDiscoveryAndUnlockAll(currentWs.id, fullCtx);
@@ -577,6 +601,7 @@ export function AppSidebar2({
         </div>
 
         {/* ACTIVE WORKSPACE PILL (Visible when expanded) */}
+        {/* ACTIVE WORKSPACE PILL WITH DROPDOWN SWITCHER (Visible when expanded) */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -585,36 +610,7 @@ export function AppSidebar2({
               exit={{ opacity: 0, height: 0 }}
               className="px-3 pt-3 overflow-hidden"
             >
-              <Link
-                to={activeWs.name === "No Active Workspace" ? "/workspace/new" : "/dashboard"}
-                onClick={(e) => {
-                  if (activeWs.name === "No Active Workspace" && isLimitReached) {
-                    e.preventDefault();
-                    setIsUpgradeModalOpen(true);
-                    return;
-                  }
-                  onNavigate?.();
-                }}
-                className="neu-sm neu-press flex cursor-pointer items-center justify-between gap-2.5 rounded-xl border border-border/70 bg-card p-2.5 shadow-xs"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-                      {t("settings.workspace", "Active Workspace")}
-                    </span>
-                    <span className="neu-sm px-1.5 py-0.2 text-[8px] font-bold text-primary">
-                      {activeWs.mode === "know" ? "Direct" : "AI Guided"}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-xs font-semibold leading-tight truncate text-foreground">
-                    {activeWs.name}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    {activeWs.industry}
-                  </p>
-                </div>
-                <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-              </Link>
+              <WorkspaceDropdownSwitcher onNavigate={onNavigate} />
             </motion.div>
           )}
         </AnimatePresence>

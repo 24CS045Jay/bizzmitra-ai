@@ -32,6 +32,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { LanguageSelector } from "./LanguageSelector";
 import { useTranslation } from "@/lib/i18n";
 import { AppSidebar2 } from "@/components/AppSidebar2";
+import { WorkspaceDropdownSwitcher } from "@/components/WorkspaceDropdownSwitcher";
 import { AiCopilotPanel } from "@/components/AiCopilotPanel";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { supabase } from "@/integrations/supabase/client";
@@ -153,13 +154,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     if (user?.id) {
       supabase
         .from("workspaces")
-        .select("id, name, problem_statement, industry, goals, constraints_text, intake_mode, intake_method, language_code, workspace_context")
+        .select(
+          "id, name, problem_statement, industry, goals, constraints_text, intake_mode, intake_method, language_code, workspace_context",
+        )
         .eq("owner_id", user.id)
         .order("updated_at", { ascending: false })
         .then(({ data: wsList }) => {
           if (wsList && wsList.length > 0 && wsList[0]) {
             const wsId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
-            const currentWs = wsList.find((w) => w.id === wsId) || wsList[0];
+            const currentWs = (wsId && wsList.find((w) => w.id === wsId)) || wsList[0];
 
             const storedCtx =
               currentWs.workspace_context && typeof currentWs.workspace_context === "object"
@@ -168,18 +171,29 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
             const isCompleted =
               storedCtx?.["discoveryCompleted"] === true ||
-              (storedCtx?.["discoveryAnswers"] && Array.isArray(storedCtx["discoveryAnswers"]) && storedCtx["discoveryAnswers"].length > 0);
+              (storedCtx?.["discoveryAnswers"] &&
+                Array.isArray(storedCtx["discoveryAnswers"]) &&
+                storedCtx["discoveryAnswers"].length > 0);
 
             const fullContext = {
               ...(storedCtx || {}),
-              businessName: (storedCtx?.["businessName"] as string) || currentWs.name || "Enterprise Workspace",
-              problemStatement: (storedCtx?.["problemStatement"] as string) || currentWs.problem_statement || "",
-              industry: (storedCtx?.["industry"] as string) || currentWs.industry || "Cross-Industry Transformation",
+              businessName:
+                (storedCtx?.["businessName"] as string) || currentWs.name || "Enterprise Workspace",
+              problemStatement:
+                (storedCtx?.["problemStatement"] as string) || currentWs.problem_statement || "",
+              industry:
+                (storedCtx?.["industry"] as string) ||
+                currentWs.industry ||
+                "Cross-Industry Transformation",
               goals: (storedCtx?.["goals"] as string) || currentWs.goals || "",
-              constraints: (storedCtx?.["constraints"] as string) || currentWs.constraints_text || "",
-              intakeMode: (storedCtx?.["intakeMode"] as string) || currentWs.intake_mode || "consult",
-              intakeMethod: (storedCtx?.["intakeMethod"] as string) || currentWs.intake_method || "prompt",
-              language: (storedCtx?.["language"] as string) || currentWs.language_code || storedLang,
+              constraints:
+                (storedCtx?.["constraints"] as string) || currentWs.constraints_text || "",
+              intakeMode:
+                (storedCtx?.["intakeMode"] as string) || currentWs.intake_mode || "consult",
+              intakeMethod:
+                (storedCtx?.["intakeMethod"] as string) || currentWs.intake_method || "prompt",
+              language:
+                (storedCtx?.["language"] as string) || currentWs.language_code || storedLang,
               discoveryCompleted: Boolean(isCompleted),
             };
 
@@ -245,6 +259,33 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     }
   }, [user]);
 
+  useEffect(() => {
+    const handleWsUpdate = () => {
+      const storedLang = window.localStorage.getItem("bizzmitra.language") || "en";
+      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          setActiveWs({
+            name: parsed.businessName || "Custom Workspace",
+            industry: parsed.industry || "Custom Workspace",
+            mode: parsed.intakeMode || "consult",
+            lang: storedLang,
+          });
+        } catch {}
+      }
+    };
+
+    window.addEventListener("bizzmitra:workspace-updated", handleWsUpdate);
+    window.addEventListener("bizzmitra:workspace-changed", handleWsUpdate);
+    window.addEventListener("storage", handleWsUpdate);
+    return () => {
+      window.removeEventListener("bizzmitra:workspace-updated", handleWsUpdate);
+      window.removeEventListener("bizzmitra:workspace-changed", handleWsUpdate);
+      window.removeEventListener("storage", handleWsUpdate);
+    };
+  }, []);
+
   const visibleNav = NAV.filter((item) => item.to !== "/admin" || isSuperAdmin);
 
   return (
@@ -277,29 +318,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </div>
 
         {/* Animated Return-to-Home indicator */}
-        <motion.div
-          className="flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-primary opacity-0 group-hover:opacity-100 transition-all duration-200 -translate-x-1 group-hover:translate-x-0"
-        >
+        <motion.div className="flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-mono font-bold text-primary opacity-0 group-hover:opacity-100 transition-all duration-200 -translate-x-1 group-hover:translate-x-0">
           <Home className="size-2.5" />
           <span>Home</span>
           <ArrowRight className="size-2.5 transition-transform group-hover:translate-x-0.5" />
         </motion.div>
       </Link>
 
-      <div className="neu-sm neu-press flex shrink-0 cursor-pointer items-center justify-between gap-3 px-3.5 py-2.5">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              {t("settings.workspace", "Active workspace")}
-            </p>
-            <span className="neu-sm px-1.5 py-0.5 text-[9px] font-bold text-primary">
-              {activeWs.mode === "know" ? "Direct" : "AI Guided"}
-            </span>
-          </div>
-          <p className="mt-0.5 text-xs font-semibold leading-tight truncate">{activeWs.name}</p>
-          <p className="text-[10px] text-muted-foreground truncate">{activeWs.industry}</p>
-        </div>
-        <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+      <div className="px-1">
+        <WorkspaceDropdownSwitcher onNavigate={onNavigate} />
       </div>
 
       <nav className="flex-1 min-h-0 space-y-0.5 overflow-y-auto pr-1">
@@ -339,7 +366,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="shrink-0 border-t border-border pt-2.5 space-y-2">
         <div className="rounded-xl border border-border/80 bg-background/50 p-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Role</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Active Role
+            </span>
             <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">
               {ROLE_DEFINITIONS[activeRole]?.badge || "Viewer"}
             </span>
@@ -540,7 +569,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 onClick={() => {
                   saveCurrentRole("admin");
                   setCurrentRole("admin");
-                  window.dispatchEvent(new CustomEvent("bizzmitra:role-changed", { detail: "admin" }));
+                  window.dispatchEvent(
+                    new CustomEvent("bizzmitra:role-changed", { detail: "admin" }),
+                  );
                 }}
                 className="text-[11px] font-bold underline hover:text-foreground"
               >

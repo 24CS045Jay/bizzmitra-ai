@@ -15,12 +15,74 @@ export interface WorkspaceContextData {
   sourceDetails?: Record<string, unknown>;
   createdAt?: string;
   discoveryCompleted?: boolean;
-  discoveryAnswers?: Array<{ question: string; answer: string; hint?: string; missingEntity?: string }>;
+  discoveryAnswers?: Array<{
+    question: string;
+    answer: string;
+    hint?: string;
+    missingEntity?: string;
+  }>;
   discoveryQuestions?: any[];
   discoverySummary?: string;
   businessAnalysis?: any;
   lastUpdated?: string;
   regenerateVersion?: number;
+}
+
+/**
+ * Helper to reliably persist active workspace selection across localStorage,
+ * user-scoped cache, stage-gate unlock status, and event listeners.
+ */
+export function saveActiveWorkspaceLocally(
+  workspaceId: string,
+  workspaceName: string,
+  context: Partial<WorkspaceContextData> & Record<string, any>,
+  userId?: string | null,
+): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem("bizzmitra.activeWorkspaceId", workspaceId);
+    localStorage.setItem("bizzmitra.activeWorkspaceName", workspaceName);
+    localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(context));
+
+    if (context["language"]) {
+      localStorage.setItem("bizzmitra.language", String(context["language"]));
+    }
+
+    if (context["discoveryCompleted"] === true) {
+      completeDiscoveryAndUnlockAll(workspaceId, context);
+    }
+
+    if (userId) {
+      const cacheKey = `bizzmitra.user_workspaces_${userId}`;
+      const raw = localStorage.getItem(cacheKey);
+      let list: any[] = [];
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed?.list)) list = parsed.list;
+        } catch {}
+      }
+      localStorage.setItem(
+        cacheKey,
+        JSON.stringify({
+          activeId: workspaceId,
+          activeName: workspaceName,
+          context,
+          list,
+        }),
+      );
+    }
+
+    window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated", { detail: context }));
+    window.dispatchEvent(
+      new CustomEvent("bizzmitra:workspace-changed", {
+        detail: { workspaceId, workspaceName, context },
+      }),
+    );
+  } catch (e) {
+    console.warn("[saveActiveWorkspaceLocally error]:", e);
+  }
 }
 
 /**
@@ -37,22 +99,40 @@ export async function restoreUserActiveWorkspace(userId: string): Promise<boolea
     return false;
   }
 
+  const existingActiveId =
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem("bizzmitra.activeWorkspaceId")
+      : null;
+
   // 1. First check user-scoped local cache for instant zero-latency UI hydrate
   try {
     const cachedRaw = localStorage.getItem(`bizzmitra.user_workspaces_${userId}`);
     if (cachedRaw) {
       const cached = JSON.parse(cachedRaw);
-      if (cached && cached.activeId && cached.context) {
-        localStorage.setItem("bizzmitra.activeWorkspaceId", cached.activeId);
-        localStorage.setItem("bizzmitra.activeWorkspaceName", cached.activeName || cached.context.businessName || "Enterprise Workspace");
-        localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(cached.context));
-        if (cached.context.language) {
-          localStorage.setItem("bizzmitra.language", cached.context.language);
+      // Only hydrate cached workspace if no activeWorkspaceId was set or if existingActiveId matches cached.activeId
+      if (cached && cached.context) {
+        if (!existingActiveId || existingActiveId === cached.activeId) {
+          localStorage.setItem("bizzmitra.activeWorkspaceId", cached.activeId);
+          localStorage.setItem(
+            "bizzmitra.activeWorkspaceName",
+            cached.activeName || cached.context.businessName || "Enterprise Workspace",
+          );
+          localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(cached.context));
+          if (cached.context.language) {
+            localStorage.setItem("bizzmitra.language", cached.context.language);
+          }
+          if (cached.context.discoveryCompleted === true) {
+            completeDiscoveryAndUnlockAll(cached.activeId, cached.context);
+          }
+          window.dispatchEvent(
+            new CustomEvent("bizzmitra:workspace-updated", { detail: cached.context }),
+          );
+          window.dispatchEvent(
+            new CustomEvent("bizzmitra:workspace-changed", {
+              detail: { workspaceId: cached.activeId, context: cached.context },
+            }),
+          );
         }
-        if (cached.context.discoveryCompleted === true) {
-          completeDiscoveryAndUnlockAll(cached.activeId, cached.context);
-        }
-        window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
       }
     }
   } catch {}
@@ -65,7 +145,9 @@ export async function restoreUserActiveWorkspace(userId: string): Promise<boolea
     try {
       let query = supabase
         .from("workspaces")
-        .select("id, name, problem_statement, industry, goals, constraints_text, intake_mode, intake_method, language_code, workspace_context, updated_at");
+        .select(
+          "id, name, problem_statement, industry, goals, constraints_text, intake_mode, intake_method, language_code, workspace_context, maturity_score, updated_at",
+        );
 
       if (isUuid) {
         query = query.eq("owner_id", userId);
@@ -104,7 +186,9 @@ export async function restoreUserActiveWorkspace(userId: string): Promise<boolea
 
     if (wsList && wsList.length > 0) {
       const currentActiveId = localStorage.getItem("bizzmitra.activeWorkspaceId");
-      const matched = wsList.find((w) => w.id === currentActiveId) || wsList[0];
+      // Find the workspace explicitly matching currentActiveId, or fallback to wsList[0]
+      const matched =
+        (currentActiveId && wsList.find((w) => w.id === currentActiveId)) || wsList[0];
 
       if (matched) {
         const storedCtx =
@@ -115,19 +199,25 @@ export async function restoreUserActiveWorkspace(userId: string): Promise<boolea
         const isDiscoveryDone = Boolean(
           storedCtx?.["discoveryCompleted"] === true ||
           storedCtx?.["discoveryAnswers"] ||
-          (matched.maturity_score && matched.maturity_score >= 80)
+          (matched.maturity_score && matched.maturity_score >= 80),
         );
 
         const restoredContext: WorkspaceContextData = {
-          businessName: (storedCtx?.["businessName"] as string) || matched.name || "Enterprise Workspace",
+          businessName:
+            (storedCtx?.["businessName"] as string) || matched.name || "Enterprise Workspace",
           name: matched.name || "Enterprise Workspace",
-          problemStatement: (storedCtx?.["problemStatement"] as string) || matched.problem_statement || "",
+          problemStatement:
+            (storedCtx?.["problemStatement"] as string) || matched.problem_statement || "",
           description: (storedCtx?.["description"] as string) || matched.problem_statement || "",
-          industry: (storedCtx?.["industry"] as string) || matched.industry || "Cross-Industry Transformation",
+          industry:
+            (storedCtx?.["industry"] as string) ||
+            matched.industry ||
+            "Cross-Industry Transformation",
           goals: (storedCtx?.["goals"] as string) || matched.goals || "",
           constraints: (storedCtx?.["constraints"] as string) || matched.constraints_text || "",
           intakeMode: (storedCtx?.["intakeMode"] as string) || matched.intake_mode || "consult",
-          intakeMethod: (storedCtx?.["intakeMethod"] as string) || matched.intake_method || "prompt",
+          intakeMethod:
+            (storedCtx?.["intakeMethod"] as string) || matched.intake_method || "prompt",
           language: (storedCtx?.["language"] as string) || matched.language_code || "en",
           sourceDetails: (storedCtx?.["sourceDetails"] as Record<string, unknown>) || {},
           discoveryCompleted: isDiscoveryDone,
@@ -137,29 +227,24 @@ export async function restoreUserActiveWorkspace(userId: string): Promise<boolea
           businessAnalysis: storedCtx?.["businessAnalysis"] as any,
         };
 
-        localStorage.setItem("bizzmitra.activeWorkspaceId", matched.id);
-        localStorage.setItem("bizzmitra.activeWorkspaceName", matched.name);
-        localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(restoredContext));
-        if (restoredContext.language) {
-          localStorage.setItem("bizzmitra.language", restoredContext.language);
-        }
-
-        if (isDiscoveryDone) {
-          completeDiscoveryAndUnlockAll(matched.id, restoredContext);
-        }
-
-        // Cache for this user
-        localStorage.setItem(
-          `bizzmitra.user_workspaces_${userId}`,
-          JSON.stringify({
-            activeId: matched.id,
-            activeName: matched.name,
-            context: restoredContext,
-            list: wsList.map((w) => ({ id: w.id, name: w.name })),
-          }),
+        saveActiveWorkspaceLocally(
+          matched.id,
+          matched.name,
+          restoredContext as Record<string, any>,
+          userId,
         );
 
-        window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
+        // Also cache list of workspace headers
+        const cacheKey = `bizzmitra.user_workspaces_${userId}`;
+        const raw = localStorage.getItem(cacheKey);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            parsed.list = wsList.map((w) => ({ id: w.id, name: w.name }));
+            localStorage.setItem(cacheKey, JSON.stringify(parsed));
+          } catch {}
+        }
+
         return true;
       }
     } else {
