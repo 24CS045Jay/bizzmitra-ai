@@ -95,11 +95,13 @@ export function Footer11({ className = "" }: { className?: string }) {
         {/* Brand Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-12 border-b border-border/60">
           <div className="space-y-2 max-w-lg">
-            <Link to="/" className="flex items-center gap-2.5">
-              <span className="grid size-8 place-items-center rounded-xl bg-primary font-display text-sm font-black text-primary-foreground shadow-sm glow-primary">
-                B
-              </span>
-              <span className="font-display text-xl font-extrabold tracking-tight">
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <img
+                src="/logo.png"
+                alt="BizzMitra"
+                className="size-8 rounded-xl object-cover shadow-sm ring-1 ring-primary/40 group-hover:scale-105 transition-transform"
+              />
+              <span className="font-display text-xl font-extrabold tracking-tight group-hover:text-primary transition-colors">
                 BizzMitra-AI
               </span>
             </Link>

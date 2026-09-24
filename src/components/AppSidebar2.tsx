@@ -522,9 +522,13 @@ export function AppSidebar2({
               whileHover={{ scale: 1.1, rotate: -6 }}
               whileTap={{ scale: 0.9, rotate: 6 }}
               transition={{ type: "spring", stiffness: 420, damping: 22 }}
-              className="relative grid size-8.5 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary via-primary to-primary/85 font-display text-sm font-black text-primary-foreground shadow-sm glow-primary"
+              className="relative shrink-0 overflow-hidden rounded-xl shadow-sm glow-primary"
             >
-              B
+              <img
+                src="/logo.png"
+                alt="BizzMitra"
+                className="size-8.5 rounded-xl object-cover"
+              />
             </motion.div>
 
             <AnimatePresence>

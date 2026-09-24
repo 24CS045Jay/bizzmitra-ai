@@ -260,10 +260,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             whileHover={{ scale: 1.12, rotate: -6 }}
             whileTap={{ scale: 0.92, rotate: 6 }}
             transition={{ type: "spring", stiffness: 420, damping: 22 }}
-            className="relative grid size-8.5 place-items-center rounded-xl bg-gradient-to-br from-primary via-primary to-primary/85 font-display text-sm font-black text-primary-foreground shadow-sm glow-primary"
+            className="relative shrink-0 overflow-hidden rounded-xl shadow-sm glow-primary"
           >
-            <span className="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-            B
+            <img
+              src="/logo.png"
+              alt="BizzMitra"
+              className="size-8.5 rounded-xl object-cover"
+            />
           </motion.div>
           <div className="flex flex-col">
             <span className="font-display text-base font-extrabold tracking-tight text-foreground group-hover:text-primary transition-colors">
@@ -459,9 +462,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             whileHover={{ scale: 1.1, rotate: -6 }}
             whileTap={{ scale: 0.9, rotate: 6 }}
             transition={{ type: "spring", stiffness: 420, damping: 22 }}
-            className="grid size-7.5 place-items-center rounded-lg bg-primary font-display text-xs font-black text-primary-foreground shadow-sm glow-primary"
+            className="shrink-0 overflow-hidden rounded-lg shadow-sm glow-primary"
           >
-            B
+            <img
+              src="/logo.png"
+              alt="BizzMitra"
+              className="size-7.5 rounded-lg object-cover"
+            />
           </motion.span>
           <span className="font-display text-base font-extrabold group-hover:text-primary transition-colors">
             BizzMitra

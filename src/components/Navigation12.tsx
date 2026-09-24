@@ -40,10 +40,12 @@ export function Navigation12({
         className="neu-reflect relative flex items-center justify-between gap-3 sm:gap-6 rounded-full border border-border/80 bg-surface/80 px-3.5 py-2 shadow-lg backdrop-blur-xl dark:border-white/15 dark:bg-surface/85 dark:shadow-[0_12px_36px_-10px_rgba(0,0,0,0.8)]"
       >
         {/* Brand mark */}
-        <Link to="/" className="flex items-center gap-2 pl-1 pr-2">
-          <span className="grid size-7 place-items-center rounded-full bg-primary font-display text-xs font-black text-primary-foreground shadow-sm">
-            B
-          </span>
+        <Link to="/" className="flex items-center gap-2 pl-1 pr-2 group">
+          <img
+            src="/logo.png"
+            alt="BizzMitra"
+            className="size-7 rounded-full object-cover shadow-sm ring-1 ring-primary/40 group-hover:scale-105 transition-transform"
+          />
           <span className="hidden font-display text-sm font-extrabold tracking-tight sm:inline">
             BizzMitra
           </span>

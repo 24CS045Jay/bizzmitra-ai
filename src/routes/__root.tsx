@@ -122,6 +122,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "manifest", href: "/manifest.json" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "icon", href: "/logo.png", type: "image/png" },
+      { rel: "shortcut icon", href: "/logo.png" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
@@ -228,6 +230,8 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+import { AppSplashIntro } from "@/components/AppSplashIntro";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const location = useRouterState({ select: (s) => s.location.pathname });
@@ -272,6 +276,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
+          <AppSplashIntro />
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <PageTransition key={location}>
             <Outlet />
