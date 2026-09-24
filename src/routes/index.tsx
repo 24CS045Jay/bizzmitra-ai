@@ -45,10 +45,12 @@ function Nav() {
 
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
-        <Link to="/" className="flex items-center gap-2.5">
-          <span className="grid size-8 place-items-center rounded-lg bg-primary font-display text-sm font-extrabold text-primary-foreground">
-            B
-          </span>
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <img
+            src="/logo.png"
+            alt="BizzMitra"
+            className="size-8 rounded-lg object-cover shadow-sm ring-1 ring-primary/40 group-hover:scale-105 transition-transform"
+          />
           <span className="font-display text-lg font-extrabold tracking-tight">BizzMitra-AI</span>
         </Link>
         <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">

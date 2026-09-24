@@ -50,11 +50,13 @@ function SharedBlueprintPage() {
       {/* Public Top Header */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/80 bg-background/90 px-6 py-3.5 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="grid size-8 place-items-center rounded-lg bg-primary font-display text-sm font-extrabold text-primary-foreground shadow-sm">
-              B
-            </span>
-            <span className="font-display text-base font-extrabold tracking-tight">BizzMitra</span>
+          <Link to="/" className="flex items-center gap-2 group">
+            <img
+              src="/logo.png"
+              alt="BizzMitra"
+              className="size-8 rounded-lg object-cover shadow-sm ring-1 ring-primary/40 group-hover:scale-105 transition-transform"
+            />
+            <span className="font-display text-base font-extrabold tracking-tight group-hover:text-primary transition-colors">BizzMitra</span>
           </Link>
           <span className="hidden sm:inline-block text-border">/</span>
           <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">

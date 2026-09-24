@@ -111,7 +111,7 @@ export async function initiateRazorpayPayment(options: RazorpayCheckoutOptions):
       currency: "INR",
       name: "BizzMitra-AI",
       description: `${options.planName} Plan — ${options.creditsGranted.toLocaleString("en-IN")} Credits`,
-      image: "https://bizzmitra.ai/favicon.ico",
+      image: "https://bizzmitra-ai.vercel.app/logo.png",
       prefill: {
         name: options.customerName || "Enterprise Customer",
         email: options.customerEmail || "billing@bizzmitra.ai",

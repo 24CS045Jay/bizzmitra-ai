@@ -281,11 +281,13 @@ function GoogleIcon({ className }: { className?: string }) {
 
       <div className="relative z-10 grid min-h-[calc(100vh-6rem)] place-items-center">
         <Reveal className="w-full max-w-md">
-          <Link to="/" className="mb-8 flex items-center justify-center gap-2.5">
-            <span className="grid size-8 place-items-center rounded-lg bg-primary font-display text-sm font-extrabold text-primary-foreground">
-              B
-            </span>
-            <span className="font-display text-lg font-extrabold tracking-tight">BizzMitra</span>
+          <Link to="/" className="mb-8 flex items-center justify-center gap-2.5 group">
+            <img
+              src="/logo.png"
+              alt="BizzMitra"
+              className="size-8.5 rounded-xl object-cover shadow-sm ring-1 ring-primary/40 group-hover:scale-105 transition-transform"
+            />
+            <span className="font-display text-lg font-extrabold tracking-tight group-hover:text-primary transition-colors">BizzMitra</span>
           </Link>
 
           <div className="neu neu-reflect p-6 sm:p-8">
