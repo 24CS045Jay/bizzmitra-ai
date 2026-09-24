@@ -463,7 +463,7 @@ export function AiCopilotPanel() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 360, damping: 32 }}
-            className="fixed inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] top-14 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-4 z-50 flex w-auto sm:w-full sm:max-w-[420px] flex-col overflow-hidden rounded-3xl border border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl"
+            className="fixed inset-x-2 bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] top-14 sm:inset-x-auto sm:bottom-4 sm:right-4 sm:top-4 z-[70] flex w-auto sm:w-full sm:max-w-[420px] flex-col overflow-hidden rounded-3xl border border-border/80 bg-card/95 shadow-2xl backdrop-blur-xl"
           >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border/70 p-4">
@@ -761,7 +761,7 @@ export function AiCopilotPanel() {
                 e.preventDefault();
                 void handleSend();
               }}
-              className="border-t border-border/70 p-3"
+              className="border-t border-border/70 p-3 shrink-0 bg-card"
             >
               <div className="neu-inset flex items-center gap-2 px-3 py-2">
                 <input

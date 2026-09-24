@@ -166,7 +166,7 @@ export async function restoreUserActiveWorkspace(userId: string): Promise<boolea
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData?.session?.access_token;
-        const authBearer = token ? `Bearer ${token}` : isTest ? "Bearer demo-token-bypass" : "";
+        const authBearer = token ? `Bearer ${token}` : "";
 
         if (authBearer) {
           const apiRes = await fetch("/api/workspaces", {
