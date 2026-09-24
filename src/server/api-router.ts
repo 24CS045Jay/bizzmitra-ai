@@ -64,14 +64,48 @@ function getSupabaseConfig(env: unknown) {
   return { supabaseUrl, serviceRoleKey, anonKey };
 }
 
-function jsonResponse(data: unknown, status = 200, headers: Record<string, string> = {}) {
+function getCorsHeaders(request?: Request): Record<string, string> {
+  const origin = request?.headers.get("Origin") || "";
+  const allowedOrigins = [
+    "https://bizzmitra-ai.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:8080",
+    "http://localhost:8082",
+    "capacitor://localhost",
+    "http://localhost",
+  ];
+
+  let allowOrigin = "https://bizzmitra-ai.vercel.app";
+  if (
+    allowedOrigins.includes(origin) ||
+    origin.endsWith(".vercel.app") ||
+    origin.startsWith("http://localhost:") ||
+    origin.startsWith("capacitor://")
+  ) {
+    allowOrigin = origin;
+  }
+
+  return {
+    "access-control-allow-origin": allowOrigin,
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "access-control-allow-headers": "Content-Type, Authorization, X-Workspace-Id",
+    "access-control-allow-credentials": "true",
+  };
+}
+
+function jsonResponse(
+  data: unknown,
+  status = 200,
+  headers: Record<string, string> = {},
+  request?: Request
+) {
+  const corsHeaders = getCorsHeaders(request);
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "content-type": "application/json",
-      "access-control-allow-origin": "*",
-      "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "access-control-allow-headers": "Content-Type, Authorization, X-Workspace-Id",
+      ...corsHeaders,
       ...headers,
     },
   });
@@ -83,17 +117,46 @@ async function getAuthenticatedUser(request: Request, supabaseAdmin: any) {
     return null;
   }
   const token = authHeader.replace("Bearer ", "").trim();
-  if (token === "demo-token-bypass" || token.startsWith("custom-token-")) {
-    return {
-      id: "demo-admin-id",
-      email: "admin@bizzmitra.ai",
-      role: "authenticated",
-    };
-  }
+  if (!token) return null;
 
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !user) return null;
   return user;
+}
+
+async function assertWorkspaceOwnership(
+  userId: string,
+  workspaceId: string,
+  supabaseAdmin: any
+): Promise<{ allowed: boolean; workspace?: any; error?: string }> {
+  if (!workspaceId || !userId) {
+    return { allowed: false, error: "Missing workspace or user identifier" };
+  }
+
+  const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId);
+  if (!isValidUuid) {
+    return { allowed: true };
+  }
+
+  const { data: workspace, error } = await supabaseAdmin
+    .from("workspaces")
+    .select("id, owner_id, name, industry, problem_statement, goals, constraints_text, workspace_context")
+    .eq("id", workspaceId)
+    .maybeSingle();
+
+  if (error) {
+    return { allowed: false, error: error.message };
+  }
+
+  if (!workspace) {
+    return { allowed: false, error: "Workspace not found" };
+  }
+
+  if (workspace.owner_id && workspace.owner_id !== userId) {
+    return { allowed: false, error: "Forbidden: You do not own this workspace" };
+  }
+
+  return { allowed: true, workspace };
 }
 
 export async function handleApiRoute(
@@ -106,13 +169,10 @@ export async function handleApiRoute(
 
   // Handle CORS preflight options
   if (request.method === "OPTIONS") {
+    const corsHeaders = getCorsHeaders(request);
     return new Response(null, {
       status: 204,
-      headers: {
-        "access-control-allow-origin": "*",
-        "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "access-control-allow-headers": "Content-Type, Authorization, X-Workspace-Id",
-      },
+      headers: corsHeaders,
     });
   }
 
@@ -138,7 +198,11 @@ export async function handleApiRoute(
       const fullName = body.fullName?.trim();
 
       if (!email || !password) {
-        return jsonResponse({ error: "Email and password are required." }, 400);
+        return jsonResponse({ error: "Email and password are required." }, 400, {}, request);
+      }
+
+      if (password.length < 6) {
+        return jsonResponse({ error: "Password must be at least 6 characters long." }, 400, {}, request);
       }
 
       const { data: userRes, error: createErr } = await supabaseAdmin.auth.admin.createUser({
@@ -153,23 +217,14 @@ export async function handleApiRoute(
           createErr.message.toLowerCase().includes("already") ||
           createErr.message.toLowerCase().includes("exists")
         ) {
-          const { data: listRes } = await supabaseAdmin.auth.admin.listUsers();
-          const existing = listRes?.users?.find((u) => u.email?.toLowerCase() === email);
-          if (existing) {
-            await supabaseAdmin.auth.admin.updateUserById(existing.id, {
-              password,
-              email_confirm: true,
-              user_metadata: { full_name: fullName || email.split("@")[0] },
-            });
-            await supabaseAdmin.from("profiles").upsert({
-              id: existing.id,
-              full_name: fullName || email.split("@")[0],
-              plan: "free",
-            });
-            return jsonResponse({ success: true, userId: existing.id });
-          }
+          return jsonResponse(
+            { error: "An account with this email address already exists. Please sign in or reset your password." },
+            409,
+            {},
+            request
+          );
         }
-        return jsonResponse({ error: createErr.message }, 400);
+        return jsonResponse({ error: createErr.message }, 400, {}, request);
       }
 
       if (userRes?.user) {
@@ -180,9 +235,9 @@ export async function handleApiRoute(
         });
       }
 
-      return jsonResponse({ success: true, userId: userRes?.user?.id });
+      return jsonResponse({ success: true, userId: userRes?.user?.id }, 201, {}, request);
     } catch (err: any) {
-      return jsonResponse({ error: err?.message || "Registration failed" }, 500);
+      return jsonResponse({ error: err?.message || "Registration failed" }, 500, {}, request);
     }
   }
 
@@ -301,11 +356,16 @@ export async function handleApiRoute(
   // 4. Artifacts: GET /api/artifacts?workspaceId=... or POST /api/artifacts
   if (pathname === "/api/artifacts") {
     const user = await getAuthenticatedUser(request, supabaseAdmin);
-    if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
+    if (!user) return jsonResponse({ error: "Unauthorized" }, 401, {}, request);
 
     if (request.method === "GET") {
       const workspaceId = url.searchParams.get("workspaceId");
-      if (!workspaceId) return jsonResponse({ error: "workspaceId is required" }, 400);
+      if (!workspaceId) return jsonResponse({ error: "workspaceId is required" }, 400, {}, request);
+
+      const authCheck = await assertWorkspaceOwnership(user.id, workspaceId, supabaseAdmin);
+      if (!authCheck.allowed) {
+        return jsonResponse({ error: authCheck.error || "Forbidden: You do not own this workspace" }, 403, {}, request);
+      }
 
       const { data: artifacts, error } = await supabaseAdmin
         .from("artifacts")
@@ -313,8 +373,8 @@ export async function handleApiRoute(
         .eq("workspace_id", workspaceId)
         .order("version", { ascending: false });
 
-      if (error) return jsonResponse({ error: error.message }, 500);
-      return jsonResponse({ success: true, artifacts: artifacts || [] });
+      if (error) return jsonResponse({ error: error.message }, 500, {}, request);
+      return jsonResponse({ success: true, artifacts: artifacts || [] }, 200, {}, request);
     }
 
     if (request.method === "POST") {
@@ -322,7 +382,12 @@ export async function handleApiRoute(
         const body = await request.json();
         const { workspaceId, moduleType, content } = body;
         if (!workspaceId || !moduleType || !content) {
-          return jsonResponse({ error: "workspaceId, moduleType, and content are required" }, 400);
+          return jsonResponse({ error: "workspaceId, moduleType, and content are required" }, 400, {}, request);
+        }
+
+        const authCheck = await assertWorkspaceOwnership(user.id, workspaceId, supabaseAdmin);
+        if (!authCheck.allowed) {
+          return jsonResponse({ error: authCheck.error || "Forbidden: You do not own this workspace" }, 403, {}, request);
         }
 
         // Get current latest version
@@ -348,10 +413,10 @@ export async function handleApiRoute(
           .select()
           .single();
 
-        if (error) return jsonResponse({ error: error.message }, 500);
-        return jsonResponse({ success: true, artifact: newArtifact, version: nextVersion }, 201);
+        if (error) return jsonResponse({ error: error.message }, 500, {}, request);
+        return jsonResponse({ success: true, artifact: newArtifact, version: nextVersion }, 201, {}, request);
       } catch (err: any) {
-        return jsonResponse({ error: err?.message || "Failed to save artifact" }, 500);
+        return jsonResponse({ error: err?.message || "Failed to save artifact" }, 500, {}, request);
       }
     }
   }
@@ -607,6 +672,18 @@ function extractJsonFromText(rawText: string): any {
       const workspaceId = body.workspaceId;
       const isValidUuid = workspaceId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId);
 
+      // Verify workspace ownership for authenticated persistence
+      if (isValidUuid) {
+        const user = await getAuthenticatedUser(request, supabaseAdmin);
+        if (!user) {
+          return jsonResponse({ error: "Unauthorized: Please sign in to generate workspace artifacts." }, 401, {}, request);
+        }
+        const authCheck = await assertWorkspaceOwnership(user.id, workspaceId, supabaseAdmin);
+        if (!authCheck.allowed) {
+          return jsonResponse({ error: authCheck.error || "Forbidden: You do not own this workspace." }, 403, {}, request);
+        }
+      }
+
       // 1. Check if we already have this artifact generated in Supabase (Rate-limit / Cost awareness)
       if (isValidUuid && !body.forceFresh) {
         const { data: existing } = await supabaseAdmin
@@ -625,7 +702,7 @@ function extractJsonFromText(rawText: string): any {
             modelUsed: "Persisted Supabase Artifact",
             content: existing.content,
             version: existing.version,
-          });
+          }, 200, {}, request);
         }
       }
 
@@ -1289,19 +1366,24 @@ Return strictly valid JSON:
   // 5a-2. Predictive Prefetch All Artifacts: POST /api/ai/prefetch-all
   if (pathname === "/api/ai/prefetch-all" && request.method === "POST") {
     try {
+      const user = await getAuthenticatedUser(request, supabaseAdmin);
+      if (!user) {
+        return jsonResponse({ error: "Unauthorized" }, 401, {}, request);
+      }
+
       const body = (await request.json()) as { workspaceId: string };
       const { workspaceId } = body;
       if (!workspaceId) {
-        return jsonResponse({ error: "workspaceId is required" }, 400);
+        return jsonResponse({ error: "workspaceId is required" }, 400, {}, request);
       }
 
-      const { data: ws } = await supabaseAdmin
-        .from("workspaces")
-        .select("name, industry, problem_statement, goals, constraints_text, workspace_context")
-        .eq("id", workspaceId)
-        .maybeSingle();
+      const authCheck = await assertWorkspaceOwnership(user.id, workspaceId, supabaseAdmin);
+      if (!authCheck.allowed) {
+        return jsonResponse({ error: authCheck.error || "Forbidden: You do not own this workspace" }, 403, {}, request);
+      }
 
-      if (!ws) return jsonResponse({ error: "Workspace not found" }, 404);
+      const ws = authCheck.workspace;
+      if (!ws) return jsonResponse({ error: "Workspace not found" }, 404, {}, request);
 
       const allModules: ArtifactKind[] = ["framing", "solution", "architecture", "process", "ux", "data", "roadmap"];
 
@@ -1319,7 +1401,10 @@ Return strictly valid JSON:
             if (!existing) {
               await fetch(`http://localhost:8082/api/ai/generate-artifact`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: request.headers.get("Authorization") || "",
+                },
                 body: JSON.stringify({
                   workspaceId,
                   moduleType: m,
@@ -1337,9 +1422,9 @@ Return strictly valid JSON:
         }
       })();
 
-      return jsonResponse({ success: true, message: "Prefetch background pipeline started" });
+      return jsonResponse({ success: true, message: "Prefetch background pipeline started" }, 200, {}, request);
     } catch (err: any) {
-      return jsonResponse({ error: err?.message || "Prefetch failed" }, 500);
+      return jsonResponse({ error: err?.message || "Prefetch failed" }, 500, {}, request);
     }
   }
 
@@ -1753,10 +1838,15 @@ Return strictly valid JSON with this exact structure:
   // 6. Documents: GET /api/documents and POST /api/documents/upload
   if (pathname === "/api/documents") {
     const user = await getAuthenticatedUser(request, supabaseAdmin);
-    if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
+    if (!user) return jsonResponse({ error: "Unauthorized" }, 401, {}, request);
 
     const workspaceId = url.searchParams.get("workspaceId");
-    if (!workspaceId) return jsonResponse({ error: "workspaceId is required" }, 400);
+    if (!workspaceId) return jsonResponse({ error: "workspaceId is required" }, 400, {}, request);
+
+    const authCheck = await assertWorkspaceOwnership(user.id, workspaceId, supabaseAdmin);
+    if (!authCheck.allowed) {
+      return jsonResponse({ error: authCheck.error || "Forbidden: You do not own this workspace" }, 403, {}, request);
+    }
 
     const { data: docs, error } = await supabaseAdmin
       .from("uploaded_documents")
@@ -1764,8 +1854,8 @@ Return strictly valid JSON with this exact structure:
       .eq("workspace_id", workspaceId)
       .order("uploaded_at", { ascending: false });
 
-    if (error) return jsonResponse({ error: error.message }, 500);
-    return jsonResponse({ success: true, documents: docs || [] });
+    if (error) return jsonResponse({ error: error.message }, 500, {}, request);
+    return jsonResponse({ success: true, documents: docs || [] }, 200, {}, request);
   }
 
   // 7. Universal Deliverable Exports: GET /api/export/:format

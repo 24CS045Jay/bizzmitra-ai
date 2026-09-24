@@ -333,11 +333,7 @@ function IntakePage() {
       let createdWorkspaceId: string | null = null;
       const { data: sessionData } = await supabase.auth.getSession();
       const activeToken = sessionData?.session?.access_token || session?.access_token;
-      const authBearer = activeToken
-        ? `Bearer ${activeToken}`
-        : isTest
-          ? "Bearer demo-token-bypass"
-          : "";
+      const authBearer = activeToken ? `Bearer ${activeToken}` : "";
 
       // 1. Direct Supabase Client Insert
       const payload: any = {
