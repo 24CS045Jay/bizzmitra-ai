@@ -750,7 +750,7 @@ export function AppSidebar2({
         </div>
 
         {/* BOTTOM USER ROW */}
-        <div className="border-t border-border/60 p-2.5 space-y-2">
+        <div className="shrink-0 border-t border-border/60 p-2.5 space-y-2 bg-sidebar/95 backdrop-blur-sm pb-[max(0.625rem,env(safe-area-inset-bottom,0px))]">
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-1.5 overflow-hidden">
               <ThemeToggle />
@@ -761,7 +761,7 @@ export function AppSidebar2({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="truncate text-[11px] text-muted-foreground"
+                    className="truncate text-[11px] text-muted-foreground font-medium"
                   >
                     {user?.email || "Guest Workspace"}
                   </motion.span>
@@ -772,11 +772,27 @@ export function AppSidebar2({
             <button
               onClick={() => signOut()}
               title="Sign out"
-              className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-surface-2 hover:text-foreground transition-colors"
+              aria-label="Sign out"
+              className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border hover:border-destructive/20 transition-all active:scale-95"
             >
               <LogOut className="size-4" />
             </button>
           </div>
+
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.button
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                onClick={() => signOut()}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-surface-2/80 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 border border-border/40 py-1.5 px-2 text-xs font-semibold text-muted-foreground transition-all active:scale-98"
+              >
+                <LogOut className="size-3.5" />
+                <span>Sign Out</span>
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
       </motion.aside>
 

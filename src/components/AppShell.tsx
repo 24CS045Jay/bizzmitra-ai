@@ -248,11 +248,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const visibleNav = NAV.filter((item) => item.to !== "/admin" || isSuperAdmin);
 
   return (
-    <div className="flex h-full flex-col gap-6 p-4">
+    <div className="flex flex-1 min-h-0 flex-col gap-3 px-4 pb-2 overflow-hidden">
       <Link
         to="/"
         onClick={onNavigate}
-        className="group relative flex items-center justify-between rounded-xl px-2.5 py-2 transition-all duration-200 hover:bg-surface-2/80 dark:hover:bg-surface-2/60 border border-transparent hover:border-border/60 hover:shadow-sm"
+        className="group relative flex items-center justify-between rounded-xl px-2.5 py-2 transition-all duration-200 hover:bg-surface-2/80 dark:hover:bg-surface-2/60 border border-transparent hover:border-border/60 hover:shadow-sm shrink-0"
         title="Return to Landing Page"
       >
         <div className="flex items-center gap-2.5">
@@ -286,7 +286,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </motion.div>
       </Link>
 
-      <div className="neu-sm neu-press flex cursor-pointer items-center justify-between gap-3 px-3.5 py-3">
+      <div className="neu-sm neu-press flex shrink-0 cursor-pointer items-center justify-between gap-3 px-3.5 py-2.5">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -296,13 +296,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               {activeWs.mode === "know" ? "Direct" : "AI Guided"}
             </span>
           </div>
-          <p className="mt-1 text-sm font-semibold leading-tight truncate">{activeWs.name}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground truncate">{activeWs.industry}</p>
+          <p className="mt-0.5 text-xs font-semibold leading-tight truncate">{activeWs.name}</p>
+          <p className="text-[10px] text-muted-foreground truncate">{activeWs.industry}</p>
         </div>
-        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+        <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
       </div>
 
-      <nav className="flex-1 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 min-h-0 space-y-0.5 overflow-y-auto pr-1">
         {visibleNav.map((item) => {
           const active = pathname === item.to;
           return (
@@ -318,7 +318,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 onNavigate?.();
               }}
               className={cn(
-                "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                 active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -336,8 +336,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
 
-      <div className="border-t border-border pt-3 space-y-2">
-        <div className="rounded-xl border border-border/80 bg-background/50 p-2.5">
+      <div className="shrink-0 border-t border-border pt-2.5 space-y-2">
+        <div className="rounded-xl border border-border/80 bg-background/50 p-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Role</span>
             <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">
@@ -357,19 +357,22 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               ))}
             </select>
           ) : (
-            <p className="mt-1.5 text-xs font-medium text-foreground">
+            <p className="mt-1 text-xs font-medium text-foreground truncate">
               {ROLE_DEFINITIONS[activeRole]?.title || "Stakeholder Viewer"}
             </p>
           )}
         </div>
 
-        <div className="flex items-center justify-between px-2">
-          <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+        <div className="flex items-center justify-between px-1">
+          <p className="truncate text-xs text-muted-foreground max-w-[170px]">{user?.email}</p>
           <ThemeToggle />
         </div>
         <button
-          onClick={() => signOut()}
-          className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:text-primary"
+          onClick={() => {
+            onNavigate?.();
+            void signOut();
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/20 px-3 py-2 text-xs font-semibold transition-all active:scale-98"
         >
           <LogOut className="size-3.5" /> Sign out
         </button>
@@ -485,25 +488,25 @@ export function AppShell({ children }: { children: ReactNode }) {
       <AnimatePresence>
         {open ? (
           <motion.div
-            className="fixed inset-0 z-50 bg-foreground/30 sm:hidden"
+            className="fixed inset-0 z-[60] bg-foreground/30 backdrop-blur-xs sm:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setOpen(false)}
           >
             <motion.div
-              className="h-full w-72 bg-sidebar pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+              className="flex h-full w-72 flex-col bg-sidebar shadow-2xl pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] overflow-hidden"
               initial={{ x: -290 }}
               animate={{ x: 0 }}
               exit={{ x: -290 }}
               transition={{ type: "spring", stiffness: 380, damping: 36 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-end p-3">
+              <div className="flex justify-end px-3 py-1.5 shrink-0">
                 <button
                   onClick={() => setOpen(false)}
                   aria-label="Close navigation"
-                  className="grid size-9 place-items-center rounded-lg"
+                  className="neu-sm neu-press grid size-8.5 place-items-center rounded-lg"
                 >
                   <X className="size-4" />
                 </button>
