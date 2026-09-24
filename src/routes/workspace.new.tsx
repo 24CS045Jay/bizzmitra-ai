@@ -34,6 +34,7 @@ import { useAuth, isTestingAccount } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentIngestionModal } from "@/components/DocumentIngestionModal";
 import { resetWorkspaceStages } from "@/lib/workspace-stage-gate";
+import { saveActiveWorkspaceLocally } from "@/lib/workspace-persistence";
 import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
 import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
 
@@ -428,12 +429,8 @@ function IntakePage() {
           } catch {}
         }
 
-        window.localStorage.setItem("bizzmitra.activeWorkspaceId", createdWorkspaceId);
-        window.localStorage.setItem("bizzmitra.activeWorkspaceName", safeBusinessName);
-        window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
-        window.localStorage.setItem("bizzmitra.language", lang);
+        saveActiveWorkspaceLocally(createdWorkspaceId, safeBusinessName, contextPayload, user?.id);
         resetWorkspaceStages(createdWorkspaceId);
-        window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
         toast.success("Workspace created successfully!");
         navigate({ to: "/workspace/discovery" });
         return;
@@ -442,12 +439,8 @@ function IntakePage() {
       console.error("[createWorkspace error]:", err);
       // Even on exception, create workspace locally so user's work is never lost
       const fallbackId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ws-${Date.now()}`;
-      window.localStorage.setItem("bizzmitra.activeWorkspaceId", fallbackId);
-      window.localStorage.setItem("bizzmitra.activeWorkspaceName", safeBusinessName);
-      window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(contextPayload));
-      window.localStorage.setItem("bizzmitra.language", lang);
+      saveActiveWorkspaceLocally(fallbackId, safeBusinessName, contextPayload, user?.id);
       resetWorkspaceStages(fallbackId);
-      window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated"));
       toast.success("Workspace created!");
       navigate({ to: "/workspace/discovery" });
     } finally {

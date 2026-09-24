@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Lock,
@@ -40,11 +41,17 @@ export function WorkspaceUpgradeModal({
   const { user } = useAuth();
   const navigate = useNavigate();
   const [upgrading, setUpgrading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isSuperAdmin = isSuperAdminEmail(user?.email);
   const isTest = isTestingAccount(user?.email);
 
   if (!isOpen) return null;
+  if (!mounted || typeof document === "undefined") return null;
 
   async function handleInstantUpgrade() {
     setUpgrading(true);
@@ -132,9 +139,9 @@ export function WorkspaceUpgradeModal({
     navigate({ to: "/dashboard" });
   }
 
-  return (
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -150,13 +157,13 @@ export function WorkspaceUpgradeModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 16 }}
           transition={{ duration: 0.22, ease: "easeOut" }}
-          className="neu relative z-10 w-full max-w-xl overflow-hidden rounded-3xl border border-primary/20 bg-card p-6 sm:p-8 shadow-2xl shadow-primary/10"
+          className="neu relative z-10 w-full max-w-lg sm:max-w-xl my-auto max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-3xl border border-primary/20 bg-card p-4 sm:p-7 shadow-2xl shadow-primary/10 scrollbar-none"
         >
           {/* Close Icon Button */}
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-5 top-5 rounded-full p-2 text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-colors"
+            className="absolute right-3 top-3 sm:right-4 sm:top-4 z-20 rounded-full p-2 text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-colors"
             aria-label="Close dialog"
           >
             <X className="size-4" />
@@ -170,25 +177,27 @@ export function WorkspaceUpgradeModal({
             </span>
           </div>
 
-          <h2 className="mt-3 font-display text-2xl font-extrabold sm:text-3xl text-foreground tracking-tight">
+          <h2 className="mt-3 font-display text-xl sm:text-2xl font-extrabold text-foreground tracking-tight leading-snug pr-8 break-words">
             Upgrade your plan to create another workspace
           </h2>
 
           <p className="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed">
-            In the <strong className="text-foreground">Basic (Free Starter) plan</strong>, you are allowed to create{" "}
-            <strong className="text-primary font-bold">only one workspace</strong>. You currently have{" "}
-            <span className="font-semibold text-foreground">{workspaceCount} active workspace</span>. Upgrade to unlock
-            unlimited business blueprints, collaborative architectures, and full exports.
+            In the <strong className="text-foreground">Basic (Free Starter) plan</strong>, you are
+            allowed to create <strong className="text-primary font-bold">only one workspace</strong>
+            . You currently have{" "}
+            <span className="font-semibold text-foreground">{workspaceCount} active workspace</span>
+            . Upgrade to unlock unlimited business blueprints, collaborative architectures, and full
+            exports.
           </p>
 
           {/* Usage Meter Card */}
-          <div className="mt-5 rounded-2xl border border-border/80 bg-muted/40 p-4">
-            <div className="flex items-center justify-between text-xs font-semibold">
-              <span className="text-muted-foreground flex items-center gap-1.5">
-                <Building2 className="size-3.5 text-primary" />
+          <div className="mt-4 sm:mt-5 rounded-2xl border border-border/80 bg-muted/40 p-3.5 sm:p-4">
+            <div className="flex items-center justify-between text-xs font-semibold gap-2">
+              <span className="text-muted-foreground flex items-center gap-1.5 truncate">
+                <Building2 className="size-3.5 text-primary shrink-0" />
                 Workspaces Quota (Basic Plan)
               </span>
-              <span className="font-bold text-amber-600 dark:text-amber-400">
+              <span className="font-bold text-amber-600 dark:text-amber-400 shrink-0">
                 {workspaceCount} / 1 Used (100%)
               </span>
             </div>
@@ -201,52 +210,61 @@ export function WorkspaceUpgradeModal({
           </div>
 
           {/* Upgrade Tier Highlights */}
-          <div className="mt-5 rounded-2xl border-2 border-primary/40 bg-primary/5 p-4 sm:p-5 relative overflow-hidden">
-            <div className="absolute right-3 top-3">
-              <span className="rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-extrabold text-primary-foreground uppercase tracking-wide">
-                Recommended
-              </span>
-            </div>
+          <div className="mt-4 sm:mt-5 rounded-2xl border-2 border-primary/40 bg-primary/5 p-3.5 sm:p-5 relative">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-display text-base sm:text-lg font-bold text-foreground">
+                  Growth Pro
+                </h3>
+                <span className="rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-extrabold text-primary-foreground uppercase tracking-wide shrink-0">
+                  Recommended
+                </span>
+              </div>
 
-            <div className="flex items-baseline gap-2">
-              <h3 className="font-display text-lg font-bold text-foreground">Growth Pro</h3>
-              <span className="font-display text-2xl font-black text-primary">₹3,999</span>
-              <span className="text-xs text-muted-foreground">/ month</span>
+              <div className="flex items-baseline gap-1 shrink-0">
+                <span className="font-display text-xl sm:text-2xl font-black text-primary">
+                  ₹3,999
+                </span>
+                <span className="text-xs text-muted-foreground">/ month</span>
+              </div>
             </div>
 
             <ul className="mt-3.5 space-y-2 text-xs">
-              <li className="flex items-center gap-2 font-medium text-foreground">
-                <Check className="size-4 shrink-0 text-emerald-500" />
+              <li className="flex items-start sm:items-center gap-2 font-medium text-foreground">
+                <Check className="size-4 shrink-0 text-emerald-500 mt-0.5 sm:mt-0" />
                 <span>
-                  <strong>Unlimited Workspaces</strong> — create as many client & initiative blueprints as needed
+                  <strong>Unlimited Workspaces</strong> — create as many client & initiative
+                  blueprints as needed
                 </span>
               </li>
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <Check className="size-4 shrink-0 text-emerald-500" />
-                <span><strong>1,000 AI Credits/month</strong> for full Solution Studio regeneration</span>
+              <li className="flex items-start sm:items-center gap-2 text-muted-foreground">
+                <Check className="size-4 shrink-0 text-emerald-500 mt-0.5 sm:mt-0" />
+                <span>
+                  <strong>1,000 AI Credits/month</strong> for full Solution Studio regeneration
+                </span>
               </li>
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <Check className="size-4 shrink-0 text-emerald-500" />
+              <li className="flex items-start sm:items-center gap-2 text-muted-foreground">
+                <Check className="size-4 shrink-0 text-emerald-500 mt-0.5 sm:mt-0" />
                 <span>PostgreSQL DDL, REST OpenAPI 3.0 & Executive Pitch Deck exports</span>
               </li>
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <Check className="size-4 shrink-0 text-emerald-500" />
+              <li className="flex items-start sm:items-center gap-2 text-muted-foreground">
+                <Check className="size-4 shrink-0 text-emerald-500 mt-0.5 sm:mt-0" />
                 <span>Multi-tier Artifact Map & automated consistency audit</span>
               </li>
             </ul>
           </div>
 
           {/* Action CTAs */}
-          <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
             <button
               type="button"
               onClick={handleInstantUpgrade}
               disabled={upgrading}
-              className="neu-press flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-xs sm:text-sm font-bold text-primary-foreground glow-primary shadow-md hover:brightness-105 transition-all disabled:opacity-50"
+              className="neu-press w-full sm:flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-xs sm:text-sm font-bold text-primary-foreground glow-primary shadow-md hover:brightness-105 transition-all disabled:opacity-50 text-center"
             >
-              <Zap className="size-4" />
-              <span>{upgrading ? "Processing Upgrade..." : "Upgrade to Growth Pro Now"}</span>
-              <ArrowRight className="size-4 ml-0.5" />
+              <Zap className="size-4 shrink-0" />
+              <span>{upgrading ? "Processing..." : "Upgrade to Growth Pro Now"}</span>
+              <ArrowRight className="size-4 ml-0.5 shrink-0" />
             </button>
 
             <button
@@ -255,7 +273,7 @@ export function WorkspaceUpgradeModal({
               className="neu-sm neu-press flex items-center justify-center gap-1.5 rounded-xl border border-border px-4 py-3 text-xs font-semibold text-foreground hover:bg-muted/60 transition-colors"
             >
               <span>View All Plans</span>
-              <ExternalLink className="size-3.5 text-muted-foreground" />
+              <ExternalLink className="size-3.5 text-muted-foreground shrink-0" />
             </button>
           </div>
 
@@ -271,6 +289,7 @@ export function WorkspaceUpgradeModal({
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
