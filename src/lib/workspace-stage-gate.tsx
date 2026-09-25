@@ -167,6 +167,42 @@ export function isDiscoveryCompleted(targetWsId?: string): boolean {
  * Problem Intake, Dashboard/Workspaces, and AI Discovery are ALWAYS accessible.
  * Downstream modules require AI Discovery to be completed.
  */
+/**
+ * Checks whether the Software Studio module has been unlocked.
+ * By default, Software Studio remains locked.
+ */
+export function isSoftwareModuleUnlocked(targetWsId?: string): boolean {
+  if (typeof window === "undefined") return false;
+  const wsId = targetWsId || window.localStorage.getItem("bizzmitra.activeWorkspaceId") || "default";
+  return window.localStorage.getItem(`bizzmitra.softwareModuleUnlocked_${wsId}`) === "true";
+}
+
+/**
+ * Explicitly unlocks the Software Studio module for a workspace.
+ */
+export function unlockSoftwareModule(targetWsId?: string): void {
+  if (typeof window === "undefined") return;
+  const wsId = targetWsId || window.localStorage.getItem("bizzmitra.activeWorkspaceId") || "default";
+  window.localStorage.setItem(`bizzmitra.softwareModuleUnlocked_${wsId}`, "true");
+  window.dispatchEvent(new CustomEvent("bizzmitra:stages-updated"));
+}
+
+/**
+ * Explicitly locks the Software Studio module for a workspace.
+ */
+export function lockSoftwareModule(targetWsId?: string): void {
+  if (typeof window === "undefined") return;
+  const wsId = targetWsId || window.localStorage.getItem("bizzmitra.activeWorkspaceId") || "default";
+  window.localStorage.removeItem(`bizzmitra.softwareModuleUnlocked_${wsId}`);
+  window.dispatchEvent(new CustomEvent("bizzmitra:stages-updated"));
+}
+
+/**
+ * Determines whether a stage is accessible.
+ * Default for new accounts: only Problem Intake, Dashboard, and AI Discovery are accessible.
+ * Downstream architecture & planning modules unlock after AI Discovery is completed.
+ * The Software Studio module remains strictly locked unless explicitly unlocked.
+ */
 export function isStageUnlocked(stageId: string, targetWsId?: string): boolean {
   if (
     stageId === "discovery" ||
@@ -179,11 +215,17 @@ export function isStageUnlocked(stageId: string, targetWsId?: string): boolean {
     return true;
   }
 
+  // Software Studio is locked by default
+  if (stageId === "build") {
+    return isSoftwareModuleUnlocked(targetWsId);
+  }
+
   return isDiscoveryCompleted(targetWsId);
 }
 
 /**
- * Unlocks all workspace stages upon completing AI Discovery and persists to DB.
+ * Unlocks all workspace transformation stages upon completing AI Discovery and persists to DB.
+ * The software module remains locked as required.
  */
 export function completeDiscoveryAndUnlockAll(
   workspaceId?: string,
@@ -191,7 +233,8 @@ export function completeDiscoveryAndUnlockAll(
 ): void {
   if (typeof window === "undefined") return;
   const wsId = workspaceId || window.localStorage.getItem("bizzmitra.activeWorkspaceId") || "default";
-  const allIds = [...WORKSPACE_STAGES.map((s) => s.id), "crm", "build", "all"];
+  // Unlocks core blueprint stages (Software Studio "build" remains locked)
+  const allIds = [...WORKSPACE_STAGES.map((s) => s.id), "crm"];
 
   const key = `${STAGES_STORAGE_KEY_PREFIX}_${wsId}`;
   window.localStorage.setItem(key, JSON.stringify(allIds));
@@ -256,7 +299,7 @@ export function completeStageAndUnlockNext(currentStageId: string): string | nul
 }
 
 /**
- * Resets stage progression for a new workspace: locks downstream modules until discovery is done.
+ * Resets stage progression for a new workspace: locks downstream modules and software module.
  */
 export function resetWorkspaceStages(workspaceId?: string): void {
   if (typeof window === "undefined") return;
@@ -264,6 +307,7 @@ export function resetWorkspaceStages(workspaceId?: string): void {
   const key = `${STAGES_STORAGE_KEY_PREFIX}_${wsId}`;
   window.localStorage.setItem(key, JSON.stringify(["discovery"]));
   window.localStorage.removeItem(`bizzmitra.discoveryCompleted_${wsId}`);
+  window.localStorage.removeItem(`bizzmitra.softwareModuleUnlocked_${wsId}`);
 
   window.dispatchEvent(new CustomEvent("bizzmitra:stages-updated", { detail: ["discovery"] }));
 }
@@ -304,6 +348,17 @@ export function validateRouteAccess(pathname: string): { allowed: boolean; redir
     return { allowed: true };
   }
 
+  // Software module route is explicitly locked
+  if (pathname.startsWith("/workspace/build")) {
+    if (!isSoftwareModuleUnlocked()) {
+      return {
+        allowed: false,
+        redirectTo: isDiscoveryCompleted() ? "/workspace/solution" : "/workspace/discovery",
+        reason: "Software Studio is currently locked.",
+      };
+    }
+  }
+
   // All downstream workspace modules require AI Discovery
   if (!isDiscoveryCompleted()) {
     return {
@@ -328,14 +383,25 @@ export function useStageGate(currentStageId: string) {
 
     const unlocked = isStageUnlocked(currentStageId);
     if (!unlocked) {
-      toast.error(
-        "🔒 AI Discovery Required: Please complete the AI Diagnostic Discovery first before accessing this module.",
-        {
-          duration: 5000,
-          id: "discovery-required-gate",
-        }
-      );
-      navigate({ to: "/workspace/discovery" });
+      if (currentStageId === "build") {
+        toast.error(
+          "🔒 Software Studio is Locked: The software generation module is currently locked.",
+          {
+            duration: 5000,
+            id: "software-module-locked-gate",
+          }
+        );
+        navigate({ to: isDiscoveryCompleted() ? "/workspace/solution" : "/workspace/discovery" });
+      } else {
+        toast.error(
+          "🔒 AI Discovery Required: Please complete the AI Diagnostic Discovery first before accessing this module.",
+          {
+            duration: 5000,
+            id: "discovery-required-gate",
+          }
+        );
+        navigate({ to: "/workspace/discovery" });
+      }
     }
   }, [currentStageId, navigate]);
 }

@@ -850,7 +850,7 @@ export function AppSidebar2({
               {(() => {
                 const allItems = filteredPortalGroups.flatMap((g) => g.items);
                 const cur = allItems.find((i) => i.id === activeFlyout);
-                const curIsGated = cur && (WORKSPACE_STAGES.some((s) => s.id === cur.id) || cur.id === "crm") && cur.id !== "discovery";
+                const curIsGated = cur && (WORKSPACE_STAGES.some((s) => s.id === cur.id) || cur.id === "crm" || cur.id === "build") && cur.id !== "discovery";
                 const curIsUnlocked = !curIsGated || (cur ? isStageUnlocked(cur.id) : true);
 
                 return cur?.subItems?.map((sub) => {
@@ -860,7 +860,11 @@ export function AppSidebar2({
                         key={sub.label}
                         type="button"
                         onClick={() => {
-                          toast.warning(`Please complete earlier stages to unlock ${getItemLabel(cur!)}.`);
+                          if (cur?.id === "build") {
+                            toast.error("🔒 Software Studio is Locked: The software generation module is currently locked.");
+                          } else {
+                            toast.warning(`Please complete earlier stages to unlock ${getItemLabel(cur!)}.`);
+                          }
                         }}
                         className="group flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground/50 cursor-not-allowed hover:bg-transparent"
                       >

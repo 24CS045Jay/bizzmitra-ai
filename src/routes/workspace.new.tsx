@@ -54,6 +54,9 @@ type IntakeTab = "prompt" | "upload" | "url" | "voice" | "legacy";
 type OperatingMode = "know" | "consult";
 
 const INDUSTRIES = [
+  "IT & Software Services",
+  "Software Services",
+  "Information Technology (IT)",
   "Cross-Industry Transformation",
   "D2C E-Commerce",
   "Healthcare & MedTech",
@@ -74,7 +77,7 @@ function IntakePage() {
   const [mode, setMode] = useState<OperatingMode>("consult");
   const [activeTab, setActiveTab] = useState<IntakeTab>("prompt");
   const [businessName, setBusinessName] = useState("");
-  const [industry, setIndustry] = useState("Cross-Industry Transformation");
+  const [industry, setIndustry] = useState("IT & Software Services");
   const [problemStatement, setProblemStatement] = useState("");
   const [goals, setGoals] = useState("");
   const [constraints, setConstraints] = useState("");
@@ -671,6 +674,9 @@ function IntakePage() {
                           } else if (chip.includes("Support team")) {
                             setBusinessName("Nexa Retail — Support Deflection");
                             setIndustry("D2C E-Commerce");
+                          } else if (chip.includes("Software") || chip.includes("IT")) {
+                            setBusinessName("CloudScale IT & Software Solutions");
+                            setIndustry("IT & Software Services");
                           }
                         }}
                         className="neu-sm px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground text-left max-w-full break-words whitespace-normal"

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Rocket,
@@ -18,6 +18,7 @@ import {
   Terminal,
   Loader2,
   UploadCloud,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,7 +48,7 @@ import { DeployTargetConfirmModal } from "@/components/builder/DeployTargetConfi
 import { CloudCredentials, loadCloudCredentials } from "@/lib/builder/cloud-credentials-store";
 import { cn } from "@/lib/utils";
 import { Cloud, Settings } from "lucide-react";
-import { useStageGate } from "@/lib/workspace-stage-gate";
+import { useStageGate, isStageUnlocked, isDiscoveryCompleted } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/build")({
   head: () => ({
@@ -62,6 +63,38 @@ export const Route = createFileRoute("/workspace/build")({
 
 function WorkspaceBuildPage() {
   useStageGate("build");
+  const navigate = useNavigate();
+  const isUnlocked = isStageUnlocked("build");
+
+  if (!isUnlocked) {
+    return (
+      <AppShell>
+        <div className="flex h-full min-h-[70vh] flex-col items-center justify-center p-8 text-center">
+          <div className="neu p-8 max-w-md w-full flex flex-col items-center">
+            <div className="size-16 rounded-2xl bg-muted/40 grid place-items-center mb-4 text-primary">
+              <Lock className="size-8" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground">Software Studio is Locked</h2>
+            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+              The autonomous code generation and 1-click cloud deployment module is currently locked for this workspace.
+            </p>
+            <div className="mt-6 flex flex-col w-full gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  navigate({ to: isDiscoveryCompleted() ? "/workspace/solution" : "/workspace/discovery" });
+                }}
+                className="neu-primary w-full py-2.5 text-xs font-semibold"
+              >
+                Return to {isDiscoveryCompleted() ? "Solution Studio" : "AI Discovery"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState<"preview" | "code" | "spec">("preview");
   const [workspaceContext, setWorkspaceContext] = useState<any>(() => {
     try {
