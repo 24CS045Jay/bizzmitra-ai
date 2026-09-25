@@ -119,76 +119,26 @@ function getStorageKey(): string {
 
 /**
  * Returns list of currently unlocked stage IDs for the active workspace.
+ * All stages are enabled so users can seamlessly explore Solution Studio, Architecture, and Software Studio.
  */
 export function getUnlockedStages(): string[] {
-  if (typeof window === "undefined") return ["discovery"];
-  try {
-    const raw = window.localStorage.getItem(getStorageKey());
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        if (!parsed.includes("discovery")) parsed.unshift("discovery");
-        return parsed;
-      }
-    }
-  } catch {}
-  return ["discovery"];
+  return [...WORKSPACE_STAGES.map((s) => s.id), "crm", "build", "all"];
 }
 
 /**
  * Checks whether AI Discovery has been completed for the active workspace.
- * Checked against workspaceContext flag, local storage, user cache, and stages list.
+ * Returns true to allow frictionless exploration across all user accounts and problem statements.
  */
 export function isDiscoveryCompleted(targetWsId?: string): boolean {
-  if (typeof window === "undefined") return false;
-  const wsId = targetWsId || window.localStorage.getItem("bizzmitra.activeWorkspaceId") || "default";
-
-  // Demo account default always unlocked
-  if (wsId === "ws-talentcraft-default") return true;
-
-  // 1. Direct workspaceContext check
-  try {
-    const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed?.discoveryCompleted === true) return true;
-    }
-  } catch {}
-
-  // 2. Explicit discovery completed key
-  if (window.localStorage.getItem(`bizzmitra.discoveryCompleted_${wsId}`) === "true") {
-    return true;
-  }
-
-  // 3. User-scoped cache check
-  try {
-    for (let i = 0; i < window.localStorage.length; i++) {
-      const k = window.localStorage.key(i);
-      if (k && k.startsWith("bizzmitra.user_workspaces_")) {
-        const val = window.localStorage.getItem(k);
-        if (val) {
-          const parsed = JSON.parse(val);
-          if (parsed?.activeId === wsId && parsed?.context?.discoveryCompleted === true) {
-            return true;
-          }
-        }
-      }
-    }
-  } catch {}
-
-  // 4. Stored unlocked stages list
-  const unlocked = getUnlockedStages();
-  return unlocked.includes("solution") || unlocked.includes("all") || unlocked.length > 1;
+  return true;
 }
 
 /**
  * Checks whether a specific stage is unlocked.
- * Discovery, export, and settings are always accessible.
- * Once Discovery is completed, ALL stages across the platform are unlocked!
+ * Solution Studio, Software Studio, and all workspace modules are always accessible.
  */
 export function isStageUnlocked(stageId: string): boolean {
-  if (stageId === "discovery" || stageId === "export" || stageId === "settings") return true;
-  return isDiscoveryCompleted();
+  return true;
 }
 
 /**
@@ -200,7 +150,7 @@ export function completeDiscoveryAndUnlockAll(
 ): void {
   if (typeof window === "undefined") return;
   const wsId = workspaceId || window.localStorage.getItem("bizzmitra.activeWorkspaceId") || "default";
-  const allIds = [...WORKSPACE_STAGES.map((s) => s.id), "crm", "all"];
+  const allIds = [...WORKSPACE_STAGES.map((s) => s.id), "crm", "build", "all"];
 
   const key = `${STAGES_STORAGE_KEY_PREFIX}_${wsId}`;
   window.localStorage.setItem(key, JSON.stringify(allIds));
@@ -264,25 +214,10 @@ export function completeStageAndUnlockNext(currentStageId: string): string | nul
 }
 
 /**
- * Resets stage progression for a new workspace (only discovery unlocked until completed).
+ * Resets stage progression for a new workspace while keeping all modules accessible.
  */
 export function resetWorkspaceStages(workspaceId?: string): void {
-  if (typeof window === "undefined") return;
-  const wsId = workspaceId || window.localStorage.getItem("bizzmitra.activeWorkspaceId") || "default";
-  const key = `${STAGES_STORAGE_KEY_PREFIX}_${wsId}`;
-  window.localStorage.setItem(key, JSON.stringify(["discovery"]));
-  window.localStorage.removeItem(`bizzmitra.discoveryCompleted_${wsId}`);
-
-  try {
-    const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      parsed.discoveryCompleted = false;
-      window.localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(parsed));
-    }
-  } catch {}
-
-  window.dispatchEvent(new CustomEvent("bizzmitra:stages-updated", { detail: ["discovery"] }));
+  completeDiscoveryAndUnlockAll(workspaceId);
 }
 
 /**
@@ -296,54 +231,22 @@ export function unlockAllStages(): void {
  * Resolves the highest unlocked stage that the user can currently navigate to.
  */
 export function getHighestUnlockedStage(): WorkspaceStage {
-  if (isDiscoveryCompleted()) {
-    return WORKSPACE_STAGES[1]!; // Solution Studio
-  }
-  return WORKSPACE_STAGES[0]!; // Discovery
+  return WORKSPACE_STAGES[1]!; // Solution Studio
 }
 
 /**
  * Given a target path, returns whether it is allowed.
+ * Permissive routing ensures all workspaces and accounts can access all studios.
  */
 export function validateRouteAccess(pathname: string): { allowed: boolean; redirectTo?: string; reason?: string } {
-  if (
-    pathname.startsWith("/workspace/discovery") ||
-    pathname.startsWith("/workspace/new") ||
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/settings") ||
-    pathname.startsWith("/workspace/export")
-  ) {
-    return { allowed: true };
-  }
-
-  if (!isDiscoveryCompleted()) {
-    return {
-      allowed: false,
-      redirectTo: "/workspace/discovery",
-      reason: "Please complete AI Discovery first to unlock all workspace blueprints.",
-    };
-  }
-
   return { allowed: true };
 }
 
 /**
- * React hook that enforces stage gating on any workspace route.
+ * React hook that ensures workspace routes never lock the user out.
  */
 export function useStageGate(currentStageId: string) {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (currentStageId === "discovery") return;
-
-    if (!isStageUnlocked(currentStageId)) {
-      toast.warning("Please complete AI Discovery first to unlock all workspace modules.", {
-        id: "gate-lock-discovery",
-      });
-      navigate({ to: "/workspace/discovery" });
-    }
-  }, [currentStageId, navigate]);
+  // Always permit access so Solution Studio, CRM, and Software Studio open seamlessly
 }
 
 /**

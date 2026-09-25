@@ -91,9 +91,46 @@ const MODULE_TIME_TAGS: Record<string, Exclude<TimeTag, "All">> = {
 
 function SolutionPage() {
   useStageGate("solution");
-  const [problemText, setProblemText] = useState(HR_CONSULTANCY_PROBLEM);
-  const [businessName, setBusinessName] = useState("Enterprise Business");
-  const [industry, setIndustry] = useState("Cross-Industry");
+  const [problemText, setProblemText] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.problemStatement || parsed.summary || parsed.description) {
+            return parsed.problemStatement || parsed.summary || parsed.description;
+          }
+        }
+      } catch {}
+    }
+    return HR_CONSULTANCY_PROBLEM;
+  });
+  const [businessName, setBusinessName] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.businessName || parsed.name) {
+            return parsed.businessName || parsed.name;
+          }
+        }
+      } catch {}
+    }
+    return "Enterprise Business";
+  });
+  const [industry, setIndustry] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.industry) return parsed.industry;
+        }
+      } catch {}
+    }
+    return "Cross-Industry";
+  });
   const [isStudioOpen, setIsStudioOpen] = useState(false);
   const [studioSettings, setStudioSettings] = useState(() => loadStudioSettings());
   const [timeFilter, setTimeFilter] = useState<TimeTag>("All");
@@ -711,9 +748,9 @@ function SolutionPage() {
       <SolutionStudioDrawer
         isOpen={isStudioOpen}
         onClose={() => setIsStudioOpen(false)}
-        onSettingsChange={async (newSettings) => {
+        onTriggerRegeneration={() => handleRegenerate(true)}
+        onSettingsChange={(newSettings) => {
           setStudioSettings(newSettings);
-          await handleRegenerate(true, newSettings.customFields.map((f) => f.label));
         }}
       />
     </AppShell>

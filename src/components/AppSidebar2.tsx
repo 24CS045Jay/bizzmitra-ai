@@ -676,9 +676,7 @@ export function AppSidebar2({
                           return;
                         }
                         if (!isUnlocked) {
-                          e.preventDefault();
-                          toast.warning(`Please complete earlier stages first to unlock ${getItemLabel(item)}.`);
-                          return;
+                          completeDiscoveryAndUnlockAll();
                         }
                         onNavigate?.();
                       }}
