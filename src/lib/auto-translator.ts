@@ -34,8 +34,12 @@ export const PHRASE_DICTIONARY: Record<
     "Go home": "होम पेज पर जाएं",
     "Page not found": "पेज नहीं मिला",
 
-    // Landing Page
+    // Landing Page & Hero
     "From business problem to blueprint": "व्यावसायिक समस्या से क्रियान्वयन ब्लूप्रिंट तक",
+    "From Business Problem to Blueprint": "व्यावसायिक समस्या से क्रियान्वयन ब्लूप्रिंट तक",
+    "From Business Idea to Full Blueprint": "व्यावसायिक विचार से पूर्ण ब्लूप्रिंट तक",
+    "Empowered by Autonomous Multi-Agent AI": "स्वायत्त मल्टी-एजेंट AI द्वारा संचालित",
+    "Autonomous Multi-Agent Architecture": "स्वायत्त मल्टी-एजेंट वास्तुकला",
     "Describe a business problem": "किसी व्यावसायिक समस्या का वर्णन करें",
     "Modules": "मॉड्यूल",
     "Why one workspace": "एक ही कार्यक्षेत्र क्यों",
@@ -47,7 +51,7 @@ export const PHRASE_DICTIONARY: Record<
     "Interactive Talent Pipeline": "इंटरैक्टिव प्रतिभा पाइपलाइन",
     "Enterprise Governance": "उद्यम शासन और नियंत्रण",
 
-    // Dashboard & Cockpit
+    // Dashboard, Cockpit & Widgets
     "Workspaces": "कार्यक्षेत्र (प्रोजेक्ट्स)",
     "Active Projects": "सक्रिय परियोजनाएं",
     "Saved Artifacts": "सहेजे गए आर्टिफ़ैक्ट्स",
@@ -63,11 +67,76 @@ export const PHRASE_DICTIONARY: Record<
     "Maturity Score": "परिपक्वता स्कोर",
     "Recent Workspaces": "हाल के कार्यक्षेत्र",
     "Search projects...": "परियोजनाएं खोजें...",
+    "Search projects": "परियोजनाएं खोजें",
     "Create New Workspace": "नया कार्यक्षेत्र बनाएं",
     "Loading workspace...": "कार्यक्षेत्र लोड हो रहा है...",
     "All projects & blueprints": "सभी प्रोजेक्ट और ब्लूप्रिंट",
+    "Flagged Open Risks": "चिह्नित खुले जोखिम",
+    "Total Risks": "कुल जोखिम",
+    "Action Items": "आगे बढ़ें (Action Items)",
+    "Milestones": "मील के पत्थर (Milestones)",
+    "AI Copilot Assistant": "AI को-पायलट सहायक",
+    "Have questions about your blueprint?": "क्या आपके ब्लूप्रिंट के बारे में प्रश्न हैं?",
+    "Instant answers grounded on your Supabase artifacts.": "आपके आर्टिफ़ैक्ट्स पर आधारित त्वरित उत्तर।",
+    "Launch Copilot": "को-पायलट शुरू करें",
+    "Review Risk Register": "जोखिम रजिस्टर की समीक्षा करें",
+    "Inspect Sprints": "स्प्रिंट्स का निरीक्षण करें",
+    "Top 3 Flagged Risks": "शीर्ष 3 चिह्नित जोखिम",
+    "All Risks": "सभी जोखिम",
+    "Sprint Plan": "स्प्रिंट योजना",
+    "All Transformation Workspaces": "सभी परिवर्तन कार्यक्षेत्र (प्रोजेक्ट्स)",
+    "All Transformation": "सभी परिवर्तन",
+    "Switch or create blueprints for client initiatives.": "क्लाइंट पहलों के लिए ब्लूप्रिंट बदलें या नए बनाएं।",
+    "Workspace Used": "कार्यक्षेत्र उपयोग किया गया",
+    "New workspace": "नया कार्यक्षेत्र",
+    "High Priority": "उच्च प्राथमिकता",
+    "Compliance Signoff Needed": "अनुपालन हस्ताक्षर आवश्यक",
+    "Technical Risk": "तकनीकी जोखिम",
+    "Geospatial Data Architect": "भू-स्थानिक डेटा आर्किटेक्ट",
+    "Telematics Ingestion Engine": "टेलीमैटिक्स डेटा इंजन",
+    "Circular & Polygon Warehouse Geofencing Engine": "गोदाम जियोफेंसिंग इंजन",
+    "Fleet Dispatch Command Map Visualizer": "फ्लीट डिस्पैच कमांड मैप",
 
-    // Workspace & Navigation
+    // CRM, Shipments, Logistics & HR Fields
+    "Consignment": "कंसाइनमेंट",
+    "Route & Cargo Spec": "रूट और कार्गो विवरण",
+    "Metric": "मीट्रिक",
+    "Stage (Click to advance)": "चरण (आगे बढ़ने के लिए क्लिक करें)",
+    "Stage": "चरण",
+    "Rating": "रेटिंग",
+    "Status": "स्थिति",
+    "Notes": "नोट्स",
+    "Notice Period": "नोटिस अवधि",
+    "Expected CTC": "अपेक्षित सीटीसी",
+    "LinkedIn URL": "लिंक्डइन लिंक",
+    "Actions": "कार्रवाई",
+    "Total Shipments": "कुल शिपमेंट",
+    "In Pipeline": "पाइपलाइन में",
+    "Top Rated": "शीर्ष मूल्यांकित",
+    "Avg. Rating": "औसत रेटिंग",
+    "Avg Rating": "औसत रेटिंग",
+    "Dispatched": "भेजा गया (Dispatched)",
+    "In Transit": "मार्ग में (In Transit)",
+    "Customs / Hub": "कस्टम्स / हब",
+    "Delivered": "वितरित (Delivered)",
+    "Active": "सक्रिय",
+    "Hired": "नियुक्त (Hired)",
+    "Add Consignment": "नया कंसाइनमेंट जोड़ें",
+    "Filters": "फ़िल्टर",
+    "Export CSV": "CSV निर्यात करें",
+    "Search by name, route & cargo spec, or email...": "नाम, रूट, कार्गो या ईमेल से खोजें...",
+    "CLINICAL STAFF & PHLEBOTOMIST DUTY CLOCK": "क्लिनिकल स्टाफ और फ्लेबोटोमिस्ट ड्यूटी क्लॉक",
+    "Operational Shift Check-In / Check-Out": "परिचालन शिफ्ट चेक-इन / चेक-आउट",
+    "Punch In": "पंच इन (शुरू करें)",
+    "Punch Out": "पंच आउट (समाप्त करें)",
+    "Session elapsed": "सत्र की बीती अवधि",
+    "Not clocked in": "क्लॉक-इन नहीं किया गया",
+    "Date": "दिनांक",
+    "Hours Worked": "कार्य किए गए घंटे",
+    "Staff / Field Agent": "स्टाफ / फील्ड एजेंट",
+    "Candidates": "उम्मीदवार",
+
+    // Navigation & Chain Items
     "Workspace & Intake": "कार्यक्षेत्र और इनटेक",
     "Intelligence & Solution": "इंटेलिजेंस और समाधान",
     "Systems & Design": "सिस्टम और डिज़ाइन",
@@ -102,40 +171,75 @@ export const PHRASE_DICTIONARY: Record<
     "Export": "निर्यात करें",
     "History": "इतिहास",
 
-    // Common Actions & Settings
-    "Save": "सहेजें",
-    "Cancel": "रद्द करें",
-    "Upload SOP / BRD": "SOP / BRD अपलोड करें",
-    "Upload": "अपलोड करें",
-    "Download": "डाउनलोड करें",
-    "Close": "बंद करें",
-    "Back": "पीछे जाएं",
-    "Next": "आगे बढ़ें",
-    "Submit": "जमा करें",
-    "Delete": "हटाएं",
-    "Edit": "संपादित करें",
-    "Rename": "नाम बदलें",
-    "Filter": "फ़िल्टर करें",
-    "Search": "खोजें",
-    "Status": "स्थिति",
-    "Actions": "कार्रवाई",
-    "Role": "भूमिका",
+    // Build vs Buy Decision Matrix
+    "Build vs. Buy vs. Hybrid — Strategic Decision Matrix": "बिल्ड बनाम बाय बनाम हाइब्रिड — रणनीतिक निर्णय मैट्रिक्स",
+    "Strategic Decision Matrix": "रणनीतिक निर्णय मैट्रिक्स",
+    "BizzMitra AI Tailored Platform": "बिजमित्र AI टेलर्ड प्लेटफॉर्म",
+    "Custom Ground-Up Microservices": "कस्टम ग्राउंड-अप माइक्रो-सर्विसेज",
+    "Off-the-shelf Generic Enterprise SaaS": "ऑफ-द-शेल्फ जेनेरिक एंटरप्राइज SaaS",
+    "COST EFFICIENCY": "लागत दक्षता",
+    "DELIVERY SPEED": "वितरण गति",
+    "CONTROL": "नियंत्रण और स्वामित्व",
+    "DOMAIN FIT": "डोमेन उपयुक्तता",
+    "Recommended": "अनुशंसित",
+    "Viable": "व्यवहार्य",
+    "Rejected": "अस्वीकृत",
+
+    // Governance, Review & Sign-Off
+    "Governance, Review & Stakeholder Sign-Off": "शासन, समीक्षा और हितधारक हस्ताक्षर",
+    "Enterprise Collaboration & Governance Hub": "उद्यम सहयोग और शासन केंद्र",
+    "In-Context Artifact Review Threads": "इन-कॉन्टेक्स्ट आर्टिफ़ैक्ट समीक्षा सूत्र",
+    "Collaborative notes and feedback pinned to technical blueprints.": "तकनीकी ब्लूप्रिंट से जुड़े सहयोगात्मक नोट्स और सुझाव।",
+    "Leave In-Context Blueprint Feedback": "ब्लूप्रिंट पर इन-कॉन्टेक्स्ट फीडबैक छोड़ें",
+    "Target Artifact": "लक्षित आर्टिफ़ैक्ट",
+    "Severity": "गंभीरता",
+    "Feedback / Suggestion": "सुझाव / प्रतिक्रिया",
+    "Post Comment": "टिप्पणी पोस्ट करें",
+    "Cross-Functional Stakeholder Sign-Offs": "क्रॉस-फंक्शनल हितधारक हस्ताक्षर",
+    "Sign-Off Progress": "हस्ताक्षर प्रगति",
+    "Review Comments": "समीक्षा टिप्पणियां",
+    "Audit Trail Entries": "ऑडिट ट्रेल प्रविष्टियां",
+    "Governance Compliance": "शासन अनुपालन",
+    "Approved": "स्वीकृत",
+    "Signed": "हस्ताक्षरित",
+    "Mark Draft": "ड्राफ्ट चिह्नित करें",
+    "Submit for Review": "समीक्षा के लिए जमा करें",
+    "Approve Blueprint": "ब्लूप्रिंट स्वीकृत करें",
+
+    // AI Copilot & Chat
+    "Blueprint Copilot": "ब्लूप्रिंट को-पायलट",
+    "Live Grounded": "लाइव कनेक्टेड",
+    "Chat History": "चैट इतिहास",
+    "New Chat": "नई चैट",
+    "Ask about your risks, timeline, budget...": "अपने जोखिम, समयसीमा, बजट के बारे में पूछें...",
+    "Live metered • Deducts per token": "लाइव मीटर्ड • टोकन अनुसार कटौती",
+    "Multi-session memory • Deducts per token": "मल्टी-सत्र मेमोरी • टोकन अनुसार कटौती",
+    "Analyzing blueprint data…": "ब्लूप्रिंट डेटा का विश्लेषण हो रहा है…",
+
+    // Common Actions, Billing & Modals
     "AI Credit Wallet": "AI क्रेडिट वॉलेट",
     "Current Balance": "वर्तमान शेष",
+    "Monthly Quota": "मासिक कोटा",
+    "5-Hour Throttle Ceiling": "5-घंटे की थ्रॉटल सीमा",
+    "7-Day Rolling Weekly Ceiling": "7-दिवसीय साप्ताहिक सीमा",
     "Subscription Tiers": "सदस्यता योजनाएं",
     "Current Plan": "वर्तमान योजना",
     "Pay & Upgrade": "भुगतान करें और अपग्रेड करें",
     "Appearance & Theme": "दिखावट (थीम)",
     "Language & Multilingual Support": "भाषा और बहुभाषी समर्थन",
     "Export Defaults": "निर्यात डिफ़ॉल्ट",
-    "Razorpay Payment Gateway": "रेज़रपे भुगतान गेटवे",
-    "Single workspace": "एकल कार्यक्षेत्र",
-    "Unlimited workspaces": "असीमित कार्यक्षेत्र",
     "Free Starter": "मुफ़्त स्टार्टर",
     "Growth Pro": "ग्रोथ प्रो",
     "Enterprise Scale": "एंटरप्राइज स्केल",
-    "Top-up Credits": "क्रेडिट जोड़ें",
-    "Profile": "प्रोफ़ाइल",
+    "Top-up Credits": "क्रेडिट जोड़ें (टॉप-अप)",
+    "Profile": "उपयोगकर्ता प्रोफ़ाइल",
+    "Save": "सहेजें",
+    "Cancel": "रद्द करें",
+    "Download": "डाउनलोड करें",
+    "Close": "बंद करें",
+    "Back": "पीछे जाएं",
+    "Next": "आगे बढ़ें",
+    "Skip": "छोड़ें (Skip)",
   },
 
   gu: {
@@ -165,8 +269,12 @@ export const PHRASE_DICTIONARY: Record<
     "Go home": "હોમ પેજ પર જાઓ",
     "Page not found": "પેજ મળ્યું નથી",
 
-    // Landing Page
+    // Landing Page & Hero
     "From business problem to blueprint": "વ્યાપાર સમસ્યાથી અમલીકરણ બ્લૂપ્રિન્ટ સુધી",
+    "From Business Problem to Blueprint": "વ્યાપાર સમસ્યાથી અમલીકરણ બ્લૂપ્રિન્ટ સુધી",
+    "From Business Idea to Full Blueprint": "વ્યાપાર વિચારથી સંપૂર્ણ બ્લૂપ્રિન્ટ સુધી",
+    "Empowered by Autonomous Multi-Agent AI": "સ્વાયત્ત મલ્ટી-એજન્ટ AI દ્વારા સંચાલિત",
+    "Autonomous Multi-Agent Architecture": "સ્વાયત્ત મલ્ટી-એજન્ટ આર્કિટેક્ચર",
     "Describe a business problem": "વ્યાપાર સમસ્યાનું વર્ણન કરો",
     "Modules": "મોડ્યુલ્સ",
     "Why one workspace": "એક જ કાર્યસ્થળ શા માટે",
@@ -178,7 +286,7 @@ export const PHRASE_DICTIONARY: Record<
     "Interactive Talent Pipeline": "ટેલેન્ટ પાઇપલાઇન",
     "Enterprise Governance": "એન્ટરપ્રાઇઝ ગવર્નન્સ",
 
-    // Dashboard & Cockpit
+    // Dashboard, Cockpit & Widgets
     "Workspaces": "પ્રોજેક્ટ્સ (વર્કસ્પેસ)",
     "Active Projects": "સક્રિય પ્રોજેક્ટ્સ",
     "Saved Artifacts": "સાચવેલા દસ્તાવેજો",
@@ -194,120 +302,196 @@ export const PHRASE_DICTIONARY: Record<
     "Maturity Score": "પરિપક્વતા સ્કોર",
     "Recent Workspaces": "તાજેતરના વર્કસ્પેસ",
     "Search projects...": "પ્રોજેક્ટ્સ શોધો...",
+    "Search projects": "પ્રોજેક્ટ્સ શોધો",
     "Create New Workspace": "નવું વર્કસ્પેસ બનાવો",
     "Loading workspace...": "વર્કસ્પેસ લોડ થઈ રહ્યું છે...",
     "All projects & blueprints": "બધા પ્રોજેક્ટ્સ અને બ્લૂપ્રિન્ટ્સ",
+    "Flagged Open Risks": "ચિહ્નિત ખુલ્લા જોખમો",
+    "Total Risks": "કુલ જોખમો",
+    "Action Items": "આગળ વધવાનાં કાર્યો (Action Items)",
+    "Milestones": "માઇલસ્ટોન્સ",
+    "AI Copilot Assistant": "AI કો-પાયલટ સહાયક",
+    "Have questions about your blueprint?": "શું તમારા બ્લૂપ્રિન્ટ વિશે પ્રશ્નો છે?",
+    "Instant answers grounded on your Supabase artifacts.": "તમારા સુપાબેસ આર્ટિફેક્ટ્સ પર આધારિત ત્વરિત જવાબો.",
+    "Launch Copilot": "કો-પાયલટ શરૂ કરો",
+    "Review Risk Register": "જોખમ રજિસ્ટરની સમીક્ષા કરો",
+    "Inspect Sprints": "સ્પ્રિન્ટ્સ તપાસો",
+    "Top 3 Flagged Risks": "ટોચના ૩ ચિહ્નિત જોખમો",
+    "All Risks": "બધા જોખમો",
+    "Sprint Plan": "સ્પ્રિન્ટ યોજના",
+    "All Transformation Workspaces": "બધા ટ્રાન્સફોર્મેશન વર્કસ્પેસ (પ્રોજેક્ટ્સ)",
+    "All Transformation": "બધા ટ્રાન્સફોર્મેશન",
+    "Switch or create blueprints for client initiatives.": "ક્લાયન્ટ પ્રોજેક્ટ્સ માટે બ્લૂપ્રિન્ટ્સ સ્વિચ કરો અથવા નવા બનાવો.",
+    "Workspace Used": "વર્કસ્પેસ વપરાયેલ",
+    "New workspace": "નવું વર્કસ્પેસ",
+    "High Priority": "ઉચ્ચ પ્રાથમિકતા",
+    "Compliance Signoff Needed": "અનુપાલન સહી જરૂરી",
+    "Technical Risk": "ટેકનિકલ જોખમ",
+    "Geospatial Data Architect": "ભૂ-અવકાશીય ડેટા આર્કિટેક્ટ",
+    "Telematics Ingestion Engine": "ટેલિમેટિક્સ ઇન્જેશન એન્જિન",
+    "Circular & Polygon Warehouse Geofencing Engine": "ગોદામ જીઓફેન્સિંગ એન્જિન",
+    "Fleet Dispatch Command Map Visualizer": "ફ્લીટ ડિસ્પેચ કમાન્ડ મેપ",
 
-    // Workspace & Navigation
-    "Workspace & Intake": "કાર્યસ્થળ અને ઇન્ટેક",
+    // CRM, Shipments, Logistics & HR Fields
+    "Consignment": "કન્સાઇનમેન્ટ",
+    "Route & Cargo Spec": "રૂટ અને કાર્ગો વિગત",
+    "Metric": "મેટ્રિક",
+    "Stage (Click to advance)": "સ્ટેજ (આગળ વધવા ક્લિક કરો)",
+    "Stage": "સ્ટેજ",
+    "Rating": "રેટિંગ",
+    "Status": "સ્થિતિ",
+    "Notes": "નોંધ",
+    "Notice Period": "નોટિસ પીરિયડ",
+    "Expected CTC": "અપેક્ષિત સીટીસી",
+    "LinkedIn URL": "લિંક્ડઇન લિંક",
+    "Actions": "ક્રિયાઓ",
+    "Total Shipments": "કુલ શિપમેન્ટ્સ",
+    "In Pipeline": "પાઇપલાઇનમાં",
+    "Top Rated": "શ્રેષ્ઠ કરેલ",
+    "Avg. Rating": "સરેરાશ રેટિંગ",
+    "Avg Rating": "સરેરાશ રેટિંગ",
+    "Dispatched": "રવાના થયેલ (Dispatched)",
+    "In Transit": "ટ્રાન્ઝિટમાં (In Transit)",
+    "Customs / Hub": "કસ્ટમ્સ / હબ",
+    "Delivered": "ડિલિવર થયેલ",
+    "Active": "સક્રિય",
+    "Hired": "હાયર કરેલ",
+    "Add Consignment": "કન્સાઇનમેન્ટ ઉમેરો",
+    "Filters": "ફિલ્ટર્સ",
+    "Export CSV": "CSV નિકાસ કરો",
+    "Search by name, route & cargo spec, or email...": "નામ, રૂટ, કાર્ગો અથવા ઇમેઇલ દ્વારા શોધો...",
+    "CLINICAL STAFF & PHLEBOTOMIST DUTY CLOCK": "ક્લિનિકલ સ્ટાફ અને ફ્લેબોટોમિસ્ટ ડ્યુટી ક્લોક",
+    "Operational Shift Check-In / Check-Out": "શિફ્ટ ચેક-ઇન / ચેક-આઉટ",
+    "Punch In": "પંચ ઇન (શરૂ કરો)",
+    "Punch Out": "પંચ આઉટ (સમાપ્ત કરો)",
+    "Session elapsed": "સત્રનો વિતાવેલો સમય",
+    "Not clocked in": "ક્લોક-ઇન થયેલ નથી",
+    "Date": "તારીખ",
+    "Hours Worked": "કામના કલાકો",
+    "Staff / Field Agent": "સ્ટાફ / ફિલ્ડ એજન્ટ",
+    "Candidates": "ઉમેદવારો",
+
+    // Navigation & Chain Items
+    "Workspace & Intake": "વર્કસ્પેસ અને ઇનટેક",
     "Intelligence & Solution": "ઇન્ટેલિજન્સ અને સોલ્યુશન",
     "Systems & Design": "સિસ્ટમ્સ અને ડિઝાઇન",
     "Execution & Strategy": "અમલીકરણ અને વ્યૂહરચના",
     "Delivery & Governance": "ડિલિવરી અને ગવર્નન્સ",
     "Collaboration & Artifacts": "સહયોગ અને દસ્તાવેજો",
-    "Governance & Admin": "ગવર્નન્સ અને એડમિન",
-    "New Intake": "નવો ઇન્ટેક",
-    "AI Discovery": "AI ડિસ્કવરી",
+    "Governance & Admin": "વહીવટ અને નિયંત્રણ",
+    "New Intake": "નવું ઇનટેક",
+    "AI Discovery": "AI શોધ અને વિશ્લેષણ",
     "Solution Studio": "સોલ્યુશન સ્ટુડિયો",
-    "HR CRM": "HR CRM",
+    "HR CRM": "એચઆર સીઆરએમ",
     "Architecture": "સિસ્ટમ આર્કિટેક્ચર",
     "Process": "પ્રક્રિયા",
     "Process & BPMN": "પ્રક્રિયા અને BPMN",
     "UX Designer": "UX ડિઝાઇનર",
     "Data & APIs": "ડેટા અને API",
-    "Roadmap & ROI": "રોડમેપ અને ROI",
+    "Roadmap & ROI": "અમલીકરણ રોડમેપ",
     "Roadmap": "રોડમેપ",
-    "Transformation Insights": "આર્કિટેક્ચરલ સમજ",
-    "Artifact Map": "આર્ટિફેક્ટ નકશો",
-    "Governance & Review": "ગવર્નન્સ અને સમીક્ષા",
+    "Transformation Insights": "ટ્રાન્સફોર્મેશન ઇનસાઇટ્સ",
+    "Artifact Map": "આર્ટિફેક્ટ મેપ",
+    "Governance & Review": "ગવર્નન્સ અને રિવ્યુ",
     "Export Center": "નિકાસ કેન્દ્ર",
     "Admin Console": "એડમિન કન્સોલ",
     "Settings & Billing": "સેટિંગ્સ અને બિલિંગ",
-    "Settings & Monetization": "સેટિંગ્સ અને મોનેટાઇઝેશન",
+    "Settings & Monetization": "સેટિંગ્સ અને મુદ્રીકરણ",
     "Active Workspace": "સક્રિય વર્કસ્પેસ",
-    "Intake": "ઇન્ટેક",
-    "Discovery": "ડિસ્કવરી",
+    "Intake": "ઇનટેક",
+    "Discovery": "શોધ",
     "Solution": "સોલ્યુશન",
-    "CRM": "CRM",
+    "CRM": "સીઆરએમ",
     "Regenerate": "ફરીથી બનાવો",
     "Export": "નિકાસ કરો",
     "History": "ઇતિહાસ",
 
-    // Common Actions & Settings
-    "Save": "સાચવો",
-    "Cancel": "રદ કરો",
-    "Upload SOP / BRD": "SOP / BRD અપલોડ કરો",
-    "Upload": "અપલોડ કરો",
-    "Download": "ડાઉનલોડ કરો",
-    "Close": "બંધ કરો",
-    "Back": "પાછળ",
-    "Next": "આગળ",
-    "Submit": "સબમિટ કરો",
-    "Delete": "કાઢી નાખો",
-    "Edit": "સંપાદિત કરો",
-    "Rename": "નામ બદલો",
-    "Filter": "ફિલ્ટર",
-    "Search": "શોધો",
-    "Status": "સ્થિતિ",
-    "Actions": "ક્રિયાઓ",
-    "Role": "ભૂમિકા",
+    // Build vs Buy Decision Matrix
+    "Build vs. Buy vs. Hybrid — Strategic Decision Matrix": "બિલ્ડ વિ. બાય વિ. હાઇબ્રિડ — વ્યૂહાત્મક નિર્ણય મેટ્રિક્સ",
+    "Strategic Decision Matrix": "વ્યૂહાત્મક નિર્ણય મેટ્રિક્સ",
+    "BizzMitra AI Tailored Platform": "બિઝમિત્ર AI ટેલર્ડ પ્લેટફોર્મ",
+    "Custom Ground-Up Microservices": "કસ્ટમ ગ્રાઉન્ડ-અપ માઇક્રોસર્વિસિસ",
+    "Off-the-shelf Generic Enterprise SaaS": "ઑફ-ધ-શેલ્ફ જેનેરિક SaaS",
+    "COST EFFICIENCY": "ખર્ચ કાર્યક્ષમતા",
+    "DELIVERY SPEED": "ડિલિવરી ઝડપ",
+    "CONTROL": "નિયંત્રણ અને માલિકી",
+    "DOMAIN FIT": "યોગ્યતા",
+    "Recommended": "ભલામણ કરેલ",
+    "Viable": "શક્ય",
+    "Rejected": "નકારવામાં આવેલ",
+
+    // Governance, Review & Sign-Off
+    "Governance, Review & Stakeholder Sign-Off": "ગવર્નન્સ, રિવ્યુ અને સાઇન-ઑફ",
+    "Enterprise Collaboration & Governance Hub": "એન્ટરપ્રાઇઝ સહયોગ અને ગવર્નન્સ હબ",
+    "In-Context Artifact Review Threads": "ઇન-કોન્ટેક્સ્ટ રિવ્યુ થ્રેડ્સ",
+    "Leave In-Context Blueprint Feedback": "બ્લૂપ્રિન્ટ પર ફીડબેક આપો",
+    "Target Artifact": "લક્ષ્ય આર્ટિફેક્ટ",
+    "Severity": "ગંભીરતા",
+    "Feedback / Suggestion": "સૂચન / પ્રતિભાવ",
+    "Post Comment": "ટિપ્પણી પોસ્ટ કરો",
+    "Cross-Functional Stakeholder Sign-Offs": "સ્ટેકહોલ્ડર સાઇન-ઑફ",
+    "Sign-Off Progress": "સાઇન-ઑફ પ્રગતિ",
+    "Approved": "મંજૂર થયેલ",
+    "Signed": "સહી કરેલ",
+    "Mark Draft": "ડ્રાફ્ટ ચિહ્નિત કરો",
+    "Submit for Review": "સમીક્ષા માટે સબમિટ કરો",
+    "Approve Blueprint": "બ્લૂપ્રિન્ટ મંજૂર કરો",
+
+    // AI Copilot & Chat
+    "Blueprint Copilot": "બ્લૂપ્રિન્ટ કો-પાયલટ",
+    "Live Grounded": "લાઇવ કનેક્ટેડ",
+    "Chat History": "ચેટ ઇતિહાસ",
+    "New Chat": "નવી ચેટ",
+    "Ask about your risks, timeline, budget...": "તમારા જોખમો, સમયરેખા, બજેટ વિશે પૂછો...",
+    "Live metered • Deducts per token": "લાઇવ મીટર કરેલ • ટોકન દીઠ કપાત",
+    "Multi-session memory • Deducts per token": "મલ્ટી-સત્ર મેમરી • ટોકન દીઠ કપાત",
+    "Analyzing blueprint data…": "બ્લૂપ્રિન્ટ ડેટાનું વિશ્લેષણ થઈ રહ્યું છે…",
+
+    // Common Actions, Billing & Modals
     "AI Credit Wallet": "AI ક્રેડિટ વૉલેટ",
-    "Current Balance": "કુલ બેલેન્સ",
-    "Subscription Tiers": "સબ્સ્ક્રિપ્શન પ્લાન્સ",
-    "Current Plan": "હાલનો પ્લાન",
-    "Pay & Upgrade": "ચૂકવો અને અપગ્રેડ કરો",
+    "Current Balance": "હાલનું બેલેન્સ",
+    "Monthly Quota": "માસિક ક્વોટા",
+    "5-Hour Throttle Ceiling": "5-કલાકની થ્રોટલ મર્યાદા",
+    "7-Day Rolling Weekly Ceiling": "7-દિવસની સાપ્તાહિક મર્યાદા",
+    "Subscription Tiers": "સબ્સ્ક્રિપ્શન પ્લાન",
+    "Current Plan": "વર્તમાન પ્લાન",
+    "Pay & Upgrade": "ચુકવણી કરો અને અપગ્રેડ કરો",
     "Appearance & Theme": "થીમ અને દેખાવ",
-    "Language & Multilingual Support": "ભાષા અને બહુભાષી સપોર્ટ",
-    "Export Defaults": "નિકાસ ડિફૉલ્ટ",
-    "Razorpay Payment Gateway": "રેઝરપે પેમેન્ટ ગેટવે",
-    "Single workspace": "એક જ વર્કસ્પેસ",
-    "Unlimited workspaces": "અમર્યાદિત વર્કસ્પેસ",
+    "Language & Multilingual Support": "ભાષા સપોર્ટ",
+    "Export Defaults": "ડિફોલ્ટ નિકાસ",
     "Free Starter": "ફ્રી સ્ટાર્ટર",
     "Growth Pro": "ગ્રોથ પ્રો",
     "Enterprise Scale": "એન્ટરપ્રાઇઝ સ્કેલ",
-    "Top-up Credits": "ક્રેડિટ ઉમેરો",
+    "Top-up Credits": "ક્રેડિટ્સ ઉમેરો",
     "Profile": "પ્રોફાઇલ",
+    "Save": "સાચવો",
+    "Cancel": "રદ કરો",
+    "Download": "ડાઉનલોડ કરો",
+    "Close": "બંધ કરો",
+    "Back": "પાછળ જાઓ",
+    "Next": "આગળ વધો",
+    "Skip": "છોડો (Skip)",
   },
 
   es: {
     "Welcome back": "Bienvenido de nuevo",
-    "Pick up your workspace where you left it.": "Retoma tu espacio de trabajo donde lo dejaste.",
+    "Pick up your workspace where you left it.": "Continúa tu espacio de trabajo donde lo dejaste.",
     "Continue with Google": "Continuar con Google",
-    "or": "o",
     "Email": "Correo electrónico",
     "Password": "Contraseña",
     "Sign in": "Iniciar sesión",
-    "Signing in…": "Iniciando sesión…",
-    "Signing in...": "Iniciando sesión…",
-    "Forgot password?": "¿Olvidaste tu contraseña?",
-    "New here?": "¿Eres nuevo aquí?",
     "Create an account": "Crear una cuenta",
-    "Start your first blueprint": "Inicia tu primer plano",
-    "One workspace, free forever. No card needed.": "Un espacio de trabajo, gratis para siempre. Sin tarjeta.",
-    "Full name": "Nombre completo",
-    "At least 6 characters": "Al menos 6 caracteres",
-    "Create account": "Crear cuenta",
-    "Creating account…": "Creando cuenta…",
-    "Already have an account?": "¿Ya tienes una cuenta?",
-    "Sign up": "Registrarse",
-    "Log in": "Iniciar sesión",
-    "Sign out": "Cerrar sesión",
-    "Go home": "Ir al inicio",
-    "Page not found": "Página no encontrada",
-    "Workspaces": "Espacios de Trabajo",
-    "Active Projects": "Proyectos Activos",
-    "Saved Artifacts": "Artefactos Guardados",
+    "Start your first blueprint": "Comienza tu primer anteproyecto",
+    "Workspaces": "Espacios de trabajo",
     "Live Command Center": "Centro de Comando en Vivo",
-    "Active Blueprint": "Plano Activo",
-    "Transformation Cockpit": "Panel de Transformación",
-    "Ask Copilot": "Preguntar a Copilot",
-    "View Full Roadmap": "Ver Hoja de Ruta Completa",
-    "Blueprint Completion": "Finalización del Plano",
-    "In Progress": "En Progreso",
-    "Audit Ready": "Listo para Auditoría",
+    "Transformation Cockpit": "Cabina de Transformación",
+    "Ask Copilot": "Preguntar al Copiloto",
+    "View Full Roadmap": "Ver hoja de ruta completa",
+    "Blueprint Completion": "Finalización del anteproyecto",
+    "In Progress": "En progreso",
+    "Audit Ready": "Listo para auditoría",
     "Save": "Guardar",
     "Cancel": "Cancelar",
-    "Upload SOP / BRD": "Subir SOP / BRD",
     "Download": "Descargar",
     "Close": "Cerrar",
     "Back": "Atrás",
@@ -316,221 +500,174 @@ export const PHRASE_DICTIONARY: Record<
     "Current Balance": "Saldo Actual",
     "Subscription Tiers": "Planes de Suscripción",
     "Current Plan": "Plan Actual",
-    "Pay & Upgrade": "Pagar y Mejorar",
-    "Profile": "Perfil",
+    "Pay & Upgrade": "Pagar y Actualizar",
+    "Operational Shift Check-In / Check-Out": "Registro de Turno Operativo",
+    "Punch In": "Registrar Entrada",
+    "Punch Out": "Registrar Salida",
+    "Session elapsed": "Tiempo transcurrido",
+    "Not clocked in": "No registrado",
+    "Consignment": "Envío / Consignación",
+    "Route & Cargo Spec": "Ruta y Carga",
+    "Status": "Estado",
+    "Rating": "Calificación",
+    "Notice Period": "Período de Preaviso",
+    "Expected CTC": "Salario Esperado",
+    "Actions": "Acciones",
+    "Total Shipments": "Envíos Totales",
+    "In Pipeline": "En Proceso",
+    "Dispatched": "Despachado",
+    "In Transit": "En Tránsito",
+    "Delivered": "Entregado",
+    "Flagged Open Risks": "Riesgos Abiertos",
+    "Total Risks": "Riesgos Totales",
+    "Action Items": "Acciones Clave",
+    "Milestones": "Hitos",
+    "Governance, Review & Stakeholder Sign-Off": "Gobernanza y Aprobación",
+    "Approved": "Aprobado",
+    "Recommended": "Recomendado",
+    "Viable": "Viable",
+    "Rejected": "Rechazado",
   },
 
   fr: {
-    "Welcome back": "Bienvenue",
+    "Welcome back": "Bon retour",
     "Pick up your workspace where you left it.": "Reprenez votre espace de travail là où vous l'avez laissé.",
     "Continue with Google": "Continuer avec Google",
-    "or": "ou",
     "Email": "E-mail",
     "Password": "Mot de passe",
     "Sign in": "Se connecter",
-    "Signing in…": "Connexion en cours…",
-    "Signing in...": "Connexion en cours…",
-    "Forgot password?": "Mot de passe oublié ?",
-    "New here?": "Nouveau ici ?",
     "Create an account": "Créer un compte",
-    "Start your first blueprint": "Lancez votre premier projet",
-    "One workspace, free forever. No card needed.": "Un espace, gratuit pour toujours. Aucune carte requise.",
-    "Full name": "Nom complet",
-    "At least 6 characters": "Au moins 6 caractères",
-    "Create account": "Créer un compte",
-    "Creating account…": "Création en cours…",
-    "Already have an account?": "Vous avez déjà un compte ?",
-    "Sign up": "S'inscrire",
-    "Log in": "Connexion",
-    "Sign out": "Se déconnecter",
-    "Go home": "Retour à l'accueil",
-    "Page not found": "Page non trouvée",
-    "Workspaces": "Espaces de Travail",
-    "Active Projects": "Projets Actifs",
-    "Saved Artifacts": "Artefacts Enregistrés",
-    "Live Command Center": "Centre de Commande",
-    "Active Blueprint": "Plan Actif",
+    "Workspaces": "Espaces de travail",
     "Transformation Cockpit": "Cockpit de Transformation",
-    "Ask Copilot": "Demander à Copilot",
-    "View Full Roadmap": "Voir la Feuille de Route",
-    "Blueprint Completion": "Achèvement du Plan",
-    "In Progress": "En cours",
-    "Audit Ready": "Prêt pour Audit",
+    "Ask Copilot": "Demander au Copilote",
+    "View Full Roadmap": "Voir la feuille de route",
     "Save": "Enregistrer",
     "Cancel": "Annuler",
-    "Upload SOP / BRD": "Téléverser SOP / BRD",
     "Download": "Télécharger",
     "Close": "Fermer",
-    "Back": "Retour",
-    "Next": "Suivant",
     "AI Credit Wallet": "Portefeuille de Crédits IA",
     "Current Balance": "Solde Actuel",
-    "Subscription Tiers": "Abonnements",
+    "Subscription Tiers": "Niveaux d'abonnement",
     "Current Plan": "Plan Actuel",
-    "Pay & Upgrade": "Payer et Mettre à Niveau",
-    "Profile": "Profil",
+    "Operational Shift Check-In / Check-Out": "Pointage des quarts de travail",
+    "Punch In": "Pointer Entrée",
+    "Punch Out": "Pointer Sortie",
+    "Consignment": "Expédition",
+    "Status": "Statut",
+    "Actions": "Actions",
+    "Total Shipments": "Expéditions Totales",
+    "Approved": "Approuvé",
+    "Recommended": "Recommandé",
   },
 
   de: {
     "Welcome back": "Willkommen zurück",
-    "Pick up your workspace where you left it.": "Setzen Sie Ihre Arbeit dort fort, wo Sie aufgehört haben.",
-    "Continue with Google": "Weiter mit Google",
-    "or": "oder",
+    "Continue with Google": "Mit Google fortfahren",
     "Email": "E-Mail",
     "Password": "Passwort",
     "Sign in": "Anmelden",
-    "Signing in…": "Anmeldung läuft…",
-    "Signing in...": "Anmeldung läuft…",
-    "Forgot password?": "Passwort vergessen?",
-    "New here?": "Neu hier?",
     "Create an account": "Konto erstellen",
-    "Start your first blueprint": "Erstellen Sie Ihren ersten Plan",
-    "One workspace, free forever. No card needed.": "Ein Arbeitsbereich, für immer kostenlos. Keine Karte nötig.",
-    "Full name": "Vollständiger Name",
-    "At least 6 characters": "Mindestens 6 Zeichen",
-    "Create account": "Konto anlegen",
-    "Creating account…": "Konto wird erstellt…",
-    "Already have an account?": "Haben Sie bereits ein Konto?",
-    "Sign up": "Registrieren",
-    "Log in": "Einloggen",
-    "Sign out": "Abmelden",
-    "Go home": "Zur Startseite",
-    "Page not found": "Seite nicht gefunden",
     "Workspaces": "Arbeitsbereiche",
-    "Active Projects": "Aktive Projekte",
-    "Saved Artifacts": "Gespeicherte Artefakte",
-    "Live Command Center": "Live-Kommandozentrale",
-    "Active Blueprint": "Aktiver Plan",
     "Transformation Cockpit": "Transformations-Cockpit",
     "Ask Copilot": "Copilot fragen",
-    "View Full Roadmap": "Vollständigen Fahrplan ansehen",
-    "Blueprint Completion": "Plan-Fertigstellung",
-    "In Progress": "In Bearbeitung",
-    "Audit Ready": "Auditbereit",
     "Save": "Speichern",
     "Cancel": "Abbrechen",
-    "Upload SOP / BRD": "SOP / BRD hochladen",
     "Download": "Herunterladen",
-    "Close": "Schließen",
-    "Back": "Zurück",
-    "Next": "Weiter",
-    "AI Credit Wallet": "KI-Guthaben-Konto",
+    "AI Credit Wallet": "KI-Guthaben-Wallet",
     "Current Balance": "Aktuelles Guthaben",
-    "Subscription Tiers": "Abonnements",
-    "Current Plan": "Aktueller Plan",
-    "Pay & Upgrade": "Bezahlen & Upgraden",
-    "Profile": "Profil",
+    "Subscription Tiers": "Abonnement-Stufen",
+    "Operational Shift Check-In / Check-Out": "Schicht-Einchecken / Auschecken",
+    "Punch In": "Einstempeln",
+    "Punch Out": "Ausstempeln",
+    "Consignment": "Sendung",
+    "Status": "Status",
+    "Actions": "Aktionen",
+    "Total Shipments": "Gesamtsendungen",
+    "Approved": "Genehmigt",
+    "Recommended": "Empfohlen",
   },
 
   ja: {
-    "Welcome back": "お帰りなさい",
-    "Pick up your workspace where you left it.": "前回の続きからワークスペースを再開します。",
+    "Welcome back": "おかえりなさい",
     "Continue with Google": "Googleで続行",
-    "or": "または",
     "Email": "メールアドレス",
     "Password": "パスワード",
     "Sign in": "サインイン",
-    "Signing in…": "サインイン中…",
-    "Signing in...": "サインイン中…",
-    "Forgot password?": "パスワードをお忘れですか？",
-    "New here?": "初めてのご利用ですか？",
     "Create an account": "アカウントを作成",
-    "Start your first blueprint": "最初のブループリントを作成",
-    "One workspace, free forever. No card needed.": "1つのワークスペース、ずっと無料。カード不要。",
-    "Full name": "氏名",
-    "At least 6 characters": "6文字以上",
-    "Create account": "アカウント作成",
-    "Creating account…": "アカウント作成中…",
-    "Already have an account?": "既にアカウントをお持ちですか？",
-    "Sign up": "新規登録",
-    "Log in": "ログイン",
-    "Sign out": "サインアウト",
-    "Go home": "ホームへ戻る",
-    "Page not found": "ページが見つかりません",
-    "Workspaces": "ワークスペース一覧",
-    "Active Projects": "アクティブプロジェクト",
-    "Saved Artifacts": "保存された成果物",
-    "Live Command Center": "ライブコマンドセンター",
-    "Active Blueprint": "アクティブブループリント",
+    "Workspaces": "ワークスペース",
     "Transformation Cockpit": "変革コックピット",
     "Ask Copilot": "Copilotに質問",
-    "View Full Roadmap": "ロードマップ全体を表示",
-    "Blueprint Completion": "ブループリント完成度",
-    "In Progress": "進行中",
-    "Audit Ready": "監査準備完了",
     "Save": "保存",
     "Cancel": "キャンセル",
-    "Upload SOP / BRD": "SOP / BRD アップロード",
     "Download": "ダウンロード",
-    "Close": "閉じる",
-    "Back": "戻る",
-    "Next": "次へ",
     "AI Credit Wallet": "AIクレジットウォレット",
     "Current Balance": "現在の残高",
     "Subscription Tiers": "サブスクリプションプラン",
-    "Current Plan": "現在のプラン",
-    "Pay & Upgrade": "支払いとアップグレード",
-    "Profile": "プロフィール",
+    "Operational Shift Check-In / Check-Out": "シフト出勤 / 退勤",
+    "Punch In": "出勤打刻",
+    "Punch Out": "退勤打刻",
+    "Consignment": "出荷・委託",
+    "Status": "ステータス",
+    "Actions": "アクション",
+    "Total Shipments": "総出荷数",
+    "Approved": "承認済み",
+    "Recommended": "推奨",
   },
 
   ar: {
-    "Welcome back": "مرحبًا بعودتك",
-    "Pick up your workspace where you left it.": "استأنف مساحة عملك من حيث توقفت.",
+    "Welcome back": "مرحبًا بك مجددًا",
     "Continue with Google": "المتابعة باستخدام Google",
-    "or": "أو",
     "Email": "البريد الإلكتروني",
     "Password": "كلمة المرور",
     "Sign in": "تسجيل الدخول",
-    "Signing in…": "جاري تسجيل الدخول…",
-    "Signing in...": "جاري تسجيل الدخول…",
-    "Forgot password?": "هل نسيت كلمة المرور؟",
-    "New here?": "جديد هنا؟",
     "Create an account": "إنشاء حساب",
-    "Start your first blueprint": "ابدأ مخططك الأول",
-    "One workspace, free forever. No card needed.": "مساحة عمل واحدة مجانًا إلى الأبد. لا حاجة لبطاقة ائتمان.",
-    "Full name": "الاسم الكامل",
-    "At least 6 characters": "6 أحرف على الأقل",
-    "Create account": "إنشاء الحساب",
-    "Creating account…": "جاري إنشاء الحساب…",
-    "Already have an account?": "هل لديك حساب بالفعل؟",
-    "Sign up": "إنشاء حساب",
-    "Log in": "تسجيل الدخول",
-    "Sign out": "تسجيل الخروج",
-    "Go home": "الصفحة الرئيسية",
-    "Page not found": "الصفحة غير موجودة",
     "Workspaces": "مساحات العمل",
-    "Active Projects": "المشاريع النشطة",
-    "Saved Artifacts": "الأصول المحفوظة",
-    "Live Command Center": "مركز القيادة المباشر",
-    "Active Blueprint": "المخطط النشط",
     "Transformation Cockpit": "قمرة قيادة التحول",
     "Ask Copilot": "اسأل المساعد الذكي",
-    "View Full Roadmap": "عرض خريطة الطريق الكاملة",
-    "Blueprint Completion": "اكتمال المخطط",
-    "In Progress": "قيد التنفيذ",
-    "Audit Ready": "جاهز للتدقيق",
     "Save": "حفظ",
     "Cancel": "إلغاء",
-    "Upload SOP / BRD": "رفع ملف SOP / BRD",
     "Download": "تنزيل",
-    "Close": "إغلاق",
-    "Back": "رجوع",
-    "Next": "التالي",
     "AI Credit Wallet": "محفظة نقاط الذكاء الاصطناعي",
     "Current Balance": "الرصيد الحالي",
     "Subscription Tiers": "خطط الاشتراك",
-    "Current Plan": "الخطة الحالية",
-    "Pay & Upgrade": "الدفع والترقية",
-    "Profile": "الملف الشخصي",
+    "Operational Shift Check-In / Check-Out": "تسجيل الحضور / الانصراف للوردية",
+    "Punch In": "تسجيل دخول",
+    "Punch Out": "تسجيل خروج",
+    "Consignment": "الشحنة",
+    "Status": "الحالة",
+    "Actions": "الإجراءات",
+    "Total Shipments": "إجمالي الشحنات",
+    "Approved": "تمت الموافقة",
+    "Recommended": "موصى به",
   },
 };
 
-// Store original text of nodes so we never lose original English content
+function escapeRegExp(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Cached sorted dictionary keys for longest-first matching
+const sortedDictionaryCache = new Map<SupportedLanguage, Array<[string, string]>>();
+
+function getSortedDictionary(lang: SupportedLanguage): Array<[string, string]> {
+  if (lang === "en") return [];
+  if (sortedDictionaryCache.has(lang)) {
+    return sortedDictionaryCache.get(lang)!;
+  }
+  const dict = PHRASE_DICTIONARY[lang as Exclude<SupportedLanguage, "en">] || {};
+  const entries = Object.entries(dict).sort((a, b) => b[0].length - a[0].length);
+  sortedDictionaryCache.set(lang, entries);
+  return entries;
+}
+
+// Maps to store original English text nodes and attributes
 const originalTextMap = new WeakMap<Node, string>();
-const originalPlaceholderMap = new WeakMap<Element, string>();
+const originalAttrMap = new WeakMap<Element, Record<string, string>>();
 
 /**
  * Translates a single text string according to current language dictionary.
+ * Performs case-insensitive matching so UPPERCASE headers (e.g. CONSIGNMENT, FLAGGED RISKS)
+ * are accurately translated.
  */
 export function translateText(text: string, lang: SupportedLanguage): string {
   if (lang === "en" || !text) return text;
@@ -541,12 +678,12 @@ export function translateText(text: string, lang: SupportedLanguage): string {
   const trimmed = text.trim();
   if (!trimmed) return text;
 
-  // 1. Direct match
+  // 1. Direct exact match
   if (dict[trimmed]) {
     return text.replace(trimmed, dict[trimmed]);
   }
 
-  // 2. Case-insensitive lookup
+  // 2. Case-insensitive exact match for standalone words/phrases
   const lower = trimmed.toLowerCase();
   for (const [enKey, val] of Object.entries(dict)) {
     if (enKey.toLowerCase() === lower) {
@@ -554,89 +691,142 @@ export function translateText(text: string, lang: SupportedLanguage): string {
     }
   }
 
-  // 3. Multi-word phrase replacement within longer sentences
+  // 3. Multi-word & substring phrase replacement (longest matches first)
+  const sorted = getSortedDictionary(lang);
   let result = text;
-  for (const [enKey, val] of Object.entries(dict)) {
-    if (enKey.length >= 4 && result.includes(enKey)) {
-      result = result.split(enKey).join(val);
+
+  for (const [enKey, val] of sorted) {
+    if (enKey.length >= 2) {
+      const escaped = escapeRegExp(enKey);
+      // Case-insensitive boundary or substring match
+      const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+      if (regex.test(result)) {
+        result = result.replace(regex, val);
+      } else if (result.toLowerCase().includes(enKey.toLowerCase()) && enKey.length >= 4) {
+        const genericRegex = new RegExp(escaped, "gi");
+        result = result.replace(genericRegex, val);
+      }
     }
   }
 
   return result;
 }
 
+let isCurrentlyTranslating = false;
+
 /**
- * Recursively walks the DOM and replaces visible text nodes with translated equivalents.
+ * Recursively walks the DOM and replaces all visible text nodes, input placeholders,
+ * buttons, tooltips, and attributes with translated equivalents.
  */
 export function runUniversalDomTranslation(targetLang: SupportedLanguage): void {
-  if (typeof document === "undefined" || !document.body) return;
+  if (typeof document === "undefined" || !document.body || isCurrentlyTranslating) return;
 
+  isCurrentlyTranslating = true;
   const isEnglish = targetLang === "en";
 
-  const walk = (node: Node) => {
-    // Ignore script, style, code, and svg non-text tags
-    const parent = node.parentElement;
-    if (parent) {
-      const tag = parent.tagName.toLowerCase();
-      if (tag === "script" || tag === "style" || tag === "noscript") {
-        return;
-      }
-    }
-
-    if (node.nodeType === Node.TEXT_NODE) {
-      const currentVal = node.nodeValue || "";
-      if (!currentVal.trim()) return;
-
-      if (!originalTextMap.has(node)) {
-        originalTextMap.set(node, currentVal);
-      }
-
-      const original = originalTextMap.get(node) || currentVal;
-
-      if (isEnglish) {
-        if (node.nodeValue !== original) {
-          node.nodeValue = original;
-        }
-      } else {
-        const translated = translateText(original, targetLang);
-        if (translated !== node.nodeValue) {
-          node.nodeValue = translated;
+  try {
+    const walk = (node: Node) => {
+      // Ignore script, style, code blocks, and SVG paths
+      const parent = node.parentElement;
+      if (parent) {
+        const tag = parent.tagName.toLowerCase();
+        if (
+          tag === "script" ||
+          tag === "style" ||
+          tag === "noscript" ||
+          tag === "code" ||
+          tag === "pre"
+        ) {
+          return;
         }
       }
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      const el = node as HTMLElement;
 
-      // Handle input / textarea placeholders
-      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
-        const input = el as HTMLInputElement | HTMLTextAreaElement;
-        if (input.placeholder) {
-          if (!originalPlaceholderMap.has(input)) {
-            originalPlaceholderMap.set(input, input.placeholder);
+      // 1. Handle TEXT_NODE
+      if (node.nodeType === Node.TEXT_NODE) {
+        const currentVal = node.nodeValue || "";
+        if (!currentVal.trim()) return;
+
+        if (!originalTextMap.has(node)) {
+          originalTextMap.set(node, currentVal);
+        }
+
+        const original = originalTextMap.get(node) || currentVal;
+
+        if (isEnglish) {
+          if (node.nodeValue !== original) {
+            node.nodeValue = original;
           }
-          const origPl = originalPlaceholderMap.get(input) || input.placeholder;
-          if (isEnglish) {
-            input.placeholder = origPl;
-          } else {
-            input.placeholder = translateText(origPl, targetLang);
+        } else {
+          const translated = translateText(original, targetLang);
+          if (translated !== node.nodeValue) {
+            node.nodeValue = translated;
           }
         }
       }
+      // 2. Handle ELEMENT_NODE attributes (placeholders, values, tooltips, options)
+      else if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement;
+        const tag = el.tagName.toLowerCase();
 
-      // Walk children
-      for (let child = el.firstChild; child; child = child.nextSibling) {
-        walk(child);
+        // Attribute caching
+        if (!originalAttrMap.has(el)) {
+          originalAttrMap.set(el, {});
+        }
+        const cache = originalAttrMap.get(el)!;
+
+        // Placeholders on input / textarea
+        if (tag === "input" || tag === "textarea") {
+          const input = el as HTMLInputElement | HTMLTextAreaElement;
+          if (input.placeholder) {
+            if (!cache["placeholder"]) cache["placeholder"] = input.placeholder;
+            const origPl = cache["placeholder"];
+            input.placeholder = isEnglish ? origPl : translateText(origPl, targetLang);
+          }
+
+          // Input button values
+          if (input.type === "button" || input.type === "submit" || input.type === "reset") {
+            if (input.value) {
+              if (!cache["value"]) cache["value"] = input.value;
+              const origVal = cache["value"];
+              input.value = isEnglish ? origVal : translateText(origVal, targetLang);
+            }
+          }
+        }
+
+        // Title tooltips
+        if (el.title) {
+          if (!cache["title"]) cache["title"] = el.title;
+          const origTitle = cache["title"];
+          el.title = isEnglish ? origTitle : translateText(origTitle, targetLang);
+        }
+
+        // Aria-labels
+        const ariaLabel = el.getAttribute("aria-label");
+        if (ariaLabel) {
+          if (!cache["aria-label"]) cache["aria-label"] = ariaLabel;
+          const origAria = cache["aria-label"];
+          el.setAttribute("aria-label", isEnglish ? origAria : translateText(origAria, targetLang));
+        }
+
+        // Walk children
+        for (let child = el.firstChild; child; child = child.nextSibling) {
+          walk(child);
+        }
       }
-    }
-  };
+    };
 
-  walk(document.body);
+    walk(document.body);
+  } finally {
+    isCurrentlyTranslating = false;
+  }
 }
 
 let observerInstance: MutationObserver | null = null;
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Initializes continuous DOM translation observer so newly mounted views,
- * dialogs, tooltips, and router pages automatically translate.
+ * dialogs, tooltips, and router pages automatically translate smoothly.
  */
 export function initUniversalDomObserver(): void {
   if (typeof window === "undefined" || typeof MutationObserver === "undefined") return;
@@ -646,14 +836,32 @@ export function initUniversalDomObserver(): void {
   }
 
   const trigger = () => {
-    const lang = getCurrentLanguage();
-    if (lang !== "en") {
-      runUniversalDomTranslation(lang);
-    }
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const lang = getCurrentLanguage();
+      if (lang !== "en") {
+        runUniversalDomTranslation(lang);
+      }
+    }, 40);
   };
 
-  observerInstance = new MutationObserver(() => {
-    trigger();
+  observerInstance = new MutationObserver((mutations) => {
+    if (isCurrentlyTranslating) return;
+    // Only trigger if meaningful nodes were added or modified
+    let hasRelevantChanges = false;
+    for (const m of mutations) {
+      if (m.type === "childList" && (m.addedNodes.length > 0 || m.removedNodes.length > 0)) {
+        hasRelevantChanges = true;
+        break;
+      }
+      if (m.type === "characterData") {
+        hasRelevantChanges = true;
+        break;
+      }
+    }
+    if (hasRelevantChanges) {
+      trigger();
+    }
   });
 
   observerInstance.observe(document.body, {

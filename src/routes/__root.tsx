@@ -18,6 +18,7 @@ import { PageTransition } from "@/components/motion/primitives";
 import { Toaster } from "@/components/ui/sonner";
 import { getCurrentLanguage, triggerGoogleTranslate } from "@/lib/i18n";
 import { initUniversalDomObserver, runUniversalDomTranslation } from "@/lib/auto-translator";
+import { initDynamicApiTranslator, translatePageViaApi } from "@/lib/dynamic-api-translator";
 import { initNative } from "@/lib/native-bridge";
 
 
@@ -238,16 +239,17 @@ function RootComponent() {
 
   useEffect(() => {
     initUniversalDomObserver();
+    initDynamicApiTranslator();
   }, []);
 
   useEffect(() => {
     const cur = getCurrentLanguage();
     if (cur !== "en") {
-      runUniversalDomTranslation(cur);
+      void translatePageViaApi(cur);
       const timer = setTimeout(() => {
-        runUniversalDomTranslation(cur);
+        void translatePageViaApi(cur);
         triggerGoogleTranslate(cur);
-      }, 100);
+      }, 150);
       return () => clearTimeout(timer);
     }
     return undefined;
