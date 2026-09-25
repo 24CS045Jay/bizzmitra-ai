@@ -23,6 +23,7 @@ import {
   ArrowRight,
   Home,
   Shield,
+  Rocket,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -48,6 +49,7 @@ import {
 import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
 import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
 import { completeDiscoveryAndUnlockAll } from "@/lib/workspace-stage-gate";
+import { CreditsBadge } from "@/components/CreditsBadge";
 
 const NAV = [
   { to: "/dashboard", label: "Workspaces", icon: LayoutGrid },
@@ -63,6 +65,7 @@ const NAV = [
   { to: "/workspace/insights", label: "Transformation", icon: BarChart3 },
   { to: "/workspace/map", label: "Artifact Map", icon: GitBranch },
   { to: "/workspace/collaboration", label: "Governance & Review", icon: FileCheck2 },
+  { to: "/workspace/build", label: "Software Studio & Deploy", icon: Rocket },
   { to: "/workspace/export", label: "Export Center", icon: Package },
   { to: "/admin", label: "Admin Console", icon: Shield },
   { to: "/settings", label: "Settings", icon: Settings },
@@ -367,6 +370,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="shrink-0 border-t border-border pt-2.5 space-y-2">
+        <CreditsBadge variant="sidebar" />
         <div className="rounded-xl border border-border/80 bg-background/50 p-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -471,6 +475,29 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("bizzmitra:role-changed", handleRoleChanged);
   }, []);
 
+  const [activeWsName, setActiveWsName] = useState<string>("TalentCraft HR Consultancy");
+
+  useEffect(() => {
+    const updateWsName = () => {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.businessName) setActiveWsName(parsed.businessName);
+        }
+      } catch {}
+    };
+    updateWsName();
+    window.addEventListener("bizzmitra:workspace-updated", updateWsName);
+    window.addEventListener("bizzmitra:workspace-changed", updateWsName);
+    window.addEventListener("storage", updateWsName);
+    return () => {
+      window.removeEventListener("bizzmitra:workspace-updated", updateWsName);
+      window.removeEventListener("bizzmitra:workspace-changed", updateWsName);
+      window.removeEventListener("storage", updateWsName);
+    };
+  }, []);
+
   if (loading || !session) return null;
 
   const roleDef = ROLE_DEFINITIONS[currentRole];
@@ -507,7 +534,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             Home
           </span>
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <CreditsBadge variant="compact" />
           <LanguageSelector variant="compact" />
           <ThemeToggle />
           <button
@@ -559,6 +587,24 @@ export function AppShell({ children }: { children: ReactNode }) {
           isPinned ? "lg:pl-[304px] sm:pl-[80px]" : "sm:pl-[80px] lg:pl-[86px]",
         )}
       >
+        {/* Desktop Top Utility Bar with Visible AI Credit Balance & Quick Tools */}
+        <header className="hidden sm:flex h-14 shrink-0 items-center justify-between border-b border-border/60 bg-background/85 px-6 sm:px-8 lg:px-10 backdrop-blur-md sticky top-0 z-30 transition-all">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+              <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="font-bold text-foreground">Project:</span>
+              <span className="truncate max-w-[200px] lg:max-w-sm text-foreground/90 font-medium">{activeWsName}</span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <CreditsBadge variant="header" />
+            <div className="h-4 w-[1px] bg-border/80" />
+            <LanguageSelector variant="compact" />
+            <ThemeToggle />
+          </div>
+        </header>
+
         {isSuperAdmin && currentRole !== "admin" ? (
           <div className="border-b border-amber-500/20 bg-amber-500/10 px-6 py-2 text-xs font-medium text-amber-700 dark:text-amber-300">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -592,7 +638,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main
           className={cn(
             "min-w-0 flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10 pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:pb-8 lg:pb-10 transition-all duration-300 ease-in-out",
-            isPinned && "lg:scale-[0.99] origin-top-left",
           )}
         >
           {children}

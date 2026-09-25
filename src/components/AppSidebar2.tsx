@@ -27,6 +27,7 @@ import {
   ChevronDown,
   Shield,
   Lock,
+  Rocket,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth, isTestingAccount } from "@/hooks/useAuth";
@@ -228,6 +229,19 @@ const PORTAL_GROUPS: PortalNavGroup[] = [
         description: "Stakeholder approval matrix",
         to: "/workspace/collaboration",
         icon: FileCheck2,
+      },
+      {
+        id: "build",
+        label: "Software Studio",
+        description: "Autonomous code gen & 1-click deploy",
+        to: "/workspace/build",
+        icon: Rocket,
+        badge: "Live Deploy",
+        subItems: [
+          { label: "Live Interactive App", href: "/workspace/build" },
+          { label: "Virtual Code Explorer", href: "/workspace/build" },
+          { label: "1-Click Cloud Deploy", href: "/workspace/build" },
+        ],
       },
       {
         id: "export",

@@ -48,6 +48,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
       chat_sessions: {
         Row: {
           id: string

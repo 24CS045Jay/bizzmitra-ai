@@ -303,7 +303,7 @@ function CRMPage() {
 
   // Dynamic Theme and Density styles
   const activeAccent = useMemo(() => {
-    return THEME_ACCENTS.find((a) => a.id === studioSettings.accent) || THEME_ACCENTS[0];
+    return THEME_ACCENTS.find((a) => a.id === studioSettings.accent) || THEME_ACCENTS[0]!;
   }, [studioSettings.accent]);
 
   const cellDensityClass = useMemo(() => {
@@ -458,7 +458,7 @@ function CRMPage() {
                   {stageFilter === s && (
                     <motion.span
                       layoutId="stage-pill"
-                      className="absolute inset-0 rounded-full bg-primary"
+                      className={cn("absolute inset-0 rounded-full shadow-sm", activeAccent.primaryClass)}
                       transition={{ type: "spring", stiffness: 420, damping: 34 }}
                     />
                   )}
@@ -522,13 +522,17 @@ function CRMPage() {
 
               <button
                 onClick={() => setIsStudioOpen(true)}
-                className="neu-press flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-primary/80 px-3.5 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm hover:brightness-105 cursor-pointer"
+                className={cn(
+                  "neu-press flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-xs font-semibold shadow-sm hover:brightness-105 cursor-pointer",
+                  activeAccent.primaryClass,
+                )}
               >
                 <Sliders className="size-3.5" />
                 Solution Studio
-                <span className="rounded-full bg-primary-foreground/20 px-1.5 py-0.2 text-[9px] font-mono">
+                <span className="rounded-full bg-white/25 px-1.5 py-0.2 text-[9px] font-mono">
                   {studioSettings.version}
                 </span>
+                <span className="size-2 rounded-full border border-white/60 bg-white" />
               </button>
             </div>
 
@@ -685,7 +689,11 @@ function CRMPage() {
                           return (
                             <span
                               key={field.id}
-                              className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium border",
+                                activeAccent.badgeClass,
+                                activeAccent.borderClass,
+                              )}
                             >
                               <Tag className="size-2 opacity-60" />
                               <span className="opacity-75">{field.label}:</span>
@@ -731,7 +739,8 @@ function CRMPage() {
                     {studioSettings.customFields.map((field) => (
                       <th
                         key={field.id}
-                        className={cn(cellDensityClass, "font-semibold text-primary")}
+                        className={cn(cellDensityClass, "font-semibold")}
+                        style={{ color: activeAccent.colorHex }}
                       >
                         <span className="flex items-center gap-1">
                           <Tag className="size-2.5 opacity-70" />
@@ -856,13 +865,23 @@ function CRMPage() {
                                     href={val}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary hover:underline"
+                                    className={cn(
+                                      "inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium hover:underline border",
+                                      activeAccent.badgeClass,
+                                      activeAccent.borderClass,
+                                    )}
                                   >
                                     <ExternalLink className="size-2.5" />
                                     Link
                                   </a>
                                 ) : (
-                                  <span className="inline-block rounded bg-accent/60 px-2 py-0.5 text-[11px] font-medium text-foreground">
+                                  <span
+                                    className={cn(
+                                      "inline-block rounded px-2 py-0.5 text-[11px] font-medium border",
+                                      activeAccent.badgeClass,
+                                      activeAccent.borderClass,
+                                    )}
+                                  >
                                     {val}
                                   </span>
                                 )}
