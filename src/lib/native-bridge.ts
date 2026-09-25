@@ -69,15 +69,27 @@ export async function saveAndShareFile(
   }
 
   // Web fallback
-  const blob = typeof data === "string" ? new Blob([data], { type: mimeType }) : data;
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  setTimeout(() => URL.revokeObjectURL(url), 400);
+  if (typeof window === "undefined") return;
+  try {
+    const blob = typeof data === "string" ? new Blob([data], { type: `${mimeType};charset=utf-8` }) : data;
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.style.display = "none";
+    anchor.href = url;
+    anchor.setAttribute("download", filename);
+    document.body.appendChild(anchor);
+    anchor.click();
+    setTimeout(() => {
+      try {
+        if (anchor.parentNode) {
+          document.body.removeChild(anchor);
+        }
+        URL.revokeObjectURL(url);
+      } catch {}
+    }, 15000);
+  } catch (err) {
+    console.error("[NativeBridge] File download trigger failed:", err);
+  }
 }
 
 export type HapticKind = "light" | "medium" | "heavy" | "success" | "warning" | "error";

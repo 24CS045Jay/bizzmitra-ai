@@ -34,7 +34,14 @@ import {
   isSuperAdminEmail,
   loadCreditWallet,
   saveCreditWallet,
+  getWalletUsageWindows,
 } from "@/lib/admin-rbac-data";
+import {
+  PLANS as CONFIG_PLANS,
+  CREDIT_TOP_UP_PACKS,
+  RATE_LIMITS,
+  FEATURE_COSTS,
+} from "@/lib/pricing-config";
 import { AiModelPaymentModal } from "@/components/AiModelPaymentModal";
 import {
   initiateRazorpayPayment,
@@ -64,7 +71,13 @@ const TIERS = [
     annualPrice: "₹0",
     cadence: "forever free",
     credits: "100 credits/mo",
-    features: ["Single workspace", "Standard LLM intake", "Basic HLD export", "Community support"],
+    features: [
+      "1 Hard-Capped Workspace",
+      "100 AI Credits / month",
+      "Gemini 2.0 Flash baseline model",
+      "Basic HLD export (PDF)",
+      "Standard community support",
+    ],
     highlight: false,
   },
   {
@@ -73,7 +86,14 @@ const TIERS = [
     annualPrice: "₹3,199",
     cadence: "per seat / month",
     credits: "1,000 credits/mo",
-    features: ["Unlimited workspaces", "Solution Studio customizer", "PostgreSQL DDL & REST APIs", "Executive pitch deck export", "Role-based access preview"],
+    features: [
+      "5 Workspaces (+₹499/mo per extra)",
+      "1,000 AI Credits / month + top-ups",
+      "GPT-4o Omnichannel & Claude 3.5 Sonnet",
+      "BPMN pipelines & Wireframes generator",
+      "Full deliverable pack & Pitch deck export",
+      "Priority email support (4h SLA)",
+    ],
     highlight: true,
   },
   {
@@ -82,7 +102,14 @@ const TIERS = [
     annualPrice: "₹12,799",
     cadence: "per org / month",
     credits: "5,000 credits/mo",
-    features: ["Dedicated compute cluster", "Custom BPMN 2.0 pipelines", "Full Git multi-tier versioning", "99.99% SLA guarantee", "SOC2 compliance attestation"],
+    features: [
+      "Unlimited workspaces (Fair-use)",
+      "5,000 AI Credits / month (negotiable)",
+      "DeepSeek V3 Reasoner + all AI models",
+      "Dedicated compute cluster & VPC",
+      "Custom BPMN 2.0 & Git versioning",
+      "Dedicated Lead Architect",
+    ],
     highlight: false,
   },
 ];
@@ -547,7 +574,7 @@ function SettingsPage() {
           </div>
         </StaggerItem>
 
-        {/* AI Credit Wallet Section */}
+          {/* AI Credit Wallet Section */}
         <StaggerItem className="neu p-4 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden w-full">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/80 pb-4">
             <div className="flex items-center gap-3">
@@ -556,7 +583,7 @@ function SettingsPage() {
               </div>
               <div>
                 <h2 className="font-display text-xl font-bold">{t("settings.wallet", "AI Token & Credit Wallet")}</h2>
-                <p className="text-xs text-muted-foreground">Live metering for LLM synthesis, solution regeneration, and blueprint exports.</p>
+                <p className="text-xs text-muted-foreground">Live rate limit metering (5-Hour, Weekly, and Monthly Quota) with token-calibrated billing.</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -565,20 +592,18 @@ function SettingsPage() {
                   Admin Testing Bypass
                 </span>
               )}
-              <button
-                onClick={() => handleAddCredits(250, 799)}
-                className="neu-sm neu-press flex items-center gap-1.5 px-3 py-2 text-xs font-semibold hover:text-primary transition-colors"
-                title="Purchase 250 AI Credits via Razorpay"
-              >
-                <PlusCircle className="size-3.5 text-primary" /> +250 Credits (₹799)
-              </button>
-              <button
-                onClick={() => handleAddCredits(1000, 2799)}
-                className="neu-press flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3.5 py-2 text-xs font-semibold text-white shadow-sm glow-primary transition-colors"
-                title="Purchase 1,000 AI Credits via Razorpay"
-              >
-                <Sparkles className="size-3.5" /> +1,000 Credits (₹2,799)
-              </button>
+              {CREDIT_TOP_UP_PACKS.map((pack) => (
+                <button
+                  key={pack.id}
+                  onClick={() => handleAddCredits(pack.credits, pack.priceInr)}
+                  className={`neu-sm neu-press flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    pack.popular ? "bg-primary text-primary-foreground font-bold shadow-sm" : "hover:text-primary"
+                  }`}
+                  title={`Purchase ${pack.name}: +${pack.credits} Credits for ₹${pack.priceInr}`}
+                >
+                  <Sparkles className="size-3.5" /> +{pack.credits} Cr (₹{pack.priceInr})
+                </button>
+              ))}
             </div>
           </div>
 
@@ -595,65 +620,184 @@ function SettingsPage() {
                 </p>
               </div>
             </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleTestRazorpay}
-                  className="neu-sm neu-press px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 hover:bg-emerald-500/10"
-                  title="Verify Razorpay Gateway with a test prompt"
-                >
-                  <Sparkles className="size-3" /> Test Gateway
-                </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleTestRazorpay}
+                className="neu-sm neu-press px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 hover:bg-emerald-500/10"
+                title="Verify Razorpay Gateway with a test prompt"
+              >
+                <Sparkles className="size-3" /> Test Gateway
+              </button>
 
-                {isEditingKey ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={razorpayKey}
-                      onChange={(e) => {
-                        setRazorpayKey(e.target.value);
-                        saveRazorpayKeyId(e.target.value);
-                      }}
-                      placeholder="rzp_test_... or rzp_live_..."
-                      className="neu-inset px-2.5 py-1 text-xs font-mono outline-none w-56"
-                    />
-                    <button
-                      onClick={() => {
-                        saveRazorpayKeyId(razorpayKey);
-                        setIsEditingKey(false);
-                        toast.success("Razorpay Key ID saved!");
-                      }}
-                      className="neu-sm neu-press px-2.5 py-1 text-xs font-bold text-primary"
-                    >
-                      Save
-                    </button>
-                  </div>
-                ) : (
+              {isEditingKey ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={razorpayKey}
+                    onChange={(e) => {
+                      setRazorpayKey(e.target.value);
+                      saveRazorpayKeyId(e.target.value);
+                    }}
+                    placeholder="rzp_test_... or rzp_live_..."
+                    className="neu-inset px-2.5 py-1 text-xs font-mono outline-none w-56"
+                  />
                   <button
-                    onClick={() => setIsEditingKey(true)}
-                    className="neu-sm neu-press px-3 py-1 text-xs font-semibold text-primary hover:underline"
+                    onClick={() => {
+                      saveRazorpayKeyId(razorpayKey);
+                      setIsEditingKey(false);
+                      toast.success("Razorpay Key ID saved!");
+                    }}
+                    className="neu-sm neu-press px-2.5 py-1 text-xs font-bold text-primary"
                   >
-                    Configure Key
+                    Save
                   </button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsEditingKey(true)}
+                  className="neu-sm neu-press px-3 py-1 text-xs font-semibold text-primary hover:underline"
+                >
+                  Configure Key
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-3">
-            <div className="rounded-xl border border-border bg-background/50 p-4">
-              <p className="text-xs text-muted-foreground">Available Credits</p>
-              <p className="mt-1 font-display text-3xl font-extrabold text-primary">{wallet.balance}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">of {wallet.monthlyQuota} monthly allocation</p>
+          {/* 3 Real-time Limits & Consumption Gauges */}
+          {(() => {
+            const usage = getWalletUsageWindows(wallet);
+            const fiveHourPct = Math.min(100, Math.round((usage.fiveHourUsed / usage.fiveHourMax) * 100));
+            const weeklyPct = Math.min(100, Math.round((usage.weeklyUsed / usage.weeklyMax) * 100));
+            const monthlyPct = wallet.monthlyQuota > 0
+              ? Math.min(100, Math.round(((wallet.monthlyQuota - wallet.balance) / wallet.monthlyQuota) * 100))
+              : 0;
+
+            return (
+              <div className="mt-6 grid gap-4 grid-cols-1 sm:grid-cols-3">
+                {/* Gauge 1: Monthly Balance */}
+                <div className="rounded-xl border border-border bg-background/50 p-4 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground font-semibold">Monthly Quota</span>
+                    <span className="font-bold text-primary">{wallet.tier}</span>
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <p className="font-display text-3xl font-extrabold text-foreground">{wallet.balance}</p>
+                    <span className="text-xs text-muted-foreground">/ {wallet.monthlyQuota} cr</span>
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="h-2 w-full rounded-full bg-accent/60 overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-500"
+                      style={{ width: `${Math.max(5, 100 - monthlyPct)}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {wallet.balance} credits remaining until renewal on {wallet.nextBillingDate}
+                  </p>
+                </div>
+
+                {/* Gauge 2: 5-Hour Throttle Window */}
+                <div className="rounded-xl border border-border bg-background/50 p-4 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground font-semibold">5-Hour Rate Limit</span>
+                    <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                      Infra Protected
+                    </span>
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <p className="font-display text-3xl font-extrabold text-foreground">{usage.fiveHourRemaining}</p>
+                    <span className="text-xs text-muted-foreground">/ {usage.fiveHourMax} cr left</span>
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="h-2 w-full rounded-full bg-accent/60 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        fiveHourPct > 80 ? "bg-destructive" : fiveHourPct > 50 ? "bg-amber-500" : "bg-emerald-500"
+                      }`}
+                      style={{ width: `${Math.max(4, fiveHourPct)}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Spent {usage.fiveHourUsed} of {usage.fiveHourMax} cr in past 5 hours (resets rolling)
+                  </p>
+                </div>
+
+                {/* Gauge 3: Weekly Rolling Window */}
+                <div className="rounded-xl border border-border bg-background/50 p-4 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground font-semibold">7-Day Weekly Limit</span>
+                    <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                      Rolling 7d
+                    </span>
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <p className="font-display text-3xl font-extrabold text-foreground">{usage.weeklyRemaining}</p>
+                    <span className="text-xs text-muted-foreground">/ {usage.weeklyMax} cr left</span>
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="h-2 w-full rounded-full bg-accent/60 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        weeklyPct > 80 ? "bg-destructive" : weeklyPct > 50 ? "bg-amber-500" : "bg-emerald-500"
+                      }`}
+                      style={{ width: `${Math.max(4, weeklyPct)}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Spent {usage.weeklyUsed} of {usage.weeklyMax} cr across last 7 days
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* AI Feature Credit Cost Matrix */}
+          <div className="mt-6 rounded-2xl border border-border/80 bg-background/40 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                  Feature Credit & Token Consumption Table
+                </h3>
+                <p className="text-[11px] text-muted-foreground">
+                  Base cost pegged to Gemini 2.0 Flash (1.0x). Multiplied by active model multiplier (GPT-4o = 2.0x, Claude 3.5 = 2.5x, DeepSeek V3 = 1.5x).
+                </p>
+              </div>
             </div>
-            <div className="rounded-xl border border-border bg-background/50 p-4">
-              <p className="text-xs text-muted-foreground">Current Tier</p>
-              <p className="mt-1 font-display text-2xl font-bold text-foreground">{wallet.tier}</p>
-              <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Renews on {wallet.nextBillingDate}</p>
-            </div>
-            <div className="rounded-xl border border-border bg-background/50 p-4">
-              <p className="text-xs text-muted-foreground">Average Burn Rate</p>
-              <p className="mt-1 font-display text-2xl font-bold text-foreground">32 / day</p>
-              <p className="mt-1 text-[11px] text-muted-foreground">Estimated 26 days of usage remaining</p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+              <div className="neu-inset p-2.5 rounded-xl">
+                <span className="text-muted-foreground block text-[10px]">AI Copilot Turn</span>
+                <span className="font-bold text-foreground">1 cr floor · 250 tok/cr</span>
+              </div>
+              <div className="neu-inset p-2.5 rounded-xl">
+                <span className="text-muted-foreground block text-[10px]">Discovery Interview</span>
+                <span className="font-bold text-foreground">2 cr floor · 250 tok/cr</span>
+              </div>
+              <div className="neu-inset p-2.5 rounded-xl">
+                <span className="text-muted-foreground block text-[10px]">Solution Studio Regenerate</span>
+                <span className="font-bold text-foreground">15 cr (Flat)</span>
+              </div>
+              <div className="neu-inset p-2.5 rounded-xl">
+                <span className="text-muted-foreground block text-[10px]">PostgreSQL Schema DDL</span>
+                <span className="font-bold text-foreground">20 cr (Flat)</span>
+              </div>
+              <div className="neu-inset p-2.5 rounded-xl">
+                <span className="text-muted-foreground block text-[10px]">BPMN Process Pipeline</span>
+                <span className="font-bold text-foreground">20 cr (Growth Pro)</span>
+              </div>
+              <div className="neu-inset p-2.5 rounded-xl">
+                <span className="text-muted-foreground block text-[10px]">Wireframe Generation</span>
+                <span className="font-bold text-foreground">18 cr (Growth Pro)</span>
+              </div>
+              <div className="neu-inset p-2.5 rounded-xl">
+                <span className="text-muted-foreground block text-[10px]">HLD/LLD Architecture</span>
+                <span className="font-bold text-foreground">25 cr (Flat)</span>
+              </div>
+              <div className="neu-inset p-2.5 rounded-xl border border-primary/30 bg-primary/5">
+                <span className="text-primary font-bold block text-[10px]">Full Blueprint Synthesis</span>
+                <span className="font-bold text-primary">50 cr (All Artifacts)</span>
+              </div>
             </div>
           </div>
 
@@ -661,12 +805,12 @@ function SettingsPage() {
           <div className="mt-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <History className="size-3.5" /> Recent Token Transactions
+                <History className="size-3.5" /> Recent Token & Credit Transactions
               </h3>
               <span className="text-[11px] text-muted-foreground">Audited in Supabase Ledger</span>
             </div>
             <div className="rounded-xl border border-border bg-background/40 divide-y divide-border/60 overflow-hidden">
-              {wallet.transactions.slice(0, 4).map((tx) => (
+              {wallet.transactions.slice(0, 5).map((tx) => (
                 <div key={tx.id} className="flex items-center justify-between gap-3 p-3 text-xs">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className={tx.type === "credit" ? "text-emerald-500 font-bold shrink-0" : "text-amber-500 font-bold shrink-0"}>

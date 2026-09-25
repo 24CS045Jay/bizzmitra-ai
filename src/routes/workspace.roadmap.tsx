@@ -35,6 +35,7 @@ import {
 } from "@/lib/planning-data";
 import { evaluateBlueprintRisks } from "@/lib/risk-evaluator";
 import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
+import { saveAndShareFile } from "@/lib/native-bridge";
 
 export const Route = createFileRoute("/workspace/roadmap")({
   head: () => ({
@@ -179,13 +180,8 @@ export function RoadmapPage() {
             .join("\n")}`
       )
       .join("\n\n")}`;
-    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${blueprint.workspaceId}_delivery_plan.md`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const filename = `${blueprint.workspaceId || "bizzmitra"}_delivery_plan.md`;
+    void saveAndShareFile(filename, text, "text/markdown");
     toast.success("Delivery plan downloaded as Markdown!");
   };
 

@@ -175,7 +175,7 @@ export function exportToWordDoc(projectName: string, workspaceContext?: any): vo
 /**
  * Generates a full Microsoft Excel Workbook (.xls / multi-sheet XML compatible) adapted to the domain.
  */
-export function exportToExcelWorkbook(projectName: string, workspaceContext?: any): void {
+export function exportToExcelWorkbookXml(projectName: string, workspaceContext?: any): string {
   let ctx = workspaceContext;
   if (!ctx && typeof window !== "undefined") {
     try {
@@ -191,23 +191,22 @@ export function exportToExcelWorkbook(projectName: string, workspaceContext?: an
   const taskXmlRows = (((roadmap as any).tasks || []) as any[]).map((t: any) => `
    <Row>
     <Cell><Data ss:Type="String">${t.id}</Data></Cell>
-    <Cell><Data ss:Type="String">${t.title.replace(/&/g, "&amp;")}</Data></Cell>
-    <Cell><Data ss:Type="String">${t.ownerRole.replace(/&/g, "&amp;")}</Data></Cell>
-    <Cell><Data ss:Type="Number">${t.estimateDays}</Data></Cell>
-    <Cell><Data ss:Type="String">${t.phase.toUpperCase()}</Data></Cell>
-    <Cell><Data ss:Type="String">${t.status}</Data></Cell>
+    <Cell><Data ss:Type="String">${(t.title || "").replace(/&/g, "&amp;")}</Data></Cell>
+    <Cell><Data ss:Type="String">${(t.ownerRole || "").replace(/&/g, "&amp;")}</Data></Cell>
+    <Cell><Data ss:Type="Number">${t.estimateDays || 0}</Data></Cell>
+    <Cell><Data ss:Type="String">${(t.phase || "").toUpperCase()}</Data></Cell>
+    <Cell><Data ss:Type="String">${t.status || ""}</Data></Cell>
    </Row>`).join("");
-
 
   const financialXmlRows = (roi.annualSavingsBreakdown || []).map((item: any) => `
    <Row>
-    <Cell><Data ss:Type="String">${item.category.replace(/&/g, "&amp;")}</Data></Cell>
+    <Cell><Data ss:Type="String">${(item.category || "").replace(/&/g, "&amp;")}</Data></Cell>
     <Cell><Data ss:Type="String">Annual Optimization</Data></Cell>
-    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${item.amount}</Data></Cell>
-    <Cell><Data ss:Type="String">${item.description.replace(/&/g, "&amp;")}</Data></Cell>
+    <Cell ss:StyleID="Currency"><Data ss:Type="Number">${item.amount || 0}</Data></Cell>
+    <Cell><Data ss:Type="String">${(item.description || "").replace(/&/g, "&amp;")}</Data></Cell>
    </Row>`).join("");
 
-  const excelXml = `<?xml version="1.0"?>
+  return `<?xml version="1.0"?>
 <?mso-application progid="Excel.Sheet"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
  xmlns:o="urn:schemas-microsoft-com:office:office"
@@ -268,14 +267,20 @@ export function exportToExcelWorkbook(projectName: string, workspaceContext?: an
   </Table>
  </Worksheet>
 </Workbook>`;
+}
 
+/**
+ * Generates a full Microsoft Excel Workbook (.xls / multi-sheet XML compatible) adapted to the domain.
+ */
+export function exportToExcelWorkbook(projectName: string, workspaceContext?: any): void {
+  const excelXml = exportToExcelWorkbookXml(projectName, workspaceContext);
   triggerFileDownload(`${projectName.replace(/\s+/g, "_")}_Estimates_Model.xls`, excelXml, "application/vnd.ms-excel");
 }
 
 /**
- * Generates a full Microsoft PowerPoint Presentation Deck (.ppt / HTML slide deck) adapted to the domain.
+ * Generates PowerPoint slide deck HTML string.
  */
-export function exportToPowerPointDeck(projectName: string, workspaceContext?: any): void {
+export function exportToPowerPointDeckHtml(projectName: string, workspaceContext?: any): string {
   let ctx = workspaceContext;
   if (!ctx && typeof window !== "undefined") {
     try {
@@ -296,7 +301,7 @@ export function exportToPowerPointDeck(projectName: string, workspaceContext?: a
     <li><strong>${ph.name} (Weeks ${ph.weeks}):</strong> ${ph.title} — ${ph.focus} (${ph.storyPoints} Story Pts)</li>
   `).join("");
 
-  const pptHtml = `
+  return `
 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:p='urn:schemas-microsoft-com:office:powerpoint' xmlns='http://www.w3.org/TR/REC-html40'>
 <head>
   <meta charset="utf-8">
@@ -386,6 +391,12 @@ export function exportToPowerPointDeck(projectName: string, workspaceContext?: a
   </div>
 </body>
 </html>`;
+}
 
+/**
+ * Generates a full Microsoft PowerPoint Presentation Deck (.ppt / HTML slide deck) adapted to the domain.
+ */
+export function exportToPowerPointDeck(projectName: string, workspaceContext?: any): void {
+  const pptHtml = exportToPowerPointDeckHtml(projectName, workspaceContext);
   triggerFileDownload(`${projectName.replace(/\s+/g, "_")}_Executive_Deck.ppt`, pptHtml, "application/vnd.ms-powerpoint");
 }
