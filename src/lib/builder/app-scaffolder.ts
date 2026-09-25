@@ -176,17 +176,17 @@ export default defineConfig({
 
   // 4. index.html
   files["index.html"] = `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="w-full min-h-full">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <title>${appTitle} — ${domain.domainName}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-slate-950 text-slate-100 antialiased font-sans">
-    <div id="root"></div>
+  <body class="w-full min-h-screen bg-slate-950 text-slate-100 antialiased font-sans m-0 p-0 overflow-x-hidden">
+    <div id="root" class="w-full min-h-screen flex flex-col"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
@@ -259,8 +259,24 @@ export default {
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply m-0 p-0 selection:bg-indigo-500 selection:text-white bg-slate-950 text-slate-100;
+  *, ::before, ::after {
+    box-sizing: border-box;
+  }
+  html, body {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #020617;
+    color: #f8fafc;
+    overflow-x: hidden;
+  }
+  #root {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0%;
   }
 }
 `;

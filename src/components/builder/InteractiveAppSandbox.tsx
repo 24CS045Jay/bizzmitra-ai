@@ -759,7 +759,7 @@ export function InteractiveAppSandbox({
           {/* ======================================================== */}
           {/* MAIN CONTENT PANE */}
           {/* ======================================================== */}
-          <div className={cn("flex-1 flex flex-col min-w-0 bg-slate-950", isStandalone && "h-full overflow-hidden")}>
+          <div className={cn("flex-1 flex flex-col min-w-0 w-full bg-slate-950", isStandalone && "h-full overflow-hidden")}>
             {/* Header Variant 1: Mobile Header */}
             {isMobile ? (
               <header className="border-b border-slate-800 bg-slate-900/90 px-3.5 py-2.5 flex flex-col gap-2 shrink-0">
@@ -1004,17 +1004,17 @@ export function InteractiveAppSandbox({
             )}
 
             {/* Main Scrollable Body */}
-            <div className={cn("flex-1 overflow-y-auto", densityPadding)}>
+            <div className={cn("flex-1 w-full min-w-0 overflow-y-auto", densityPadding)}>
               {/* ======================================================== */}
               {/* MODULE 1: OVERVIEW & OPERATIONS COMMAND CENTER */}
               {/* ======================================================== */}
               {activeTab === "overview" && (
-                <div className="space-y-5">
+                <div className="w-full space-y-5">
                   {/* Hero Banner tailored to Problem Statement */}
                   <div
                     className={cn(
-                      "rounded-2xl border bg-gradient-to-r via-slate-900 to-slate-950",
-                      isMobile ? "p-3.5 space-y-2.5" : "p-5 sm:p-6 space-y-3",
+                      "w-full rounded-2xl border bg-gradient-to-r via-slate-900 to-slate-950",
+                      isMobile ? "p-3.5 space-y-2.5" : "p-5 sm:p-6 space-y-3.5",
                       theme.borderAccent,
                       theme.gradientFrom
                     )}
@@ -1036,12 +1036,12 @@ export function InteractiveAppSandbox({
                       </span>
                     </div>
 
-                    <h4 className={cn("font-bold text-white tracking-tight", isMobile ? "text-base" : "text-lg sm:text-xl")}>
+                    <h4 className={cn("font-bold text-white tracking-tight", isMobile ? "text-base" : "text-xl sm:text-2xl")}>
                       {domain.appTitle}
                     </h4>
 
                     {/* Exact Problem Statement Ingested */}
-                    <div className={cn("rounded-xl bg-slate-950/70 border border-slate-800/80 text-slate-300 leading-relaxed max-w-3xl", isMobile ? "p-2.5 text-[11px]" : "p-3 text-xs")}>
+                    <div className={cn("w-full rounded-xl bg-slate-950/70 border border-slate-800/80 text-slate-300 leading-relaxed", isMobile ? "p-2.5 text-[11px]" : "p-3.5 sm:p-4 text-xs sm:text-sm")}>
                       <span className="font-bold text-white block mb-0.5">Problem Solved:</span>
                       "{domain.problemStatement}"
                     </div>
