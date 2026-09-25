@@ -3,6 +3,8 @@ import { Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Sparkles, ArrowRight, ShieldCheck, Zap } from "lucide-react";
 
+import { PLANS as CONFIG_PLANS, CREDIT_TOP_UP_PACKS, RATE_LIMITS } from "@/lib/pricing-config";
+
 interface PlanTier {
   id: string;
   name: string;
@@ -17,69 +19,77 @@ interface PlanTier {
     generations: string;
     collaborators: string;
     support: string;
+    models: string;
   };
 }
 
 const PLANS: PlanTier[] = [
   {
     id: "starter",
-    name: "Free Starter",
-    tagline: "For individual architects & solo founders validating new ventures.",
-    monthlyPrice: 0,
-    annualPrice: 0,
+    name: CONFIG_PLANS.free_starter.name,
+    tagline: CONFIG_PLANS.free_starter.tagline,
+    monthlyPrice: CONFIG_PLANS.free_starter.monthlyPriceInr,
+    annualPrice: CONFIG_PLANS.free_starter.annualPriceInr,
     features: [
-      "Single workspace",
-      "Standard LLM intake",
-      "Basic HLD export",
-      "Community support",
+      "1 Hard-Capped Workspace",
+      "100 AI Credits / month",
+      "Gemini 2.0 Flash baseline model",
+      "Full blueprint synthesis & HLD/LLD",
+      "Basic HLD export (PDF)",
+      "Standard community support",
     ],
     specs: {
-      workspaces: "1 active",
+      workspaces: "1 active (no add-on)",
       generations: "100 credits / mo",
       collaborators: "Solo (1 seat)",
-      support: "Standard community",
+      support: CONFIG_PLANS.free_starter.supportSla,
+      models: "Gemini 2.0 Flash (1.0x)",
     },
   },
   {
     id: "growth",
-    name: "Growth Pro",
-    tagline: "For boutique consultancies & cross-functional enterprise squads.",
-    monthlyPrice: 3999,
-    annualPrice: 3199,
+    name: CONFIG_PLANS.growth_pro.name,
+    tagline: CONFIG_PLANS.growth_pro.tagline,
+    monthlyPrice: CONFIG_PLANS.growth_pro.monthlyPriceInr,
+    annualPrice: CONFIG_PLANS.growth_pro.annualPriceInr,
     featured: true,
     badge: "Most Popular",
     features: [
-      "Unlimited workspaces",
-      "Solution Studio customizer",
-      "PostgreSQL DDL & REST APIs",
-      "Executive pitch deck export",
-      "Role-based access preview",
+      "5 Active Workspaces (+₹499/mo per extra)",
+      "1,000 AI Credits / month with top-ups",
+      "GPT-4o Omnichannel & Claude 3.5 Sonnet",
+      "BPMN pipelines & Wireframes generator",
+      "Full deliverable pack & Pitch deck export",
+      "Priority email support (4h SLA)",
     ],
     specs: {
-      workspaces: "Unlimited",
+      workspaces: "5 included (+₹499/mo extra)",
       generations: "1,000 credits / mo",
       collaborators: "Up to 8 members",
-      support: "Priority email (4h SLA)",
+      support: CONFIG_PLANS.growth_pro.supportSla,
+      models: "Gemini + GPT-4o + Claude 3.5",
     },
   },
   {
     id: "enterprise",
-    name: "Enterprise Scale",
-    tagline: "Custom governance, dedicated compute cluster, and VPC deployment.",
-    monthlyPrice: 15999,
-    annualPrice: 12799,
+    name: CONFIG_PLANS.enterprise_scale.name,
+    tagline: CONFIG_PLANS.enterprise_scale.tagline,
+    monthlyPrice: CONFIG_PLANS.enterprise_scale.monthlyPriceInr,
+    annualPrice: CONFIG_PLANS.enterprise_scale.annualPriceInr,
     features: [
-      "Dedicated compute cluster",
-      "Custom BPMN 2.0 pipelines",
-      "Full Git multi-tier versioning",
-      "99.99% SLA guarantee",
-      "SOC2 compliance attestation",
+      "Unlimited workspaces (Fair-use)",
+      "5,000 AI Credits / month (negotiable)",
+      "DeepSeek V3 Reasoner + all AI models",
+      "Dedicated compute cluster & VPC",
+      "Custom BPMN 2.0 & Git versioning",
+      "Dedicated Lead Architect",
     ],
     specs: {
-      workspaces: "Unlimited",
+      workspaces: "Unlimited (Fair-use)",
       generations: "5,000 credits / mo",
       collaborators: "Unlimited members",
-      support: "Dedicated Lead Architect",
+      support: CONFIG_PLANS.enterprise_scale.supportSla,
+      models: "All models + DeepSeek V3",
     },
   },
 ];

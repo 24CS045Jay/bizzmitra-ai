@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth, isTestingAccount } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { loadCreditWallet, isSuperAdminEmail, CreditWallet } from "@/lib/admin-rbac-data";
+import { PLANS, planNameToId, canCreateWorkspace as checkCanCreateWorkspace } from "@/lib/pricing-config";
 
 export interface WorkspaceLimitInfo {
   isBasicPlan: boolean;
@@ -11,6 +12,8 @@ export interface WorkspaceLimitInfo {
   canCreateWorkspace: boolean;
   isLimitReached: boolean;
   loading: boolean;
+  reason?: string;
+  requiresAddOn?: boolean;
   refresh: () => Promise<void>;
 }
 
@@ -30,19 +33,25 @@ export function checkWorkspaceLimitSync(): {
 
   const wallet = loadCreditWallet();
   const isBasic = wallet.tier === "Free Starter";
-  if (!isBasic) {
+  const planId = planNameToId(wallet.tier);
+  const plan = PLANS[planId] || PLANS.free_starter;
+
+  if (plan.workspaceLimit === Infinity) {
     return { isBasicPlan: false, canCreateWorkspace: true, isLimitReached: false };
   }
 
-  // In basic tier, check if user already has an active workspace stored locally
+  // Check stored active workspace
   const activeWsId = window.localStorage.getItem("bizzmitra.activeWorkspaceId");
   const rawCtx = window.localStorage.getItem("bizzmitra.workspaceContext");
   const hasLocalWorkspace = Boolean(activeWsId && rawCtx);
+  const count = hasLocalWorkspace ? 1 : 0;
+
+  const allowed = count < plan.workspaceLimit;
 
   return {
-    isBasicPlan: true,
-    canCreateWorkspace: !hasLocalWorkspace,
-    isLimitReached: hasLocalWorkspace,
+    isBasicPlan: isBasic,
+    canCreateWorkspace: allowed,
+    isLimitReached: !allowed,
   };
 }
 
@@ -58,9 +67,10 @@ export function useWorkspaceLimit(): WorkspaceLimitInfo {
   const isSuperAdmin = isSuperAdminEmail(user?.email);
   const isTest = isTestingAccount(user?.email);
 
-  // Growth Pro, Enterprise Scale, Super Admin and Demo Admin have unlimited workspaces
-  const isBasicPlan = !isSuperAdmin && !isTest && wallet.tier === "Free Starter";
-  const maxWorkspaces = isBasicPlan ? BASIC_PLAN_WORKSPACE_LIMIT : Infinity;
+  const planId = planNameToId(wallet.tier);
+  const planConfig = PLANS[planId] || PLANS.free_starter;
+  const isBasicPlan = wallet.tier === "Free Starter";
+  const maxWorkspaces = isSuperAdmin || isTest ? Infinity : planConfig.workspaceLimit;
 
   const refresh = useCallback(async () => {
     try {
@@ -122,8 +132,9 @@ export function useWorkspaceLimit(): WorkspaceLimitInfo {
     };
   }, [refresh]);
 
-  const isLimitReached = isBasicPlan && workspaceCount >= maxWorkspaces;
-  const canCreateWorkspace = !isLimitReached;
+  const check = checkCanCreateWorkspace(planId, workspaceCount);
+  const isLimitReached = !isSuperAdmin && !isTest && !check.allowed;
+  const canCreateWorkspace = isSuperAdmin || isTest || check.allowed;
 
   return {
     isBasicPlan,
@@ -133,6 +144,8 @@ export function useWorkspaceLimit(): WorkspaceLimitInfo {
     canCreateWorkspace,
     isLimitReached,
     loading,
+    reason: check.reason,
+    requiresAddOn: check.requiresAddOn,
     refresh,
   };
 }

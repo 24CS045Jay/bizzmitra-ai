@@ -32,11 +32,14 @@ import {
   generateTechnicalSpecMarkdown,
   generateDomainCsv,
 } from "@/lib/export-engine";
+import JSZip from "jszip";
 import {
   exportToWordDoc,
   exportToWordDocHtml,
   exportToExcelWorkbook,
+  exportToExcelWorkbookXml,
   exportToPowerPointDeck,
+  exportToPowerPointDeckHtml,
 } from "@/lib/document-exporters";
 import { getDatabaseBlueprint } from "@/lib/database-data";
 import { getRoadmapForWorkspace } from "@/lib/planning-data";
@@ -141,26 +144,72 @@ export function ExportCenterPage() {
     toast.success("Downloaded Microsoft PowerPoint Presentation (.ppt)");
   };
 
-  const handleDownloadCompleteBundle = () => {
-    setPackagingProgress(10);
-    const stages = [25, 55, 85, 100];
-    let i = 0;
-    const interval = setInterval(() => {
-      setPackagingProgress(stages[i]!);
-      i++;
-      if (i >= stages.length) {
-        clearInterval(interval);
-        setTimeout(() => {
-          setPackagingProgress(null);
-          handleDownloadWord();
-          setTimeout(() => handleDownloadExcel(), 300);
-          setTimeout(() => handleDownloadPowerPoint(), 600);
-          setTimeout(() => handleDownloadOpenApi(), 900);
-          setTimeout(() => handleDownloadSql(), 1200);
-          toast.success("Universal Blueprint Package successfully bundled and downloaded!");
-        }, 600);
-      }
-    }, 450);
+  const handleDownloadCompleteBundle = async () => {
+    try {
+      setPackagingProgress(15);
+      const zip = new JSZip();
+      const safeName = scenarioName.replace(/\s+/g, "_");
+
+      setPackagingProgress(35);
+      // 1. Word Report HTML
+      const wordHtml = exportToWordDocHtml(scenarioName, workspaceContext);
+      zip.file(`${safeName}_Architecture_Blueprint.doc`, wordHtml);
+
+      // 2. Excel Estimates XML
+      const excelXml = exportToExcelWorkbookXml(scenarioName, workspaceContext);
+      zip.file(`${safeName}_Estimates_Model.xls`, excelXml);
+
+      // 3. PowerPoint Deck HTML
+      const pptHtml = exportToPowerPointDeckHtml(scenarioName, workspaceContext);
+      zip.file(`${safeName}_Executive_Deck.ppt`, pptHtml);
+
+      setPackagingProgress(60);
+      // 4. OpenAPI Spec
+      zip.file(`${safeName}_OpenAPI_v3.1.json`, openApiContent);
+
+      // 5. SQL Schema
+      zip.file(`${dbBlueprint.domainId}_schema_pg16.sql`, sqlDdlContent);
+
+      // 6. Markdown Spec
+      zip.file(`${safeName}_Technical_Spec.md`, specMarkdownContent);
+
+      // 7. Domain Master CSV
+      const csvContent = generateDomainCsv(workspaceContext);
+      zip.file(`${safeName}_Master_Domain_Data.csv`, csvContent);
+
+      // 8. Bundle Manifest README
+      const readme = `# BizzMitra-AI — Universal Blueprint Deliverables Bundle
+Project: ${scenarioName}
+Date: ${new Date().toISOString().slice(0, 10)}
+Domain Engine: ${dbBlueprint.domainId.toUpperCase()}
+
+Package Contents:
+1. ${safeName}_Architecture_Blueprint.doc - Microsoft Word / LibreOffice compatible architecture specification.
+2. ${safeName}_Estimates_Model.xls - Microsoft Excel multi-sheet sprint estimates and financial ROI budget.
+3. ${safeName}_Executive_Deck.ppt - Microsoft PowerPoint executive slide deck.
+4. ${safeName}_OpenAPI_v3.1.json - OpenAPI 3.1 RESTful endpoint schemas.
+5. ${dbBlueprint.domainId}_schema_pg16.sql - PostgreSQL 16 production DDL with Row Level Security (RLS).
+6. ${safeName}_Technical_Spec.md - Full Markdown Technical Specification.
+7. ${safeName}_Master_Domain_Data.csv - Production domain baseline records.
+
+Generated with BizzMitra-AI Solution Transformation Platform.`;
+      zip.file("README_MANIFEST.txt", readme);
+
+      setPackagingProgress(85);
+      const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+
+      setPackagingProgress(100);
+      setTimeout(() => {
+        setPackagingProgress(null);
+        void saveAndShareFile(`${safeName}_Blueprint_Bundle.zip`, zipBlob, "application/zip");
+        toast.success("🎉 Universal Blueprint Package successfully bundled into ZIP archive and downloaded!");
+      }, 350);
+    } catch (err: any) {
+      console.error("Failed to generate ZIP package:", err);
+      setPackagingProgress(null);
+      toast.error("Failed to compress ZIP package. Triggering direct Word export fallback...");
+      handleDownloadWord();
+    }
   };
 
   const formats = [

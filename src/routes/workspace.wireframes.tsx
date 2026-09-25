@@ -26,6 +26,7 @@ import { getWireframeBlueprint, type ScreenConceptId } from "@/lib/wireframes-da
 import { WireframeVisualizer } from "@/components/WireframeVisualizer";
 import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
 import { supabase } from "@/integrations/supabase/client";
+import { saveAndShareFile } from "@/lib/native-bridge";
 
 export const Route = createFileRoute("/workspace/wireframes")({
   head: () => ({
@@ -194,10 +195,12 @@ function WireframesPage() {
       const spec = JSON.stringify(blueprint, null, 2);
       navigator.clipboard.writeText(spec);
       setCopiedSpec(true);
-      toast.success("Copied wireframe specs to clipboard!");
+      const filename = `${(blueprint.domainId || "wireframe").toLowerCase()}_specs.json`;
+      void saveAndShareFile(filename, spec, "application/json");
+      toast.success("Exported & downloaded wireframe specs (.json)!");
       setTimeout(() => setCopiedSpec(false), 2000);
     } catch {
-      toast.error("Failed to copy specs");
+      toast.error("Failed to export specs");
     }
   };
 

@@ -29,6 +29,7 @@ import {
   TableDef,
 } from "@/lib/database-data";
 import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
+import { saveAndShareFile } from "@/lib/native-bridge";
 
 export const Route = createFileRoute("/workspace/data")({
   head: () => ({
@@ -137,13 +138,9 @@ function DataPage() {
   };
 
   const handleDownloadSql = () => {
-    const blob = new Blob([blueprint.ddlSchema], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${blueprint.domainId}_schema_v1.sql`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const filename = `${blueprint.domainId || "domain"}_schema_v1.sql`;
+    void saveAndShareFile(filename, blueprint.ddlSchema, "application/sql");
+    toast.success(`Downloaded PostgreSQL DDL (${filename})`);
   };
 
   const handleCopyCurl = (curl: string, index: number) => {

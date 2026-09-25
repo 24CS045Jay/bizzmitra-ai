@@ -3,7 +3,23 @@
  * Powers enterprise tenant management, dynamic role simulation, and AI credit billing.
  */
 
-export type AiModelId = "gpt-4o" | "claude-3-5-sonnet" | "gemini-2-flash" | "deepseek-v3";
+import {
+  AI_MODELS as CONFIG_AI_MODELS,
+  AiModelConfig,
+  AiModelId as ConfigAiModelId,
+  FEATURE_COSTS,
+  FeatureAction,
+  PLANS,
+  PlanId,
+  RATE_LIMITS,
+  calculateCreditCost,
+  calculateUsageWindows,
+  checkRateLimit,
+  planIdToName,
+  planNameToId,
+} from "./pricing-config";
+
+export type AiModelId = ConfigAiModelId;
 
 export type AiModel = {
   id: AiModelId;
@@ -16,48 +32,16 @@ export type AiModel = {
   description: string;
 };
 
-export const AI_MODELS: AiModel[] = [
-  {
-    id: "gemini-2-flash",
-    name: "Gemini 2.0 Flash",
-    provider: "Google Cloud",
-    badge: "Free Included",
-    tierRequired: "Free Starter",
-    isPro: false,
-    costMultiplier: 1.0,
-    description: "Fast, low-latency reasoning suitable for daily discovery and Q&A.",
-  },
-  {
-    id: "gpt-4o",
-    name: "GPT-4o Omnichannel",
-    provider: "OpenAI",
-    badge: "Pro Required",
-    tierRequired: "Growth Pro",
-    isPro: true,
-    costMultiplier: 2.0,
-    description: "High-precision architecture design, schema synthesis, and complex analysis.",
-  },
-  {
-    id: "claude-3-5-sonnet",
-    name: "Claude 3.5 Sonnet",
-    provider: "Anthropic",
-    badge: "Pro Required",
-    tierRequired: "Growth Pro",
-    isPro: true,
-    costMultiplier: 2.5,
-    description: "Superior coding ability, complex BPMN workflows, and technical writing.",
-  },
-  {
-    id: "deepseek-v3",
-    name: "DeepSeek V3 Reasoner",
-    provider: "DeepSeek Cloud",
-    badge: "Enterprise",
-    tierRequired: "Enterprise Scale",
-    isPro: true,
-    costMultiplier: 1.5,
-    description: "Deep chain-of-thought mathematical planning and financial ROI modeling.",
-  },
-];
+export const AI_MODELS: AiModel[] = CONFIG_AI_MODELS.map((m) => ({
+  id: m.id,
+  name: m.name,
+  provider: m.provider,
+  badge: m.tierRequired === "free_starter" ? "Free Included" : m.tierRequired === "growth_pro" ? "Pro Required" : "Enterprise",
+  tierRequired: planIdToName(m.tierRequired),
+  isPro: m.tierRequired !== "free_starter",
+  costMultiplier: m.costMultiplier,
+  description: m.description || "",
+}));
 
 export type UserRole = "admin" | "architect" | "analyst" | "viewer";
 
@@ -163,6 +147,11 @@ export type CreditTransaction = {
   amount: number;
   timestamp: string;
   balanceAfter: number;
+  createdAt?: string; // ISO string for accurate rate limit window calculations
+  action?: FeatureAction;
+  modelId?: string;
+  promptTokens?: number;
+  completionTokens?: number;
 };
 
 export type CreditWallet = {
@@ -186,6 +175,7 @@ export const INITIAL_FREE_WALLET: CreditWallet = {
       amount: 100,
       timestamp: "Today",
       balanceAfter: 100,
+      createdAt: new Date().toISOString(),
     },
   ],
 };
@@ -203,6 +193,7 @@ export const INITIAL_ADMIN_WALLET: CreditWallet = {
       amount: 40,
       timestamp: "Today, 11:30 AM",
       balanceAfter: 840,
+      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     },
     {
       id: "tx-102",
@@ -211,6 +202,7 @@ export const INITIAL_ADMIN_WALLET: CreditWallet = {
       amount: 25,
       timestamp: "Yesterday, 04:15 PM",
       balanceAfter: 880,
+      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     },
     {
       id: "tx-103",
@@ -219,6 +211,7 @@ export const INITIAL_ADMIN_WALLET: CreditWallet = {
       amount: 50,
       timestamp: "Yesterday, 02:00 PM",
       balanceAfter: 905,
+      createdAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
     },
     {
       id: "tx-104",
@@ -227,6 +220,7 @@ export const INITIAL_ADMIN_WALLET: CreditWallet = {
       amount: 1000,
       timestamp: "Sep 01, 2026",
       balanceAfter: 1000,
+      createdAt: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000).toISOString(),
     },
   ],
 };
@@ -389,20 +383,53 @@ export type TokenDeductionResult = {
   message?: string;
 };
 
+export function getWalletUsageWindows(wallet: CreditWallet = loadCreditWallet()) {
+  const history = wallet.transactions
+    .filter((t) => t.type === "deduction")
+    .map((t) => ({
+      credits: t.amount,
+      createdAt: t.createdAt || new Date().toISOString(),
+    }));
+  return calculateUsageWindows(history);
+}
+
 export function deductCreditsByTokens(
   promptText: string,
   completionText: string,
   activityDescription: string,
   costMultiplier: number = 1.0,
+  action: FeatureAction = "ai_copilot_turn",
 ): TokenDeductionResult {
   const currentWallet = loadCreditWallet();
   const promptTokens = estimateTokensForText(promptText);
   const completionTokens = estimateTokensForText(completionText);
   const totalTokens = promptTokens + completionTokens;
 
-  // 1 credit per 250 tokens scaled by model costMultiplier, minimum 1 credit for an inference turn
+  // 1 credit per 250 tokens scaled by model costMultiplier, minimum floor
+  const featureConfig = FEATURE_COSTS[action] || FEATURE_COSTS.ai_copilot_turn;
   const baseCredits = Math.ceil(totalTokens / 250);
-  const creditsDeducted = Math.max(1, Math.round(baseCredits * (costMultiplier || 1.0)));
+  const creditsDeducted = Math.max(featureConfig.baseCredits, Math.round(baseCredits * (costMultiplier || 1.0)));
+
+  // Rate Limit Check (5-hour: 150 cr, Weekly: 500 cr)
+  const history = currentWallet.transactions
+    .filter((t) => t.type === "deduction")
+    .map((t) => ({
+      credits: t.amount,
+      createdAt: t.createdAt || new Date().toISOString(),
+    }));
+  const rateLimitCheck = checkRateLimit(history, creditsDeducted);
+
+  if (!rateLimitCheck.allowed) {
+    return {
+      success: false,
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      creditsDeducted: 0,
+      newBalance: currentWallet.balance,
+      message: rateLimitCheck.reason,
+    };
+  }
 
   if (currentWallet.balance < creditsDeducted) {
     return {
@@ -417,6 +444,7 @@ export function deductCreditsByTokens(
   }
 
   const newBalance = currentWallet.balance - creditsDeducted;
+  const nowIso = new Date().toISOString();
   const newTx: CreditTransaction = {
     id: `tx-${Date.now().toString().slice(-5)}`,
     description: `${activityDescription} (${totalTokens} tokens • ${creditsDeducted} cr)`,
@@ -424,6 +452,10 @@ export function deductCreditsByTokens(
     amount: creditsDeducted,
     timestamp: "Just now",
     balanceAfter: newBalance,
+    createdAt: nowIso,
+    action,
+    promptTokens,
+    completionTokens,
   };
 
   const updatedWallet: CreditWallet = {
@@ -440,6 +472,72 @@ export function deductCreditsByTokens(
     completionTokens,
     totalTokens,
     creditsDeducted,
+    newBalance,
+  };
+}
+
+export function deductFeatureCredits(
+  action: FeatureAction,
+  modelId: AiModelId = "gemini-2-flash",
+  descriptionOverride?: string,
+): { success: boolean; creditsDeducted: number; newBalance: number; message?: string } {
+  const currentWallet = loadCreditWallet();
+  const credits = calculateCreditCost(action, modelId);
+  const feature = FEATURE_COSTS[action];
+  const desc = descriptionOverride || `${feature?.label || action} (${credits} cr)`;
+
+  // Check rate limit
+  const history = currentWallet.transactions
+    .filter((t) => t.type === "deduction")
+    .map((t) => ({
+      credits: t.amount,
+      createdAt: t.createdAt || new Date().toISOString(),
+    }));
+  const rateLimitCheck = checkRateLimit(history, credits);
+
+  if (!rateLimitCheck.allowed) {
+    return {
+      success: false,
+      creditsDeducted: 0,
+      newBalance: currentWallet.balance,
+      message: rateLimitCheck.reason,
+    };
+  }
+
+  if (currentWallet.balance < credits) {
+    return {
+      success: false,
+      creditsDeducted: 0,
+      newBalance: currentWallet.balance,
+      message: `Insufficient credits! Action requires ${credits} credits, balance is ${currentWallet.balance}.`,
+    };
+  }
+
+  const newBalance = currentWallet.balance - credits;
+  const nowIso = new Date().toISOString();
+  const newTx: CreditTransaction = {
+    id: `tx-${Date.now().toString().slice(-5)}`,
+    description: desc,
+    type: "deduction",
+    amount: credits,
+    timestamp: "Just now",
+    balanceAfter: newBalance,
+    createdAt: nowIso,
+    action,
+    modelId,
+  };
+
+  const updatedWallet: CreditWallet = {
+    ...currentWallet,
+    balance: newBalance,
+    transactions: [newTx, ...currentWallet.transactions],
+  };
+
+  saveCreditWallet(updatedWallet);
+
+  return {
+    success: true,
+    creditsDeducted: credits,
     newBalance,
   };
 }
