@@ -11,6 +11,7 @@ export interface AppUiCustomization {
   themeColor: ThemeColor;
   layoutStyle: LayoutStyle;
   density: DensityStyle;
+  contentDensity?: DensityStyle;
   appTitle?: string;
   showKpiCards: boolean;
   showSearchBar: boolean;
@@ -21,15 +22,16 @@ export interface AppUiCustomization {
 }
 
 export const DEFAULT_UI_CUSTOMIZATION: AppUiCustomization = {
-  themeColor: "indigo",
-  layoutStyle: "topbar",
-  density: "normal",
+  themeColor: "amber",
+  layoutStyle: "sidebar",
+  density: "compact",
+  contentDensity: "compact",
   showKpiCards: true,
   showSearchBar: true,
   showQuickActions: true,
   showSlaIndicators: true,
   showDbSyncBadge: true,
-  showCsvExport: false,
+  showCsvExport: true,
 };
 
 const STORAGE_KEY = "bizzmitra.uiCustomization";

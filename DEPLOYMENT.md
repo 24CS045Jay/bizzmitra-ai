@@ -37,11 +37,19 @@ SUPABASE_SERVICE_ROLE_KEY="sb_secret_r-9ktd2UNo0Dv1xZEJwhLQ_PQBKXa5n"
 GROQ_API_KEY="your_production_groq_key"
 GEMINI_API_KEY="your_production_gemini_key"
 
+# Automated Cloud & GitHub Orchestration (Server-side)
+GITHUB_TOKEN="ghp_your_github_personal_access_token_with_repo_scope"
+VERCEL_API_TOKEN="vcp_your_vercel_access_token"
+
 # Client Public Keys
 VITE_SUPABASE_URL="https://pyqbmgkusnvyyjdsyqyj.supabase.co"
 VITE_SUPABASE_PUBLISHABLE_KEY="sb_publishable_UNXcq8DuZlHhTimGfZVx4A_qVCnnnZh"
 VITE_RAZORPAY_KEY_ID="rzp_test_TcCkj2XoiCr1tZ"
 ```
+
+> [!TIP]
+> **Enabling 1-Click "Push to GitHub" on Deployed Instances (Vercel)**:
+> In your Vercel Project Settings → **Environment Variables**, add `GITHUB_TOKEN` with a GitHub Personal Access Token (classic or fine-grained) that has the `repo` scope. This enables zero-configuration 1-click GitHub repository creation for all users. If not set, users can simply click **Cloud Accounts** in the Software Studio to connect their personal GitHub token directly from their browser.
 
 ### 2.2 Vercel Deployment (Recommended)
 The repository includes automatic Nitro Vercel server preset configuration.
