@@ -12,10 +12,39 @@ export function ThemeToggle({ className, showLabel = false }: ThemeToggleProps) 
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
 
+  const handleToggle = () => {
+    if (typeof window !== "undefined") {
+      let executed = false;
+      const onExecute = () => {
+        if (!executed) {
+          executed = true;
+          window.removeEventListener("bizzmitra:theme-snap-execute", onExecute);
+          toggleTheme();
+        }
+      };
+
+      window.addEventListener("bizzmitra:theme-snap-execute", onExecute);
+
+      // Dispatch request to robot animation
+      window.dispatchEvent(
+        new CustomEvent("bizzmitra:theme-snap-request", {
+          detail: { targetTheme: isDark ? "light" : "dark" },
+        })
+      );
+
+      // Safety fallback: if no animation listener responds within 750ms, toggle immediately
+      setTimeout(() => {
+        onExecute();
+      }, 750);
+    } else {
+      toggleTheme();
+    }
+  };
+
   return (
     <button
       type="button"
-      onClick={toggleTheme}
+      onClick={handleToggle}
       aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
       className={cn(
         "neu-sm neu-press relative flex items-center justify-center gap-2 rounded-xl p-2 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
