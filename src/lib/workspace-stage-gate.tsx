@@ -200,8 +200,8 @@ export function lockSoftwareModule(targetWsId?: string): void {
 /**
  * Determines whether a stage is accessible.
  * Default for new accounts: only Problem Intake, Dashboard, and AI Discovery are accessible.
- * Downstream architecture & planning modules unlock after AI Discovery is completed.
- * The Software Studio module remains strictly locked unless explicitly unlocked.
+ * All downstream modules (including Software Studio, Solution Studio, Architecture, etc.)
+ * unlock together after AI Discovery is completed.
  */
 export function isStageUnlocked(stageId: string, targetWsId?: string): boolean {
   if (
@@ -215,17 +215,12 @@ export function isStageUnlocked(stageId: string, targetWsId?: string): boolean {
     return true;
   }
 
-  // Software Studio is locked by default
-  if (stageId === "build") {
-    return isSoftwareModuleUnlocked(targetWsId);
-  }
-
+  // All downstream modules (including "build" Software Studio) unlock when AI Discovery is completed
   return isDiscoveryCompleted(targetWsId);
 }
 
 /**
- * Unlocks all workspace transformation stages upon completing AI Discovery and persists to DB.
- * The software module remains locked as required.
+ * Unlocks all workspace transformation stages (including Software Studio) upon completing AI Discovery and persists to DB.
  */
 export function completeDiscoveryAndUnlockAll(
   workspaceId?: string,
@@ -233,12 +228,13 @@ export function completeDiscoveryAndUnlockAll(
 ): void {
   if (typeof window === "undefined") return;
   const wsId = workspaceId || window.localStorage.getItem("bizzmitra.activeWorkspaceId") || "default";
-  // Unlocks core blueprint stages (Software Studio "build" remains locked)
-  const allIds = [...WORKSPACE_STAGES.map((s) => s.id), "crm"];
+  // Unlocks ALL blueprint stages AND Software Studio ("build")
+  const allIds = [...WORKSPACE_STAGES.map((s) => s.id), "crm", "build", "all"];
 
   const key = `${STAGES_STORAGE_KEY_PREFIX}_${wsId}`;
   window.localStorage.setItem(key, JSON.stringify(allIds));
   window.localStorage.setItem(`bizzmitra.discoveryCompleted_${wsId}`, "true");
+  window.localStorage.setItem(`bizzmitra.softwareModuleUnlocked_${wsId}`, "true");
 
   // Update local workspaceContext
   let currentCtx: any = {};
@@ -348,18 +344,7 @@ export function validateRouteAccess(pathname: string): { allowed: boolean; redir
     return { allowed: true };
   }
 
-  // Software module route is explicitly locked
-  if (pathname.startsWith("/workspace/build")) {
-    if (!isSoftwareModuleUnlocked()) {
-      return {
-        allowed: false,
-        redirectTo: isDiscoveryCompleted() ? "/workspace/solution" : "/workspace/discovery",
-        reason: "Software Studio is currently locked.",
-      };
-    }
-  }
-
-  // All downstream workspace modules require AI Discovery
+  // All downstream workspace modules (including Software Studio /workspace/build) require AI Discovery
   if (!isDiscoveryCompleted()) {
     return {
       allowed: false,
@@ -383,25 +368,14 @@ export function useStageGate(currentStageId: string) {
 
     const unlocked = isStageUnlocked(currentStageId);
     if (!unlocked) {
-      if (currentStageId === "build") {
-        toast.error(
-          "🔒 Software Studio is Locked: The software generation module is currently locked.",
-          {
-            duration: 5000,
-            id: "software-module-locked-gate",
-          }
-        );
-        navigate({ to: isDiscoveryCompleted() ? "/workspace/solution" : "/workspace/discovery" });
-      } else {
-        toast.error(
-          "🔒 AI Discovery Required: Please complete the AI Diagnostic Discovery first before accessing this module.",
-          {
-            duration: 5000,
-            id: "discovery-required-gate",
-          }
-        );
-        navigate({ to: "/workspace/discovery" });
-      }
+      toast.error(
+        "🔒 AI Discovery Required: Please complete the AI Diagnostic Discovery first before accessing this module.",
+        {
+          duration: 5000,
+          id: "discovery-required-gate",
+        }
+      );
+      navigate({ to: "/workspace/discovery" });
     }
   }, [currentStageId, navigate]);
 }

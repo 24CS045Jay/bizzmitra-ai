@@ -860,11 +860,7 @@ export function AppSidebar2({
                         key={sub.label}
                         type="button"
                         onClick={() => {
-                          if (cur?.id === "build") {
-                            toast.error("🔒 Software Studio is Locked: The software generation module is currently locked.");
-                          } else {
-                            toast.warning(`Please complete earlier stages to unlock ${getItemLabel(cur!)}.`);
-                          }
+                          toast.warning(`🔒 Please complete AI Diagnostic Discovery first to unlock ${getItemLabel(cur!)}.`);
                         }}
                         className="group flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground/50 cursor-not-allowed hover:bg-transparent"
                       >
