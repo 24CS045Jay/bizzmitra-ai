@@ -68,10 +68,10 @@ import {
   DOMAIN_SCHEMA 
 } from './lib/database';
 
-class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
-  constructor(props: { children: ReactNode }) {
+class AppErrorBoundary extends Component<{ children?: ReactNode }, { hasError: boolean }> {
+  state: { hasError: boolean } = { hasError: false };
+  constructor(props: { children?: ReactNode }) {
     super(props);
-    this.state = { hasError: false };
   }
   static getDerivedStateFromError() {
     return { hasError: true };
@@ -296,7 +296,7 @@ function SolutionApp() {
   const handleExportCsv = () => {
     const headers = [
       'ID',
-      DOMAIN_SCHEMA.columns?.titleLabel || 'Title',
+      (DOMAIN_SCHEMA.columns as any)?.titleLabel || 'Title',
       DOMAIN_SCHEMA.columns?.col1Label || 'Param 1',
       DOMAIN_SCHEMA.columns?.col2Label || 'Param 2',
       DOMAIN_SCHEMA.columns?.statusLabel || 'Status',
@@ -741,7 +741,7 @@ function SolutionApp() {
                     <div className="text-slate-400 text-xs font-medium truncate">{kpi.label}</div>
                     <div className="font-bold text-white mt-1 text-xl sm:text-2xl">{kpi.value}</div>
                     <div className="text-[10px] sm:text-xs mt-0.5 font-semibold \${theme.primaryText}">
-                      {kpi.change || kpi.sub || '+12.4%'}
+                      {kpi.change || (kpi as any).sub || '+12.4%'}
                     </div>
                   </div>
                 ))}
@@ -1014,7 +1014,7 @@ function SolutionApp() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-white">{arch.name}</span>
+                        <span className="text-xs font-bold text-white">{arch.name || (arch as any).title}</span>
                         <span className="text-[10px] px-2 py-0.5 rounded font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                           {arch.type}
                         </span>
@@ -1313,7 +1313,7 @@ ALTER TABLE public.\${DOMAIN_SCHEMA.domainKey}_records ENABLE ROW LEVEL SECURITY
                   <div key={idx} className="space-y-1.5">
                     <div className="flex justify-between text-xs">
                       <span className="font-semibold text-slate-300">{stage.stage}</span>
-                      <span className="font-mono text-indigo-300">{stage.count} items · {stage.time}</span>
+                      <span className="font-mono text-indigo-300">{stage.count} items · {(stage as any).time || (stage.pct ? (stage.pct + '%') : 'Active')}</span>
                     </div>
                     <div className="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800">
                       <div 
@@ -1338,8 +1338,8 @@ ALTER TABLE public.\${DOMAIN_SCHEMA.domainKey}_records ENABLE ROW LEVEL SECURITY
             PostgreSQL 16 · Supabase RLS · Deno Edge Workers
           </div>
         </footer>
-      </div>
-    </div>
+        </div>
+      </main>
 
       {/* Auth & Demo Logins Modal */}
       {isAuthModalOpen && (
