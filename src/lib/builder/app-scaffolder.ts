@@ -337,23 +337,30 @@ export interface DomainDemoUser {
 
 export interface DomainArchitectureItem {
   id: string;
-  title: string;
-  type: string;
-  tech: string;
-  status: string;
-  description: string;
-  endpointOrTable: string;
-  metrics: string;
+  name?: string;
+  title?: string;
+  type?: string;
+  tech?: string;
+  status?: string;
+  description?: string;
+  schema?: string;
+  endpointOrTable?: string;
+  metrics?: string;
+  [key: string]: any;
 }
 
 export interface DomainRoadmapSprint {
   id: string;
-  title: string;
-  timeline: string;
-  badge: string;
-  progress: number;
-  deliverables: string[];
-  tasks: { id: string; name: string; status: string; done: boolean }[];
+  phase?: string;
+  title?: string;
+  timeline?: string;
+  duration?: string;
+  badge?: string;
+  progress?: number;
+  status?: string;
+  deliverables?: string[];
+  tasks?: Array<{ id: string; title?: string; name?: string; done: boolean; assignee?: string; status?: string }>;
+  [key: string]: any;
 }
 
 export const DOMAIN_SCHEMA = {
