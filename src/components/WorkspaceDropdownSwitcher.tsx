@@ -74,15 +74,45 @@ export function WorkspaceDropdownSwitcher({
   const [loading, setLoading] = React.useState(true);
 
   // Active workspace info state
-  const [activeWsId, setActiveWsId] = React.useState<string | null>(null);
+  const [activeWsId, setActiveWsId] = React.useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return window.localStorage.getItem("bizzmitra.activeWorkspaceId");
+    }
+    return null;
+  });
   const [activeWsInfo, setActiveWsInfo] = React.useState<{
     name: string;
     industry: string;
     mode: string;
-  }>({
-    name: isTest ? "TalentCraft HR Consultancy" : "Loading Workspace...",
-    industry: isTest ? "HR & Recruitment Services" : "Initializing...",
-    mode: "consult",
+  }>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.businessName && !parsed.businessName.toLowerCase().includes("talentcraft")) {
+            return {
+              name: parsed.businessName,
+              industry: parsed.industry || "Custom Workspace",
+              mode: parsed.intakeMode || "consult",
+            };
+          }
+        }
+        const act = window.localStorage.getItem("bizzmitra.activeWorkspaceName");
+        if (act && !act.toLowerCase().includes("talentcraft")) {
+          return {
+            name: act,
+            industry: "Custom Workspace",
+            mode: "consult",
+          };
+        }
+      } catch {}
+    }
+    return {
+      name: "No Active Workspace",
+      industry: "Create intake to begin",
+      mode: "consult",
+    };
   });
 
   const loadWorkspaces = React.useCallback(async () => {
@@ -147,22 +177,21 @@ export function WorkspaceDropdownSwitcher({
 
     // If no workspaces in database but local context exists, create a virtual workspace item
     if (list.length === 0) {
-      if (localParsed?.["businessName"] || isTest) {
-        const demoWs: WorkspaceRecord = {
-          id: currentActiveId || (isTest ? "ws-talentcraft-default" : "local-workspace"),
-          name:
-            (localParsed?.["businessName"] as string) ||
-            (isTest ? "TalentCraft HR Consultancy" : "My Workspace"),
-          industry:
-            (localParsed?.["industry"] as string) ||
-            (isTest ? "HR & Recruitment Services" : "Custom Industry"),
+      if (
+        localParsed?.["businessName"] &&
+        !String(localParsed["businessName"]).toLowerCase().includes("talentcraft")
+      ) {
+        const localWs: WorkspaceRecord = {
+          id: currentActiveId || "local-workspace",
+          name: (localParsed?.["businessName"] as string) || "My Workspace",
+          industry: (localParsed?.["industry"] as string) || "Custom Industry",
           problem_statement: (localParsed?.["problemStatement"] as string) || "",
           intake_mode: (localParsed?.["intakeMode"] as string) || "consult",
           workspace_context: localParsed || {},
           maturity_score: 85,
           status: "active",
         };
-        list = [demoWs];
+        list = [localWs];
       }
     }
 
@@ -194,8 +223,8 @@ export function WorkspaceDropdownSwitcher({
     } else {
       setActiveWsId(null);
       setActiveWsInfo({
-        name: isTest ? "TalentCraft HR Consultancy" : "No Active Workspace",
-        industry: isTest ? "HR & Recruitment Services" : "Create intake to begin",
+        name: "No Active Workspace",
+        industry: "Create intake to begin",
         mode: "consult",
       });
     }

@@ -105,11 +105,29 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const isTestAccount = isTestingAccount(user?.email);
 
-  const [activeWs, setActiveWs] = useState({
-    name: isTestAccount ? "TalentCraft HR Consultancy" : "No Active Workspace",
-    industry: isTestAccount ? "HR & Recruitment Services" : "Create new workspace",
-    mode: "consult",
-    lang: "en",
+  const [activeWs, setActiveWs] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.businessName) {
+            return {
+              name: parsed.businessName,
+              industry: parsed.industry || "Custom Workspace",
+              mode: parsed.intakeMode || "consult",
+              lang: window.localStorage.getItem("bizzmitra.language") || "en",
+            };
+          }
+        }
+      } catch {}
+    }
+    return {
+      name: "No Active Workspace",
+      industry: "Create new workspace",
+      mode: "consult",
+      lang: "en",
+    };
   });
   const [activeRole, setActiveRole] = useState<UserRole>("viewer");
 
@@ -128,30 +146,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     if (typeof window === "undefined") return;
     const storedLang = window.localStorage.getItem("bizzmitra.language") || "en";
     const isTest = isTestingAccount(user?.email);
-
-    // 1. Testing Admin account: allow fallback to TalentCraft demo workspace
-    if (isTest) {
-      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          setActiveWs({
-            name: parsed.businessName || "TalentCraft HR Consultancy",
-            industry: parsed.industry || "HR & Recruitment Services",
-            mode: parsed.intakeMode || "consult",
-            lang: storedLang,
-          });
-          return;
-        } catch {}
-      }
-      setActiveWs({
-        name: "TalentCraft HR Consultancy",
-        industry: "HR & Recruitment Services",
-        mode: "consult",
-        lang: storedLang,
-      });
-      return;
-    }
 
     // 2. Standard user: Load their own workspace from Supabase
     if (user?.id) {
@@ -475,7 +469,22 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("bizzmitra:role-changed", handleRoleChanged);
   }, []);
 
-  const [activeWsName, setActiveWsName] = useState<string>("TalentCraft HR Consultancy");
+  const [activeWsName, setActiveWsName] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.businessName && !parsed.businessName.toLowerCase().includes("talentcraft")) {
+            return parsed.businessName;
+          }
+        }
+        const act = window.localStorage.getItem("bizzmitra.activeWorkspaceName");
+        if (act && !act.toLowerCase().includes("talentcraft")) return act;
+      } catch {}
+    }
+    return "No Active Workspace";
+  });
 
   useEffect(() => {
     const updateWsName = () => {
@@ -483,8 +492,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed.businessName) setActiveWsName(parsed.businessName);
+          if (parsed.businessName && !parsed.businessName.toLowerCase().includes("talentcraft")) {
+            setActiveWsName(parsed.businessName);
+            return;
+          }
         }
+        const act = window.localStorage.getItem("bizzmitra.activeWorkspaceName");
+        if (act && !act.toLowerCase().includes("talentcraft")) {
+          setActiveWsName(act);
+          return;
+        }
+        setActiveWsName("No Active Workspace");
       } catch {}
     };
     updateWsName();
@@ -591,9 +609,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="hidden sm:flex h-14 shrink-0 items-center justify-between border-b border-border/60 bg-background/85 px-6 sm:px-8 lg:px-10 backdrop-blur-md sticky top-0 z-30 transition-all">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-              <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span
+                className={cn(
+                  "size-2 rounded-full",
+                  activeWsName && activeWsName !== "No Active Workspace"
+                    ? "bg-emerald-500 animate-pulse"
+                    : "bg-muted-foreground/40",
+                )}
+              />
               <span className="font-bold text-foreground">Project:</span>
-              <span className="truncate max-w-[200px] lg:max-w-sm text-foreground/90 font-medium">{activeWsName}</span>
+              <span className="truncate max-w-[200px] lg:max-w-sm text-foreground/90 font-medium">
+                {activeWsName || "No Active Workspace"}
+              </span>
             </span>
           </div>
 

@@ -1794,11 +1794,11 @@ export function getWireframeBlueprint(context?: {
     };
   }
 
-  // 6. HR, Recruitment & Staffing (ONLY when explicitly HR or TalentCraft)
+  // 6. HR, Recruitment & Staffing (ONLY when explicitly HR or recruitment)
   if (
-    combined.includes("talentcraft") ||
     combined.includes("recruitment") ||
     combined.includes("staffing agency") ||
+    combined.includes("applicant tracking") ||
     combined.includes("recruiter") ||
     combined.includes("headhunting") ||
     (combined.includes("candidate") && combined.includes("hire"))

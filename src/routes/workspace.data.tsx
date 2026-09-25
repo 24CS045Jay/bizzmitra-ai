@@ -68,9 +68,23 @@ function DataPage() {
   const [workspaceContext, setWorkspaceContext] = useState<{
     businessName: string;
     industry: string;
-  }>({
-    businessName: "TalentCraft HR Consultancy",
-    industry: "HR & Recruitment Services",
+  }>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            businessName: parsed.businessName || parsed.name || "Enterprise Data & APIs",
+            industry: parsed.industry || "Cross-Industry",
+          };
+        }
+      } catch {}
+    }
+    return {
+      businessName: "Enterprise Data & APIs",
+      industry: "Cross-Industry",
+    };
   });
 
   useEffect(() => {
@@ -80,8 +94,8 @@ function DataPage() {
         if (raw) {
           const parsed = JSON.parse(raw);
           setWorkspaceContext({
-            businessName: parsed.businessName || "TalentCraft HR Consultancy",
-            industry: parsed.industry || "HR & Recruitment Services",
+            businessName: parsed.businessName || parsed.name || "Enterprise Data & APIs",
+            industry: parsed.industry || "Cross-Industry",
           });
         }
       } catch {}

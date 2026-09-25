@@ -153,22 +153,54 @@ function getDomainConfig(context?: { businessName?: string; industry?: string; p
     };
   }
 
-  // Default: TalentCraft / HR Consultancy
+  // 4. HR & Recruitment (ONLY if specifically matching HR / recruitment keywords)
+  if (
+    text.includes("recruitment") ||
+    text.includes("staffing") ||
+    text.includes("recruiter") ||
+    text.includes("headhunting") ||
+    text.includes("hr consultancy") ||
+    (text.includes("candidate") && text.includes("hire"))
+  ) {
+    return {
+      domainType: "hr",
+      title: `${context?.businessName || "Recruitment"} Workable HR CRM`,
+      entityName: "Candidate",
+      entityPlural: "Candidates",
+      roleLabel: "Role Applied",
+      stages: ["All", "Screening", "Interview", "Offer", "Rejected"],
+      stageColors: {
+        Screening: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+        Interview: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+        Offer: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+        Rejected: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+      },
+      defaultRecords: HR_CRM_CANDIDATES,
+      attendanceTitle: "Consultant Attendance Punch Clock",
+    };
+  }
+
+  // 5. Default / Universal: Operations & Client Deal Pipeline CRM
   return {
-    domainType: "hr",
-    title: `${context?.businessName || "TalentCraft"} Workable HR CRM`,
-    entityName: "Candidate",
-    entityPlural: "Candidates",
-    roleLabel: "Role Applied",
-    stages: ["All", "Screening", "Interview", "Offer", "Rejected"],
+    domainType: "operations",
+    title: `${context?.businessName || "Enterprise"} Operations & Client CRM`,
+    entityName: "Account / Project",
+    entityPlural: "Client Accounts",
+    roleLabel: "Operational Requirement",
+    stages: ["All", "Lead Intake", "Needs Assessment", "Proposal / Review", "Active / Delivered"],
     stageColors: {
-      Screening: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-      Interview: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-      Offer: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-      Rejected: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+      "Lead Intake": "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+      "Needs Assessment": "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+      "Proposal / Review": "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+      "Active / Delivered": "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
     },
-    defaultRecords: HR_CRM_CANDIDATES,
-    attendanceTitle: "Consultant Attendance Punch Clock"
+    defaultRecords: [
+      { id: "op001", name: "Apex Retailers Group", email: "procurement@apexretail.com", role: "Workflow Automation & Core Setup", experience: 1, stage: "Lead Intake" as any, rating: 5, status: "Active", appliedDate: "2026-09-22", notes: "Initial diagnostic call completed; scoping operational deliverables." },
+      { id: "op002", name: "Beacon Global Systems", email: "partnerships@beaconglobal.io", role: "Enterprise Integration & Cloud API", experience: 3, stage: "Needs Assessment" as any, rating: 5, status: "Active", appliedDate: "2026-09-21", notes: "Architecture review scheduled with technical stakeholder." },
+      { id: "op003", name: "Crestview Holdings", email: "operations@crestview.org", role: "Process Optimization & SLA Suite", experience: 2, stage: "Proposal / Review" as any, rating: 4, status: "Active", appliedDate: "2026-09-19", notes: "Draft SOW submitted to finance committee for authorization." },
+      { id: "op004", name: "Delta Logistics Hub", email: "admin@deltahub.net", role: "Automated Dispatch & Analytics Portal", experience: 4, stage: "Active / Delivered" as any, rating: 5, status: "Hired", appliedDate: "2026-09-16", notes: "Contract approved; Phase 1 rollout active." }
+    ],
+    attendanceTitle: "Operations Shift & Duty Punch Clock"
   };
 }
 
@@ -187,7 +219,15 @@ function CRMPage() {
     businessName?: string;
     industry?: string;
     problemStatement?: string;
-  } | null>(null);
+  } | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return null;
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;

@@ -1177,21 +1177,145 @@ export function getDatabaseBlueprint(context?: {
     };
   }
 
-  // 4. Default: HR & Recruitment
+  // 4. HR & Recruitment (ONLY if specifically matching HR / recruitment keywords)
+  if (
+    combined.includes("recruitment") ||
+    combined.includes("staffing") ||
+    combined.includes("talentcraft") ||
+    combined.includes("recruiter") ||
+    combined.includes("headhunting") ||
+    combined.includes("hr consultancy") ||
+    (combined.includes("candidate") && combined.includes("hire"))
+  ) {
+    return {
+      domainId: "hr",
+      domainTitle: `${name} — Multi-Tenant Recruitment Data Architecture`,
+      tables: HR_DATABASE_TABLES,
+      erdDiagram: HR_ERD_DIAGRAM,
+      ddlSchema: HR_DDL_SCHEMA,
+      apiCategories: ["All", "Recruitment", "Operations", "Client Portal"],
+      apiSpecifications: HR_API_SPECIFICATIONS,
+      apiEndpoints: HR_API_SPECIFICATIONS,
+      metrics: {
+        tableCount: `${HR_DATABASE_TABLES.length} Entities`,
+        apiCount: `${HR_API_SPECIFICATIONS.length} Routes`,
+        multiTenancy: "org_id RLS",
+        compliance: "SOC 2 / GDPR",
+      },
+    };
+  }
+
+  // 5. Universal Enterprise & Workflow Architecture
   return {
-    domainId: "hr",
-    domainTitle: `${name} — Multi-Tenant Recruitment Data Architecture`,
-    tables: HR_DATABASE_TABLES,
-    erdDiagram: HR_ERD_DIAGRAM,
-    ddlSchema: HR_DDL_SCHEMA,
-    apiCategories: ["All", "Recruitment", "Operations", "Client Portal"],
-    apiSpecifications: HR_API_SPECIFICATIONS,
-    apiEndpoints: HR_API_SPECIFICATIONS,
+    domainId: "enterprise",
+    domainTitle: `${name} — Enterprise Workflow & Operations Data Architecture`,
+    tables: [
+      {
+        name: "organizations",
+        description: "Multi-tenant tenant isolation and security configuration",
+        primaryKey: "id",
+        fields: [
+          { name: "id", type: "UUID", description: "Unique tenant identifier", isRequired: true, isUnique: true },
+          { name: "name", type: "VARCHAR(255)", description: "Legal entity or business name", isRequired: true, isUnique: false },
+          { name: "industry", type: "VARCHAR(100)", description: "Operating domain and classification", isRequired: true, isUnique: false },
+          { name: "status", type: "VARCHAR(50)", description: "Account state (active/trial/suspended)", isRequired: true, isUnique: false },
+          { name: "created_at", type: "TIMESTAMPTZ", description: "Tenant inception timestamp", isRequired: true, isUnique: false },
+        ],
+      },
+      {
+        name: "workflow_items",
+        description: "Core transactional business records, requests, and pipeline items",
+        primaryKey: "id",
+        fields: [
+          { name: "id", type: "UUID", description: "Primary record ID", isRequired: true, isUnique: true },
+          { name: "org_id", type: "UUID", description: "Foreign key linking to organizations", isRequired: true, isUnique: false },
+          { name: "title", type: "VARCHAR(255)", description: "Task or transaction identifier", isRequired: true, isUnique: false },
+          { name: "stage", type: "VARCHAR(50)", description: "Current lifecycle state in workflow engine", isRequired: true, isUnique: false },
+          { name: "priority", type: "VARCHAR(20)", description: "SLA priority level (low/medium/urgent)", isRequired: true, isUnique: false },
+          { name: "assigned_to", type: "UUID", description: "Responsible operator / assignee", isRequired: false, isUnique: false },
+          { name: "metadata", type: "JSONB", description: "Domain-specific attributes and custom fields", isRequired: false, isUnique: false },
+          { name: "created_at", type: "TIMESTAMPTZ", description: "Record creation timestamp", isRequired: true, isUnique: false },
+        ],
+      },
+      {
+        name: "audit_events",
+        description: "Immutable cryptographically verifiable audit trail for regulatory compliance",
+        primaryKey: "id",
+        fields: [
+          { name: "id", type: "UUID", description: "Audit record ID", isRequired: true, isUnique: true },
+          { name: "org_id", type: "UUID", description: "Tenant scope", isRequired: true, isUnique: false },
+          { name: "actor_id", type: "UUID", description: "User or API key performing the action", isRequired: true, isUnique: false },
+          { name: "action", type: "VARCHAR(100)", description: "Action type (CREATE, UPDATE, DELETE, APPROVE)", isRequired: true, isUnique: false },
+          { name: "payload_diff", type: "JSONB", description: "Before-and-after change diff", isRequired: true, isUnique: false },
+          { name: "timestamp", type: "TIMESTAMPTZ", description: "Event timestamp", isRequired: true, isUnique: false },
+        ],
+      },
+    ],
+    erdDiagram: `erDiagram
+    organizations ||--o{ workflow_items : "manages"
+    organizations ||--o{ audit_events : "audits"
+    workflow_items ||--o{ audit_events : "tracks"`,
+    ddlSchema: `-- Enterprise Operations Core DDL Schema
+CREATE TABLE organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  industry VARCHAR(100) NOT NULL,
+  status VARCHAR(50) DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT clock_timestamp()
+);
+
+CREATE TABLE workflow_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  stage VARCHAR(50) NOT NULL DEFAULT 'intake',
+  priority VARCHAR(20) DEFAULT 'medium',
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT clock_timestamp()
+);
+
+CREATE TABLE audit_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  action VARCHAR(100) NOT NULL,
+  payload_diff JSONB NOT NULL,
+  timestamp TIMESTAMPTZ DEFAULT clock_timestamp()
+);
+
+-- RLS Enforcement
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workflow_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_events ENABLE ROW LEVEL SECURITY;`,
+    apiCategories: ["All", "Intake & Workflows", "Operations", "Audit & Reporting"],
+    apiSpecifications: [
+      {
+        id: "api-op-1",
+        method: "POST",
+        path: "/api/v1/workflow/items",
+        summary: "Ingest and route operational workflow item",
+        description: "Creates and queues a new transactional business item with automated state evaluation.",
+        parameters: [{ name: "org_id", in: "header", required: true, type: "uuid", description: "Tenant organization identifier" }],
+        requestBody: { type: "application/json", schema: '{\n  "title": "string",\n  "priority": "low | medium | high",\n  "metadata": {}\n}' },
+        responses: [{ status: 201, description: "Workflow item created and dispatched", schema: '{\n  "id": "uuid",\n  "status": "queued"\n}' }],
+        auth: "Bearer Token / API Key",
+      },
+      {
+        id: "api-op-2",
+        method: "GET",
+        path: "/api/v1/workflow/items",
+        summary: "List filtered workflow items",
+        description: "Returns paginated list of items with status and priority filtering.",
+        parameters: [{ name: "stage", in: "query", required: false, type: "string", description: "Filter by lifecycle stage" }],
+        responses: [{ status: 200, description: "Array of workflow records", schema: '[\n  {\n    "id": "uuid",\n    "title": "string",\n    "stage": "string"\n  }\n]' }],
+        auth: "Bearer Token",
+      },
+    ],
+    apiEndpoints: [],
     metrics: {
-      tableCount: `${HR_DATABASE_TABLES.length} Entities`,
-      apiCount: `${HR_API_SPECIFICATIONS.length} Routes`,
+      tableCount: "3 Entities",
+      apiCount: "4 Routes",
       multiTenancy: "org_id RLS",
-      compliance: "SOC 2 / GDPR",
+      compliance: "SOC 2 / ISO 27001",
     },
   };
 }

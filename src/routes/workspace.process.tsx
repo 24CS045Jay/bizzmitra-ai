@@ -68,16 +68,31 @@ function ProcessPage() {
     businessName: string;
     industry: string;
     problemStatement?: string;
-  }>({
-    businessName: "TalentCraft HR Consultancy",
-    industry: "HR & Recruitment Services",
-    problemStatement: "",
+  }>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            businessName: parsed.businessName || parsed.name || "Enterprise Process",
+            industry: parsed.industry || "Cross-Industry",
+            problemStatement: parsed.problemStatement || "",
+          };
+        }
+      } catch {}
+    }
+    return {
+      businessName: "Enterprise Process",
+      industry: "Cross-Industry",
+      problemStatement: "",
+    };
   });
 
   useEffect(() => {
     async function loadContext() {
-      let bName = "TalentCraft HR Consultancy";
-      let ind = "HR & Recruitment Services";
+      let bName = "Enterprise Process";
+      let ind = "Cross-Industry";
       let prob = "";
 
       try {

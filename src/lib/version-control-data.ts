@@ -62,7 +62,7 @@ export const INITIAL_WORKSPACE_VERSIONS: WorkspaceVersionSnapshot[] = [
       {
         artifact: "Governance & Review",
         changeType: "added",
-        description: "Signed off by TalentCraft Operations Lead and external Solution Architect.",
+        description: "Signed off by Operations Lead and external Solution Architect.",
       },
     ],
     metricsSnapshot: {
@@ -120,11 +120,11 @@ export const INITIAL_WORKSPACE_VERSIONS: WorkspaceVersionSnapshot[] = [
     status: "archived",
     diffs: [
       {
-        artifact: "Workable HR CRM",
+        artifact: "Operations CRM",
         changeType: "modified",
-        description: "Extended candidate data schema with 3 dynamic attributes and updated table grid views.",
-        previousValue: "Standard candidate roster (11 fields)",
-        currentValue: "Customized schema with LinkedIn URL and Notice Period (14 fields)",
+        description: "Extended entity data schema with dynamic attributes and updated table grid views.",
+        previousValue: "Standard entity roster",
+        currentValue: "Customized schema with custom attributes and audit tracking",
       },
       {
         artifact: "Solution Studio",
@@ -154,7 +154,7 @@ export const INITIAL_WORKSPACE_VERSIONS: WorkspaceVersionSnapshot[] = [
       {
         artifact: "Multi-Modal Intake",
         changeType: "added",
-        description: "Ingested TalentCraft HR Consultancy problem statement and extracted preliminary goals.",
+        description: "Ingested enterprise problem statement and extracted preliminary transformation goals.",
       },
       {
         artifact: "AI Discovery",

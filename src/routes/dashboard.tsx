@@ -28,7 +28,7 @@ import { evaluateBlueprintRisks } from "@/lib/risk-evaluator";
 import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
 import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
 import { completeDiscoveryAndUnlockAll } from "@/lib/workspace-stage-gate";
-import { saveActiveWorkspaceLocally, type WorkspaceContextData } from "@/lib/workspace-persistence";
+import { saveActiveWorkspaceLocally, clearStaleDemoWorkspace, type WorkspaceContextData } from "@/lib/workspace-persistence";
 import { FinancialRoiCard } from "@/components/dashboard/FinancialRoiCard";
 import { cn } from "@/lib/utils";
 
@@ -114,7 +114,10 @@ function DashboardPage() {
       const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
       if (raw) {
         try {
-          return JSON.parse(raw);
+          const parsed = JSON.parse(raw);
+          if (parsed?.businessName && !parsed.businessName.toLowerCase().includes("talentcraft")) {
+            return parsed;
+          }
         } catch {}
       }
     }
@@ -128,11 +131,15 @@ function DashboardPage() {
       if (raw) {
         try {
           const parsed = JSON.parse(raw);
-          if (parsed?.businessName) return parsed.businessName;
+          if (parsed?.businessName && !parsed.businessName.toLowerCase().includes("talentcraft")) {
+            return parsed.businessName;
+          }
         } catch {}
       }
+      const act = window.localStorage.getItem("bizzmitra.activeWorkspaceName");
+      if (act && !act.toLowerCase().includes("talentcraft")) return act;
     }
-    return isTest ? "TalentCraft HR Consultancy" : "";
+    return "";
   });
 
   // Active workspace record matched against workspaces list
@@ -149,12 +156,12 @@ function DashboardPage() {
     activeContext?.businessName ||
     activeWorkspace?.name ||
     activeWsName ||
-    (isTest ? "TalentCraft HR Consultancy" : "My Workspace");
+    "My Workspace";
 
   const effectiveIndustry =
     activeContext?.industry ||
     activeWorkspace?.industry ||
-    (isTest ? "HR & Recruitment Services" : "General");
+    "General";
 
   const effectiveProblemStatement =
     activeContext?.problemStatement || activeWorkspace?.problem_statement || "";
@@ -317,8 +324,6 @@ function DashboardPage() {
 
           setActiveContext(rebuiltContext);
           saveActiveWorkspaceLocally(found.id, found.name, rebuiltContext, user?.id);
-        } else if (isTest) {
-          setActiveWsName("TalentCraft HR Consultancy");
         } else {
           const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
           if (raw) {
@@ -342,24 +347,29 @@ function DashboardPage() {
     void loadWorkspaces();
   }, [user, isTest]);
 
+  useEffect(() => {
+    clearStaleDemoWorkspace();
+  }, []);
+
   function loadSampleDemoWorkspace() {
+    clearStaleDemoWorkspace();
     const demoCtx: Partial<WorkspaceContextData> = {
-      businessName: "TalentCraft HR Consultancy",
-      problemStatement: "Scaling remote tech recruitment and candidate onboarding automation",
-      industry: "HR & Recruitment",
+      businessName: "CloudScale IT Solutions",
+      problemStatement: "Scaling IT & Software Services delivery with automated client onboarding & SLA tracking",
+      industry: "IT & Software Services",
       intakeMode: "consult",
       discoveryCompleted: true,
     };
     saveActiveWorkspaceLocally(
-      "ws-talentcraft-default",
-      "TalentCraft HR Consultancy",
+      "ws-cloudscale-demo",
+      "CloudScale IT Solutions",
       demoCtx,
       user?.id,
     );
-    setActiveWsId("ws-talentcraft-default");
-    setActiveWsName("TalentCraft HR Consultancy");
+    setActiveWsId("ws-cloudscale-demo");
+    setActiveWsName("CloudScale IT Solutions");
     setActiveContext(demoCtx);
-    toast.success("Loaded TalentCraft demo workspace!");
+    toast.success("Loaded sample IT & Software Services demo workspace!");
   }
 
   const [financialVersion, setFinancialVersion] = useState(0);
@@ -431,7 +441,7 @@ function DashboardPage() {
       ? window.localStorage.getItem("bizzmitra.activeWorkspaceId")
       : null;
   const hasCustomWorkspace =
-    workspaces.length > 0 || (localWsId && localWsId !== "ws-talentcraft-default" && rawCtx);
+    workspaces.length > 0 || (localWsId && !localWsId.includes("talentcraft") && rawCtx && !rawCtx.toLowerCase().includes("talentcraft"));
 
   // If non-test user has no active workspaces, display the Workspaces Hub with Welcome Empty State & Create Action
   if (!isTest && !hasCustomWorkspace) {
@@ -499,7 +509,7 @@ function DashboardPage() {
                   className="neu-sm neu-press inline-flex items-center gap-2 rounded-xl border border-border/80 bg-card px-4 py-3 text-xs font-bold text-foreground hover:bg-muted/50 transition-all"
                 >
                   <Sparkles className="size-3.5 text-primary" />
-                  <span>Explore Demo Workspace (TalentCraft)</span>
+                  <span>Explore Sample Demo Workspace</span>
                 </button>
               </div>
 

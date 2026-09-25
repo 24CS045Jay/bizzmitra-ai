@@ -87,8 +87,8 @@ export function getArtifactMapForWorkspace(
     description?: string;
   } | null
 ): ArtifactMapBlueprint {
-  const name = workspaceContext?.businessName || workspaceContext?.name || "TalentCraft HR Consultancy";
-  const industry = workspaceContext?.industry || "HR & Recruitment Services";
+  const name = workspaceContext?.businessName || workspaceContext?.name || "Enterprise Workspace";
+  const industry = workspaceContext?.industry || "Operations & Management";
   const problem = workspaceContext?.problemStatement || workspaceContext?.description || "";
   const combined = `${name} ${industry} ${problem}`.toLowerCase();
 
@@ -913,7 +913,7 @@ export function getArtifactMapForWorkspace(
       },
       {
         id: "hr-crm",
-        name: "Workable HR CRM",
+        name: "Prototype CRM App",
         kicker: "Signature USP #1",
         layer: "solution",
         layerLabel: "Workable Solutions",
@@ -924,11 +924,11 @@ export function getArtifactMapForWorkspace(
         y: 20,
         isUsp: true,
         uspLabel: "USP #1: Workable App",
-        summary: "A live, interactive applicant tracking CRM with candidate stage progression, search, add candidate modal, and attendance punch clock.",
-        inputsConsumed: ["Solution pillar specs", "Candidate data schema", "Recruiter role permissions"],
-        outputsProduced: ["Live candidate roster", "Stage transitions", "Attendance timesheet logs"],
+        summary: "A live, interactive operational CRM prototype with pipeline stage progression, quick search, entity modals, and activity logging.",
+        inputsConsumed: ["Solution pillar specs", "Operational entity schema", "User role permissions"],
+        outputsProduced: ["Live record roster", "Stage transitions", "Activity timesheet logs"],
         metrics: [
-          { label: "Active Candidates", value: "10 Seed Records" },
+          { label: "Active Records", value: "Live Demo" },
           { label: "Stage Flow", value: "4 Pipelines" },
         ],
       },

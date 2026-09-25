@@ -31,14 +31,7 @@ import {
   type SolutionData,
   type DynamicSolutionModule,
 } from "@/lib/ai/solution-ai";
-import {
-  getActiveProblemFraming,
-  getActiveSolution,
-  HR_BUILD_BUY_MATRIX,
-  HR_CONSULTANCY_PROBLEM,
-  HR_SOLUTION_MODULES,
-  type BuildBuyOption,
-} from "@/lib/demo-data";
+import { type BuildBuyOption } from "@/lib/demo-data";
 import { supabase } from "@/integrations/supabase/client";
 import { loadStudioSettings, THEME_ACCENTS } from "@/lib/solution-studio";
 import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
@@ -90,6 +83,9 @@ const MODULE_TIME_TAGS: Record<string, Exclude<TimeTag, "All">> = {
   "legacy-tracker": "Eliminate",
 };
 
+const DEFAULT_NEUTRAL_PROBLEM =
+  "Streamline and automate operational workflows, optimize customer and client intake, and remove manual data bottlenecks.";
+
 function SolutionPage() {
   useStageGate("solution");
   const [problemText, setProblemText] = useState(() => {
@@ -104,7 +100,7 @@ function SolutionPage() {
         }
       } catch {}
     }
-    return HR_CONSULTANCY_PROBLEM;
+    return DEFAULT_NEUTRAL_PROBLEM;
   });
   const [businessName, setBusinessName] = useState(() => {
     if (typeof window !== "undefined") {
@@ -140,7 +136,7 @@ function SolutionPage() {
 
   const initialDomainSolution = useMemo(() => {
     return generateDomainSolutionFallback(problemText, businessName, industry);
-  }, []);
+  }, [problemText, businessName, industry]);
 
   const [framing, setFraming] = useState<ProblemFramingData>(() => initialDomainSolution.framing);
   const [solution, setSolution] = useState<SolutionData>(() => initialDomainSolution.solution);
@@ -185,7 +181,7 @@ function SolutionPage() {
         }
       }
 
-      if (!loadedText) loadedText = HR_CONSULTANCY_PROBLEM;
+      if (!loadedText) loadedText = DEFAULT_NEUTRAL_PROBLEM;
       setProblemText(loadedText);
       setBusinessName(bName);
       setIndustry(ind);
