@@ -84,7 +84,7 @@ export function AiCopilotPanel() {
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Chat sessions and multi-thread history management
+  // Chat sessions and multi-thread history management (scoped by workspace and authenticated user)
   const {
     sessions,
     activeSessionId,
@@ -97,9 +97,9 @@ export function AiCopilotPanel() {
     deleteSession,
     switchSession,
     refreshSessions,
-  } = useChatSessions(workspaceId);
+  } = useChatSessions(workspaceId, user?.id);
 
-  // Sync workspaceId from storage / events
+  // Sync workspaceId from storage, user login, and custom workspace events
   useEffect(() => {
     const checkWorkspace = () => {
       if (typeof window !== "undefined") {
@@ -110,9 +110,25 @@ export function AiCopilotPanel() {
       }
     };
     checkWorkspace();
+
+    const onWorkspaceChanged = (e: Event) => {
+      const custom = e as CustomEvent<{ workspaceId?: string }>;
+      if (custom.detail?.workspaceId) {
+        setWorkspaceId(custom.detail.workspaceId);
+      } else {
+        checkWorkspace();
+      }
+    };
+
     window.addEventListener("storage", checkWorkspace);
-    return () => window.removeEventListener("storage", checkWorkspace);
-  }, [workspaceId]);
+    window.addEventListener("bizzmitra:workspace-changed", onWorkspaceChanged);
+    window.addEventListener("bizzmitra:workspace-updated", checkWorkspace);
+    return () => {
+      window.removeEventListener("storage", checkWorkspace);
+      window.removeEventListener("bizzmitra:workspace-changed", onWorkspaceChanged);
+      window.removeEventListener("bizzmitra:workspace-updated", checkWorkspace);
+    };
+  }, [workspaceId, user?.id]);
 
   useEffect(() => {
     setWallet(loadCreditWallet());

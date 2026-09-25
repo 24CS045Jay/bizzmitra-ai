@@ -35,17 +35,17 @@ export function MiniDemo() {
   }
 
   return (
-    <div className="neu p-5 sm:p-6">
+    <div className="rounded-3xl bg-white/85 dark:bg-black/60 backdrop-blur-xl border border-white/80 dark:border-white/15 p-5 sm:p-6 shadow-2xl">
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground/80 dark:text-muted-foreground">
           Try it — describe a problem
         </p>
-        <span className="rounded-full bg-sage/15 px-2 py-0.5 text-[10px] font-semibold text-sage">
+        <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400">
           live preview
         </span>
       </div>
 
-      <div className="neu-inset mt-4 p-3">
+      <div className="mt-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 p-3.5 shadow-inner">
         <textarea
           value={value}
           onChange={(e) => {
@@ -54,13 +54,13 @@ export function MiniDemo() {
           }}
           rows={3}
           aria-label="Describe your business problem"
-          className="w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-muted-foreground"
+          className="w-full resize-none bg-transparent text-sm leading-relaxed text-foreground font-medium outline-none placeholder:text-muted-foreground"
           placeholder="Our support team is overwhelmed…"
         />
         <div className="mt-2 flex justify-end">
           <button
             onClick={run}
-            className="neu-press flex items-center gap-2 rounded-lg bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground"
+            className="neu-press flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-md hover:brightness-110 transition-all"
           >
             Analyse <CornerDownLeft className="size-3.5" />
           </button>
@@ -113,19 +113,19 @@ export function MiniDemo() {
             animate={{ opacity: 1, y: 0 }}
             className="mt-4 space-y-3"
           >
-            <div className="rounded-xl bg-card border border-border/80 p-4 shadow-sm neu-reflect">
-              <p className="text-xs font-semibold text-primary">BizzMitra · discovery</p>
-              <p className="mt-1.5 text-sm leading-relaxed">
+            <div className="rounded-xl bg-white/90 dark:bg-black/70 border border-black/10 dark:border-white/10 p-4 shadow-md text-foreground">
+              <p className="text-xs font-bold text-primary">BizzMitra · discovery</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-foreground font-medium">
                 <Typewriter text={QUESTIONS[0]!} speed={14} />
               </p>
             </div>
             <motion.div
-              className="rounded-xl bg-card border border-border/80 p-4 shadow-sm neu-reflect"
+              className="rounded-xl bg-white/90 dark:bg-black/70 border border-black/10 dark:border-white/10 p-4 shadow-md text-foreground"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 2.2 }}
             >
-              <p className="mt-0 text-sm leading-relaxed">
+              <p className="mt-0 text-sm leading-relaxed text-foreground font-medium">
                 <Typewriter text={QUESTIONS[1]!} speed={14} delay={2300} />
               </p>
             </motion.div>
