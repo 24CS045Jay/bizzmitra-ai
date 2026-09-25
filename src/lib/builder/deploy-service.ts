@@ -164,6 +164,27 @@ export interface GitHubExportResult {
   isUpdate?: boolean;
   fileCount?: number;
   error?: string;
+  code?: string;
+}
+
+/**
+ * Checks server deployment environment status (whether managed tokens are configured).
+ */
+export async function checkServerCloudStatus(): Promise<{
+  hasManagedGithub: boolean;
+  hasManagedVercel: boolean;
+}> {
+  try {
+    const res = await fetch("/api/cloud/status");
+    if (!res.ok) return { hasManagedGithub: false, hasManagedVercel: false };
+    const data = await res.json();
+    return {
+      hasManagedGithub: Boolean(data?.hasManagedGithub),
+      hasManagedVercel: Boolean(data?.hasManagedVercel),
+    };
+  } catch {
+    return { hasManagedGithub: false, hasManagedVercel: false };
+  }
 }
 
 /**
@@ -196,9 +217,17 @@ export async function exportToGitHub(
       }),
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.success) {
-      return { success: false, error: data?.error || "Failed to push to GitHub" };
+      return {
+        success: false,
+        error:
+          data?.error ||
+          (res.status === 401
+            ? "Invalid or expired GitHub credentials. Please connect your GitHub account in Cloud Accounts."
+            : "Failed to push to GitHub"),
+        code: data?.code,
+      };
     }
 
     return {

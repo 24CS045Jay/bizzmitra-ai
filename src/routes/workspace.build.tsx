@@ -28,6 +28,7 @@ import {
   deployProjectToCloud,
   downloadProjectZip,
   exportToGitHub,
+  checkServerCloudStatus,
   DeploymentProgressLog,
   DeploymentResult,
 } from "@/lib/builder/deploy-service";
@@ -70,19 +71,21 @@ function WorkspaceBuildPage() {
     } catch (e) {}
     return {};
   });
+  const [uiCustomization, setUiCustomization] = useState<AppUiCustomization>(() => loadUiCustomization());
   const [project, setProject] = useState<GeneratedAppProject>(() => {
+    const cust = loadUiCustomization();
     try {
       if (typeof window !== "undefined") {
         const raw = localStorage.getItem("bizzmitra.workspaceContext");
         if (raw) {
           const parsed = JSON.parse(raw);
-          return scaffoldApplication(parsed);
+          return scaffoldApplication(parsed, cust);
         }
       }
     } catch (e) {
       // fallback
     }
-    return scaffoldApplication();
+    return scaffoldApplication({}, cust);
   });
   const [isDeploying, setIsDeploying] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -97,7 +100,6 @@ function WorkspaceBuildPage() {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"deploy" | "github">("deploy");
   const [cloudCreds, setCloudCreds] = useState<CloudCredentials>(() => loadCloudCredentials());
-  const [uiCustomization, setUiCustomization] = useState<AppUiCustomization>(() => loadUiCustomization());
 
   const isAlreadyDeployed = Boolean(deploymentResult?.success && deploymentResult?.liveUrl);
 
@@ -128,7 +130,7 @@ function WorkspaceBuildPage() {
         }
 
         setWorkspaceContext(parsed);
-        const compiled = scaffoldApplication(parsed);
+        const compiled = scaffoldApplication(parsed, uiCustomization);
         setProject(compiled);
       } catch (e) {
         console.error("Failed to load workspace context", e);
@@ -188,25 +190,16 @@ function WorkspaceBuildPage() {
         setLastPushedAt(null);
       }
 
-      // Check project-specific or workspace-specific deployment result
+      // Check project-specific deployment result (Strictly isolated by projectName)
       const projectDepKey = `bizzmitra.deploymentResult_${project.projectName}`;
-      const wsDepKey = activeWsId ? `bizzmitra.deploymentResult_${activeWsId}` : null;
-      const savedDep = localStorage.getItem(projectDepKey) || (wsDepKey ? localStorage.getItem(wsDepKey) : null);
+      const savedDep = localStorage.getItem(projectDepKey);
       if (savedDep) {
         try {
           const parsed = JSON.parse(savedDep);
-          const isDepApex =
-            parsed?.liveUrl &&
-            (parsed.liveUrl.toLowerCase().includes("apex") ||
-              parsed.liveUrl.toLowerCase().includes("bizzmitra-logistics"));
-          const isCurrentProjectApex =
-            project.projectName.toLowerCase().includes("apex") ||
-            project.appTitle.toLowerCase().includes("apex");
-
-          if (isDepApex && !isCurrentProjectApex) {
-            setDeploymentResult(null);
-          } else {
+          if (parsed && (parsed.projectName === project.projectName || !parsed.projectName)) {
             setDeploymentResult(parsed);
+          } else {
+            setDeploymentResult(null);
           }
         } catch {
           setDeploymentResult(null);
@@ -221,8 +214,15 @@ function WorkspaceBuildPage() {
     setIsDeploying(true);
     setIsModalOpen(true);
 
+    // Re-scaffold with current context and customization right before deploying
+    const latestProject = scaffoldApplication({
+      ...workspaceContext,
+      solutionTitle: uiCustomization.appTitle || workspaceContext.solutionTitle,
+    }, uiCustomization);
+    setProject(latestProject);
+
     const res = await deployProjectToCloud(
-      project,
+      latestProject,
       (logs) => {
         setDeploymentLogs(logs);
       },
@@ -286,7 +286,7 @@ function WorkspaceBuildPage() {
     const latestProject = scaffoldApplication({
       ...workspaceContext,
       solutionTitle: uiCustomization.appTitle || workspaceContext.solutionTitle,
-    });
+    }, uiCustomization);
     setProject(latestProject);
 
     const res = await exportToGitHub(latestProject, { forceManaged });
@@ -321,7 +321,29 @@ function WorkspaceBuildPage() {
         window.open(res.repoUrl, "_blank");
       }
     } else {
-      toast.error(res.error || "Failed to push to GitHub.");
+      const isCredentialError =
+        res.code === "MISSING_GITHUB_TOKEN" ||
+        res.code === "INVALID_GITHUB_TOKEN" ||
+        res.error?.toLowerCase().includes("credential") ||
+        res.error?.toLowerCase().includes("token") ||
+        res.error?.toLowerCase().includes("auth") ||
+        res.error?.toLowerCase().includes("bad credentials");
+
+      if (isCredentialError) {
+        toast.error(
+          res.error || "GitHub Personal Access Token required to push repositories.",
+          {
+            duration: 8000,
+            action: {
+              label: "Connect GitHub",
+              onClick: () => setIsCloudModalOpen(true),
+            },
+          }
+        );
+        setIsCloudModalOpen(true);
+      } else {
+        toast.error(res.error || "Failed to push to GitHub.");
+      }
     }
   };
 
@@ -362,13 +384,26 @@ function WorkspaceBuildPage() {
     window.open(githubUrl, "_blank");
   };
 
-  const handleExportGitHub = () => {
+  const handleExportGitHub = async () => {
     const creds = loadCloudCredentials();
     const hasPersonalTokens = Boolean(creds.githubToken);
     if (hasPersonalTokens) {
       setPendingAction("github");
       setIsConfirmModalOpen(true);
     } else {
+      // Check if server deployment environment has managed GitHub credentials configured
+      const serverStatus = await checkServerCloudStatus();
+      if (!serverStatus.hasManagedGithub) {
+        toast.info("Please connect your GitHub account to push repositories.", {
+          duration: 6000,
+          action: {
+            label: "Connect",
+            onClick: () => setIsCloudModalOpen(true),
+          },
+        });
+        setIsCloudModalOpen(true);
+        return;
+      }
       executeExportGitHub(false);
     }
   };
@@ -389,7 +424,7 @@ function WorkspaceBuildPage() {
           businessName: ctx.businessName,
           industry: ctx.industry,
           problemStatement: ctx.problemStatement || ctx.description,
-          solutionTitle: ctx.solutionTitle || ctx.name,
+          solutionTitle: uiCustomization.appTitle || ctx.solutionTitle || ctx.name,
           goals: ctx.goals,
           constraints: ctx.constraints || ctx.constraints_text,
           intakeMode: ctx.intakeMode || ctx.intake_mode,
@@ -397,7 +432,7 @@ function WorkspaceBuildPage() {
           language: ctx.language || ctx.language_code,
           sourceDetails: ctx.sourceDetails,
           createdAt: ctx.createdAt || ctx.created_at,
-        })
+        }, uiCustomization)
       );
       toast.success("Application code synthesized cleanly!");
     }, 600);
@@ -493,7 +528,12 @@ function WorkspaceBuildPage() {
             )}
 
             <button
-              onClick={() => window.open(liveUrl || "/preview/solution", "_blank")}
+              onClick={() => {
+                const targetUrl = typeof window !== "undefined"
+                  ? `${window.location.origin}/preview/solution`
+                  : "/preview/solution";
+                window.open(targetUrl, "_blank");
+              }}
               className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 text-xs font-bold shadow-md transition cursor-pointer"
               title="Launch standalone full-screen website in new tab"
             >
@@ -657,7 +697,7 @@ function WorkspaceBuildPage() {
                 const updatedProject = scaffoldApplication({
                   ...workspaceContext,
                   solutionTitle: updated.appTitle || workspaceContext.solutionTitle,
-                });
+                }, updated);
                 setProject(updatedProject);
               }}
             />
@@ -668,13 +708,12 @@ function WorkspaceBuildPage() {
                 liveUrl ||
                 (typeof window !== "undefined" ? `${window.location.origin}/preview/solution` : null)
               }
-              onOpenStandalone={() =>
-                window.open(
-                  liveUrl ||
-                    (typeof window !== "undefined" ? `${window.location.origin}/preview/solution` : "/preview/solution"),
-                  "_blank"
-                )
-              }
+              onOpenStandalone={() => {
+                const targetUrl = typeof window !== "undefined"
+                  ? `${window.location.origin}/preview/solution`
+                  : "/preview/solution";
+                window.open(targetUrl, "_blank");
+              }}
               customization={uiCustomization}
             />
           </div>

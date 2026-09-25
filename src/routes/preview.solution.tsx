@@ -46,7 +46,7 @@ function StandaloneSolutionPage() {
   const domain = resolveDomainAppModel(context);
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="h-screen w-screen bg-slate-950 text-slate-100 flex flex-col font-sans overflow-hidden">
       <InteractiveAppSandbox
         appTitle={customization?.appTitle || domain.appTitle}
         customization={customization}

@@ -7,14 +7,14 @@
 
 export interface CloudCredentials {
   mode: "managed" | "custom";
-  githubToken?: string;
-  githubUsername?: string;
-  githubAvatar?: string;
-  vercelToken?: string;
-  vercelUsername?: string;
-  vercelTeamName?: string;
-  supabaseUrl?: string;
-  supabaseAnonKey?: string;
+  githubToken?: string | undefined;
+  githubUsername?: string | undefined;
+  githubAvatar?: string | undefined;
+  vercelToken?: string | undefined;
+  vercelUsername?: string | undefined;
+  vercelTeamName?: string | undefined;
+  supabaseUrl?: string | undefined;
+  supabaseAnonKey?: string | undefined;
 }
 
 const STORAGE_KEY = "bizzmitra_cloud_credentials_v1";

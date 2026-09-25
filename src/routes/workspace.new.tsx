@@ -33,7 +33,7 @@ import {
 import { useAuth, isTestingAccount } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentIngestionModal } from "@/components/DocumentIngestionModal";
-import { resetWorkspaceStages } from "@/lib/workspace-stage-gate";
+import { completeDiscoveryAndUnlockAll, resetWorkspaceStages } from "@/lib/workspace-stage-gate";
 import { saveActiveWorkspaceLocally } from "@/lib/workspace-persistence";
 import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
 import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
@@ -426,7 +426,7 @@ function IntakePage() {
         }
 
         saveActiveWorkspaceLocally(createdWorkspaceId, safeBusinessName, contextPayload, user?.id);
-        resetWorkspaceStages(createdWorkspaceId);
+        completeDiscoveryAndUnlockAll(createdWorkspaceId, contextPayload);
         toast.success("Workspace created successfully!");
         navigate({ to: "/workspace/discovery" });
         return;
@@ -436,7 +436,7 @@ function IntakePage() {
       // Even on exception, create workspace locally so user's work is never lost
       const fallbackId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ws-${Date.now()}`;
       saveActiveWorkspaceLocally(fallbackId, safeBusinessName, contextPayload, user?.id);
-      resetWorkspaceStages(fallbackId);
+      completeDiscoveryAndUnlockAll(fallbackId, contextPayload);
       toast.success("Workspace created!");
       navigate({ to: "/workspace/discovery" });
     } finally {

@@ -2394,6 +2394,28 @@ Return strictly valid JSON with this exact structure:
     }
   }
 
+  // 10b. Cloud & Deployment Environment Status: /api/cloud/status
+  if (pathname === "/api/cloud/status" && request.method === "GET") {
+    const hasManagedGithub = Boolean(
+      (process.env["GITHUB_TOKEN"] && process.env["GITHUB_TOKEN"].trim()) ||
+      ((env as any)?.GITHUB_TOKEN && String((env as any)?.GITHUB_TOKEN).trim())
+    );
+    const hasManagedVercel = Boolean(
+      (process.env["VERCEL_API_TOKEN"] && process.env["VERCEL_API_TOKEN"].trim()) ||
+      ((env as any)?.VERCEL_API_TOKEN && String((env as any)?.VERCEL_API_TOKEN).trim())
+    );
+    return jsonResponse(
+      {
+        success: true,
+        hasManagedGithub,
+        hasManagedVercel,
+      },
+      200,
+      {},
+      request
+    );
+  }
+
   // 11. GitHub Repository Verifier: /api/github/check
   if (pathname === "/api/github/check" && request.method === "GET") {
     try {
@@ -2420,12 +2442,16 @@ Return strictly valid JSON with this exact structure:
       }
       const cleanRepo = repo.replace(/\.git$/, "").replace(/\/+$/, "");
 
+      const headers: Record<string, string> = {
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "BizzMitra-AI-Platform",
+      };
+      if (githubToken && githubToken.trim()) {
+        headers["Authorization"] = `Bearer ${githubToken.trim()}`;
+      }
+
       const checkRes = await fetch(`https://api.github.com/repos/${owner}/${cleanRepo}`, {
-        headers: {
-          Authorization: `Bearer ${githubToken}`,
-          Accept: "application/vnd.github.v3+json",
-          "User-Agent": "BizzMitra-AI-Platform",
-        },
+        headers,
       });
 
       return jsonResponse(
@@ -2451,6 +2477,22 @@ Return strictly valid JSON with this exact structure:
         body.customGithubToken ||
         request.headers.get("x-custom-github-token") ||
         managedToken;
+
+      // Validate presence of GitHub token before attempting requests
+      if (!githubToken || !String(githubToken).trim()) {
+        return jsonResponse(
+          {
+            success: false,
+            error:
+              "No GitHub token found. Please click 'Cloud Accounts' in Software Studio to connect your GitHub Personal Access Token, or configure GITHUB_TOKEN on your hosting provider.",
+            code: "MISSING_GITHUB_TOKEN",
+          },
+          400,
+          {},
+          request
+        );
+      }
+      githubToken = String(githubToken).trim();
 
       let targetRepoName = (body.repoName || "bizzmitra-generated-app")
         .toLowerCase()
@@ -2492,23 +2534,41 @@ Return strictly valid JSON with this exact structure:
         console.warn("Could not fetch user details from GitHub:", userErr);
       }
 
-      // If custom token failed validation, seamlessly fall back to managed platform token
-      if (!tokenValid && githubToken !== managedToken) {
+      // If custom token failed validation, seamlessly fall back to managed platform token if available
+      if (!tokenValid && githubToken !== managedToken && managedToken && String(managedToken).trim()) {
         console.warn("Custom GitHub token invalid or lacking scopes. Falling back to managed platform credentials.");
-        githubToken = managedToken;
+        githubToken = String(managedToken).trim();
         try {
           const fallbackUserRes = await fetch("https://api.github.com/user", {
             headers: {
-              Authorization: `Bearer ${managedToken}`,
+              Authorization: `Bearer ${managedToken.trim()}`,
               Accept: "application/vnd.github.v3+json",
               "User-Agent": "BizzMitra-AI-Platform",
             },
           });
           if (fallbackUserRes.ok) {
             const fbData = await fallbackUserRes.json();
-            if (fbData?.login) owner = fbData.login;
+            if (fbData?.login) {
+              owner = fbData.login;
+              tokenValid = true;
+            }
           }
         } catch {}
+      }
+
+      // If token is invalid / expired / has bad credentials, fail immediately with clear instructions
+      if (!tokenValid) {
+        return jsonResponse(
+          {
+            success: false,
+            error:
+              "GitHub authentication failed (Bad credentials). Your GitHub Personal Access Token is invalid, expired, or lacking 'repo' permissions. Please verify or update your token in Cloud Accounts.",
+            code: "INVALID_GITHUB_TOKEN",
+          },
+          401,
+          {},
+          request
+        );
       }
 
       // 2. Check if repository already exists under authenticated account
@@ -2605,9 +2665,9 @@ Return strictly valid JSON with this exact structure:
               const retryData = (await retryCreateRes.json()) as any;
               targetRepoName = retryData.name || uniqueRepoName;
               finalRepoUrl = retryData.html_url || `https://github.com/${owner}/${targetRepoName}`;
-            } else if (githubToken !== managedToken) {
+            } else if (githubToken !== managedToken && managedToken && String(managedToken).trim()) {
               // Strategy C: If custom token rejected creation, fall back to managed platform token
-              githubToken = managedToken;
+              githubToken = String(managedToken).trim();
               owner = "Param1512";
               const managedCreateRes = await fetch("https://api.github.com/user/repos", {
                 method: "POST",

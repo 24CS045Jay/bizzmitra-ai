@@ -39,6 +39,7 @@ export function CloudAccountsModal({ isOpen, onClose, onSaved }: CloudAccountsMo
 
   const [testingGithub, setTestingGithub] = useState(false);
   const [testingVercel, setTestingVercel] = useState(false);
+  const [serverStatus, setServerStatus] = useState<{ hasManagedGithub: boolean; hasManagedVercel: boolean } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -52,6 +53,22 @@ export function CloudAccountsModal({ isOpen, onClose, onSaved }: CloudAccountsMo
       setVercelInput(current.vercelToken || "");
       setSupabaseUrlInput(current.supabaseUrl || "");
       setSupabaseKeyInput(current.supabaseAnonKey || "");
+
+      fetch("/api/cloud/status")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data?.success) {
+            setServerStatus({
+              hasManagedGithub: Boolean(data.hasManagedGithub),
+              hasManagedVercel: Boolean(data.hasManagedVercel),
+            });
+            // If server does not have managed GitHub token, switch to custom so user sees token input
+            if (!data.hasManagedGithub && !current.githubToken) {
+              setCreds((prev) => ({ ...prev, mode: "custom" }));
+            }
+          }
+        })
+        .catch(() => {});
     }
   }, [isOpen]);
 
@@ -165,14 +182,20 @@ export function CloudAccountsModal({ isOpen, onClose, onSaved }: CloudAccountsMo
           >
             <Zap className="size-5 mt-0.5 shrink-0" />
             <div>
-              <div className="text-xs font-bold flex items-center gap-1.5">
+              <div className="text-xs font-bold flex items-center gap-1.5 flex-wrap">
                 <span>BizzMitra Managed Engine</span>
-                <span className="rounded-full bg-emerald-400/20 px-1.5 py-0.2 text-[9px] text-emerald-300 font-bold">
-                  Recommended for Demo
-                </span>
+                {serverStatus?.hasManagedGithub ? (
+                  <span className="rounded-full bg-emerald-400/20 px-1.5 py-0.2 text-[9px] text-emerald-300 font-bold">
+                    Connected
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-amber-400/20 px-1.5 py-0.2 text-[9px] text-amber-300 font-bold">
+                    Needs Token
+                  </span>
+                )}
               </div>
               <p className="text-[11px] opacity-80 mt-1 leading-relaxed">
-                Zero setup. Instant 12s Vercel deployment, working live QR code, and pre-connected PostgreSQL DB.
+                Zero setup with platform infrastructure. If unconfigured on host, use BYOC mode.
               </p>
             </div>
           </button>
@@ -188,13 +211,38 @@ export function CloudAccountsModal({ isOpen, onClose, onSaved }: CloudAccountsMo
           >
             <Server className="size-5 mt-0.5 shrink-0" />
             <div>
-              <div className="text-xs font-bold">Personal Accounts (BYOC)</div>
+              <div className="text-xs font-bold flex items-center gap-1.5">
+                <span>Personal Accounts (BYOC)</span>
+                <span className="rounded-full bg-indigo-400/20 px-1.5 py-0.2 text-[9px] text-indigo-300 font-bold">
+                  Your GitHub & Vercel
+                </span>
+              </div>
               <p className="text-[11px] opacity-80 mt-1 leading-relaxed">
-                Deploy directly to your personal GitHub repositories, Vercel projects, and Supabase database.
+                Deploy directly into your personal GitHub repositories and Vercel dashboard.
               </p>
             </div>
           </button>
         </div>
+
+        {/* Managed Mode Server GITHUB_TOKEN Warning if not configured on host */}
+        {creds.mode === "managed" && serverStatus && !serverStatus.hasManagedGithub && (
+          <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-4 space-y-2 text-xs">
+            <div className="flex items-center gap-2 font-bold text-amber-300">
+              <AlertCircle className="size-4 shrink-0" />
+              <span>Hosting Server GITHUB_TOKEN Not Configured</span>
+            </div>
+            <p className="text-slate-300 text-[11px] leading-relaxed">
+              Your deployed server does not have <code>GITHUB_TOKEN</code> set in its environment variables. To push repositories, connect your personal token below or add <code>GITHUB_TOKEN</code> to your Vercel Project Settings.
+            </p>
+            <button
+              type="button"
+              onClick={() => setCreds({ ...creds, mode: "custom" })}
+              className="mt-1 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-xs font-semibold transition cursor-pointer"
+            >
+              Switch to Personal Accounts (BYOC) to Enter Token →
+            </button>
+          </div>
+        )}
 
         {/* Custom Mode Form */}
         {creds.mode === "custom" && (
