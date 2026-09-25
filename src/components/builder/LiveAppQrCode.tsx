@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import { Smartphone, ExternalLink, QrCode as QrIcon, Lock, Rocket, CheckCircle2 } from "lucide-react";
 
 interface LiveAppQrCodeProps {
@@ -22,16 +21,8 @@ export function LiveAppQrCode({ url, size = 180, appName, onDeploy, compact = fa
       return;
     }
 
-    QRCode.toDataURL(url, {
-      width: size,
-      margin: 1,
-      color: {
-        dark: "#0f172a",
-        light: "#ffffff",
-      },
-    })
-      .then((res) => setDataUrl(res))
-      .catch((err) => console.error("QR Code generation error:", err));
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=10&data=${encodeURIComponent(url)}`;
+    setDataUrl(qrSrc);
   }, [url, size, isLiveDeployed]);
 
   // If not deployed yet: Show locked state
