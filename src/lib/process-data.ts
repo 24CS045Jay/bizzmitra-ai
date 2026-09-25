@@ -1267,16 +1267,14 @@ export function getProcessBlueprint(context?: {
     };
   }
 
-  // 7. HR & Recruitment Services
+  // 7. HR & Recruitment Services (Only when explicitly HR or Recruitment)
   if (
-    combined.includes("hr") ||
-    combined.includes("recruit") ||
-    combined.includes("candidate") ||
-    combined.includes("interview") ||
-    combined.includes("resume") ||
-    combined.includes("hiring") ||
-    combined.includes("talent") ||
-    combined.includes("staffing")
+    combined.includes("recruitment") ||
+    combined.includes("staffing agency") ||
+    combined.includes("applicant tracking") ||
+    combined.includes("candidate interview") ||
+    combined.includes("talent acquisition") ||
+    /\b(hr|recruiter|recruiting|hiring|resumes?)\b/.test(combined)
   ) {
     return {
       domainId: "hr",

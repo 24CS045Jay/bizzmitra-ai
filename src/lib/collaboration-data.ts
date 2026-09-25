@@ -517,9 +517,86 @@ export function getCollaborationStateForWorkspace(
     };
   }
 
-  // 5. Default / HR Consultancy (TalentCraft)
+  // 5. HR & Recruitment (ONLY if specifically matching HR / recruitment keywords)
+  if (
+    combined.includes("recruitment") ||
+    combined.includes("staffing") ||
+    combined.includes("talentcraft") ||
+    combined.includes("recruiter") ||
+    combined.includes("headhunting") ||
+    combined.includes("hr consultancy") ||
+    (combined.includes("candidate") && combined.includes("hire"))
+  ) {
+    return {
+      workspaceId: context?.id || "ws-hr-default",
+      scenarioName: name,
+      overallStatus: "approved",
+      signOffs: [
+        {
+          role: "Lead Solution Architect",
+          name: "Aarav Sharma",
+          email: "aarav@enterprise-arch.io",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 10:15 AM",
+          comments: "PostgreSQL multi-tenant schema with RLS verified. Ready for Phase 1 MVP sprint.",
+        },
+        {
+          role: "HR Operations Lead",
+          name: "Pooja Verma",
+          email: "pooja@recruitment-ops.io",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 11:30 AM",
+          comments: "Reviewed candidate pipeline stages and punch clock. Solves our spreadsheet bottleneck completely.",
+        },
+        {
+          role: "Product Delivery Lead",
+          name: "Marcus Vance",
+          email: "marcus@bizzmitra.ai",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 11:45 AM",
+          comments: "9-week delivery timeline (68 person-days) is achievable within Q4 engineering capacity.",
+        },
+        {
+          role: "Security & Compliance Officer",
+          name: "Neha Sundaram",
+          email: "neha.s@legal-corp.com",
+          signed: true,
+          signedAt: "Sep 12, 2026 · 12:05 PM",
+          comments: "Data privacy policy and resume retention policy added to Risk Register and approved.",
+        },
+      ],
+      comments: [
+        {
+          id: "c-101",
+          artifactId: "data",
+          artifactName: "Database Designer & REST APIs",
+          author: {
+            name: "Aarav Sharma",
+            role: "Lead Solution Architect",
+          },
+          content:
+            "Ensure the PostgreSQL custom fields table uses GIN indexing for fast JSONB querying across custom attributes.",
+          timestamp: "Yesterday, 04:45 PM",
+          severity: "suggestion",
+          resolved: true,
+        },
+      ],
+      auditLogs: [
+        {
+          id: "log-1",
+          actor: { name: "Param Shah", type: "user", role: "Transformation Lead" },
+          action: "Approved Architecture Blueprint",
+          category: "governance",
+          details: `Signed off on multi-tenant architecture and RLS policies for ${name}.`,
+          timestamp: "12:05 PM",
+        },
+      ],
+    };
+  }
+
+  // 6. Universal Enterprise Operations Governance Blueprint
   return {
-    workspaceId: "ws-talentcraft-hr",
+    workspaceId: context?.id || "ws-enterprise-default",
     scenarioName: name,
     overallStatus: "approved",
     signOffs: [
@@ -529,15 +606,15 @@ export function getCollaborationStateForWorkspace(
         email: "aarav@enterprise-arch.io",
         signed: true,
         signedAt: "Sep 12, 2026 · 10:15 AM",
-        comments: "PostgreSQL multi-tenant schema with RLS verified. Ready for Phase 1 MVP sprint.",
+        comments: "Cloud microservices topology and RLS data isolation verified. Ready for Phase 1 delivery.",
       },
       {
-        role: "HR Operations Lead",
+        role: "Head of Operations",
         name: "Pooja Verma",
-        email: "pooja@talentcraft.co",
+        email: "pooja@enterprise-ops.io",
         signed: true,
         signedAt: "Sep 12, 2026 · 11:30 AM",
-        comments: "Reviewed candidate pipeline stages and punch clock. Solves our spreadsheet bottleneck completely.",
+        comments: "Reviewed operational workflows, intake automations, and milestone deliverables. Solves our operational bottleneck.",
       },
       {
         role: "Product Delivery Lead",
@@ -545,7 +622,7 @@ export function getCollaborationStateForWorkspace(
         email: "marcus@bizzmitra.ai",
         signed: true,
         signedAt: "Sep 12, 2026 · 11:45 AM",
-        comments: "9-week delivery timeline (68 person-days) is achievable within Q4 engineering capacity.",
+        comments: "Phased delivery timeline is achievable within engineering sprint capacity.",
       },
       {
         role: "Security & Compliance Officer",
@@ -553,87 +630,32 @@ export function getCollaborationStateForWorkspace(
         email: "neha.s@legal-corp.com",
         signed: true,
         signedAt: "Sep 12, 2026 · 12:05 PM",
-        comments: "DPDP Act compliance 180-day resume retention policy added to Risk Register and approved.",
+        comments: "Enterprise data governance, encryption at rest, and RBAC matrix validated.",
       },
     ],
     comments: [
       {
-        id: "c-101",
+        id: "c-op-1",
         artifactId: "data",
         artifactName: "Database Designer & REST APIs",
         author: {
           name: "Aarav Sharma",
           role: "Lead Solution Architect",
         },
-        content:
-          "Ensure the PostgreSQL candidate custom fields table uses GIN indexing for fast JSONB querying across custom attributes.",
+        content: "Ensure database connection pooling and read replicas are configured for peak ingestion hours.",
         timestamp: "Yesterday, 04:45 PM",
-        severity: "blocking",
-        resolved: true,
-        replies: [
-          {
-            id: "r-1",
-            authorName: "BizzMitra AI Engine",
-            authorRole: "AI Architect",
-            content: "GIN index `idx_candidates_custom_attributes` has been added to the generated PostgreSQL DDL schema.",
-            timestamp: "Yesterday, 04:50 PM",
-          },
-        ],
-      },
-      {
-        id: "c-102",
-        artifactId: "roadmap",
-        artifactName: "AI Implementation Planning Engine",
-        author: {
-          name: "Pooja Verma",
-          role: "HR Operations Lead",
-        },
-        content:
-          "Can we schedule recruiter training workshops before Phase 1 cutover instead of waiting for Phase 3?",
-        timestamp: "Today, 09:15 AM",
-        severity: "feedback",
-        resolved: false,
-        replies: [
-          {
-            id: "r-2",
-            authorName: "Param Shah",
-            authorRole: "Transformation Lead",
-            content: "Good point. We will run an initial 2-hour onboarding session during Week 2 of the Foundation Sprint.",
-            timestamp: "Today, 09:30 AM",
-          },
-        ],
-      },
-      {
-        id: "c-103",
-        artifactId: "roi",
-        artifactName: "Financial ROI & Transformation Cockpit",
-        author: {
-          name: "Marcus Vance",
-          role: "Product Delivery Lead",
-        },
-        content:
-          "The 2.4-month payback model looks solid. CFO confirmed the ₹280k annual software & setup budget is pre-approved.",
-        timestamp: "Today, 10:00 AM",
-        severity: "approved",
+        severity: "suggestion",
         resolved: true,
       },
     ],
     auditLogs: [
       {
-        id: "log-001",
+        id: "log-op-1",
         actor: { name: "Param Shah", type: "user", role: "Transformation Lead" },
-        action: "Approved Transformation Blueprint",
+        action: "Approved Architecture Blueprint",
         category: "governance",
-        details: `Transitioned ${name} governance state from Under Review to Approved for Implementation.`,
+        details: `Signed off on operational architecture and security specifications for ${name}.`,
         timestamp: "12:05 PM",
-      },
-      {
-        id: "log-002",
-        actor: { name: "BizzMitra AI Engine", type: "ai", role: "AI Planning Engine" },
-        action: "Synthesized 9-Week Delivery Plan",
-        category: "ai_generation",
-        details: "Calculated 68 person-day Critical Path Method schedule across Foundation, Coordination, and Intelligence sprints.",
-        timestamp: "11:15 AM",
       },
     ],
   };

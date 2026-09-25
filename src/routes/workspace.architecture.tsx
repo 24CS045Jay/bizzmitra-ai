@@ -86,8 +86,8 @@ function ArchitecturePage() {
       } catch {}
     }
     return {
-      businessName: "TalentCraft HR Consultancy",
-      industry: "HR & Recruitment Services",
+      businessName: "Enterprise Architecture",
+      industry: "Cross-Industry",
       problemStatement: "",
     };
   });
@@ -99,8 +99,8 @@ function ArchitecturePage() {
         if (raw) {
           const parsed = JSON.parse(raw);
           setWorkspaceContext({
-            businessName: parsed.businessName || "TalentCraft HR Consultancy",
-            industry: parsed.industry || "HR & Recruitment Services",
+            businessName: parsed.businessName || parsed.name || "Enterprise Architecture",
+            industry: parsed.industry || "Cross-Industry",
             problemStatement: parsed.problemStatement || "",
           });
         }

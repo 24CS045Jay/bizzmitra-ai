@@ -247,9 +247,17 @@ export function AiCopilotPanel() {
 
     try {
       // 1. Pull active workspace context and roadmap from storage/DB
-      const isTestAcc = isTestingAccount(user?.email);
-      let workspaceName = isTestAcc ? "TalentCraft HR Consultancy" : "";
+      let workspaceName = "";
       let problem = "";
+
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.businessName) workspaceName = parsed.businessName;
+          if (parsed.problemStatement) problem = parsed.problemStatement;
+        }
+      } catch {}
 
       const wsId = workspaceId || (typeof window !== "undefined" ? window.localStorage.getItem("bizzmitra.activeWorkspaceId") : null);
       if (wsId && !wsId.startsWith("ws-")) {
@@ -260,18 +268,9 @@ export function AiCopilotPanel() {
           .maybeSingle();
         if (ws?.name) workspaceName = ws.name;
         if (ws?.problem_statement) problem = ws.problem_statement;
-      } else if (wsId?.startsWith("ws-") && isTestAcc) {
-        try {
-          const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed.businessName) workspaceName = parsed.businessName;
-            if (parsed.problemStatement) problem = parsed.problemStatement;
-          }
-        } catch {}
       }
 
-      // If non-testing user and no workspace in localStorage, check their Supabase workspaces
+      // If no workspace in localStorage, check their Supabase workspaces
       if (!workspaceName && !isTestAcc && user?.id) {
         const { data: wsList } = await supabase
           .from("workspaces")

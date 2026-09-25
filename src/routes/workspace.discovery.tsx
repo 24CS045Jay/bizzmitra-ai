@@ -77,6 +77,9 @@ type Turn = {
   missingEntity?: string | undefined;
 };
 
+const DEFAULT_DISCOVERY_PROBLEM =
+  "Streamline and automate operational workflows, eliminate manual data bottlenecks, and establish transparent operational visibility.";
+
 function DiscoveryPage() {
   const { user } = useAuth();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -84,7 +87,7 @@ function DiscoveryPage() {
   const initialContext = (() => {
     if (typeof window === "undefined") {
       return {
-        problem: HR_CONSULTANCY_PROBLEM,
+        problem: DEFAULT_DISCOVERY_PROBLEM,
         businessName: "Enterprise Workspace",
         industry: "Cross-Industry",
         goals: "",
@@ -103,7 +106,7 @@ function DiscoveryPage() {
       if (raw) {
         const parsed = JSON.parse(raw);
         return {
-          problem: parsed.problemStatement || parsed.summary || HR_CONSULTANCY_PROBLEM,
+          problem: parsed.problemStatement || parsed.summary || DEFAULT_DISCOVERY_PROBLEM,
           businessName: parsed.businessName || parsed.name || "Enterprise Workspace",
           industry: parsed.industry || "Cross-Industry",
           goals: parsed.goals || "",
@@ -119,7 +122,7 @@ function DiscoveryPage() {
       }
     } catch {}
     return {
-      problem: HR_CONSULTANCY_PROBLEM,
+      problem: DEFAULT_DISCOVERY_PROBLEM,
       businessName: "Enterprise Workspace",
       industry: "Cross-Industry",
       goals: "",
@@ -204,7 +207,7 @@ function DiscoveryPage() {
       }
     } catch {}
 
-    if (!loadedText) loadedText = HR_CONSULTANCY_PROBLEM;
+    if (!loadedText) loadedText = DEFAULT_DISCOVERY_PROBLEM;
     setProblemText(loadedText);
 
     // Immediate synchronous domain calibration

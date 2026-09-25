@@ -248,8 +248,18 @@ export async function restoreUserActiveWorkspace(userId: string): Promise<boolea
         return true;
       }
     } else {
-      // User has no workspaces in Supabase yet
+      // User has no workspaces in Supabase yet - clear stale demo workspace if present
       localStorage.removeItem(`bizzmitra.user_workspaces_${userId}`);
+      const curId = localStorage.getItem("bizzmitra.activeWorkspaceId");
+      const curName = localStorage.getItem("bizzmitra.activeWorkspaceName") || "";
+      if (curId === "ws-talentcraft-default" || curName.toLowerCase().includes("talentcraft") || !isTest) {
+        localStorage.removeItem("bizzmitra.activeWorkspaceId");
+        localStorage.removeItem("bizzmitra.activeWorkspaceName");
+        localStorage.removeItem("bizzmitra.workspaceContext");
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("bizzmitra:workspace-changed"));
+        }
+      }
     }
   } catch (err) {
     console.warn("[restoreUserActiveWorkspace error]:", err);
@@ -257,3 +267,25 @@ export async function restoreUserActiveWorkspace(userId: string): Promise<boolea
 
   return false;
 }
+
+export function clearStaleDemoWorkspace() {
+  if (typeof window === "undefined") return;
+  try {
+    const curId = localStorage.getItem("bizzmitra.activeWorkspaceId");
+    const curName = localStorage.getItem("bizzmitra.activeWorkspaceName") || "";
+    const curCtx = localStorage.getItem("bizzmitra.workspaceContext") || "";
+    if (
+      curId === "ws-talentcraft-default" ||
+      curName.toLowerCase().includes("talentcraft") ||
+      curCtx.toLowerCase().includes("talentcraft")
+    ) {
+      localStorage.removeItem("bizzmitra.activeWorkspaceId");
+      localStorage.removeItem("bizzmitra.activeWorkspaceName");
+      localStorage.removeItem("bizzmitra.workspaceContext");
+      localStorage.removeItem("bizzmitra.discoveryData");
+      localStorage.removeItem("bizzmitra.solutionData");
+      window.dispatchEvent(new Event("bizzmitra:workspace-changed"));
+    }
+  } catch {}
+}
+

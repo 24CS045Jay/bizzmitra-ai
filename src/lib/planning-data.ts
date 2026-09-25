@@ -1730,30 +1730,25 @@ export function getRoadmapForWorkspace(
     };
   }
 
-  // 6. HR Consultancy & TalentCraft
+  // 6. HR Consultancy & Recruitment Services (Only when explicitly recruitment/staffing)
   if (
-    combined.includes("talentcraft") ||
     combined.includes("recruitment") ||
-    combined.includes("staffing") ||
-    combined.includes("ats") ||
-    combined.includes("candidate") ||
+    combined.includes("staffing agency") ||
+    combined.includes("applicant tracking") ||
+    combined.includes("headhunting") ||
     combined.includes("hr consultancy")
   ) {
     const raw = HR_CONSULTANCY_ROADMAP;
     return {
       ...raw,
-      scenarioName: `${workspaceContext.businessName || workspaceContext.name || "TalentCraft HR"} — Delivery Roadmap & Sprint Plan`,
+      scenarioName: `${workspaceContext.businessName || workspaceContext.name || "Talent Operations"} — Delivery Roadmap & Sprint Plan`,
     };
   }
 
   // 7. Any other problem statement -> Generate bespoke dynamic roadmap
-  if (workspaceContext.businessName || workspaceContext.problemStatement || workspaceContext.industry) {
-    return generateDynamicRoadmap(
-      workspaceContext.businessName || workspaceContext.name || "Custom Project",
-      workspaceContext.industry || "General Industry",
-      workspaceContext.problemStatement || workspaceContext.description || ""
-    );
-  }
-
-  return HR_CONSULTANCY_ROADMAP;
+  return generateDynamicRoadmap(
+    workspaceContext?.businessName || workspaceContext?.name || "Enterprise Operations",
+    workspaceContext?.industry || "Enterprise Transformation",
+    workspaceContext?.problemStatement || workspaceContext?.description || "End-to-end digital transformation and process automation roadmap"
+  );
 }

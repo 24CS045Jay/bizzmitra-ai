@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
 import { syncUserRoleAndWallet } from "@/lib/admin-rbac-data";
+import { clearStaleDemoWorkspace } from "@/lib/workspace-persistence";
 import { gridMotionItems } from "@/lib/login-background";
 import { useTranslation } from "@/lib/i18n";
 
@@ -45,6 +46,10 @@ function SignupPage() {
   const { session, signInAsDemoAdmin, setSession } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    clearStaleDemoWorkspace();
+  }, []);
 
   useEffect(() => {
     if (session) navigate({ to: "/dashboard" });
