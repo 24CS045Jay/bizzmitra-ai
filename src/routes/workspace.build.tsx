@@ -330,14 +330,22 @@ function WorkspaceBuildPage() {
 
       if (res.isUpdate || isUpdate) {
         toast.success(`Successfully pushed latest changes to GitHub! (${res.fileCount || "All"} files synced)`);
-        if (isAlreadyDeployed) {
-          toast.info("⚡ Live deployed link will automatically update with these new GitHub changes.");
-        }
+        toast.info("🚀 Syncing latest changes directly to Vercel live link...");
+        deployProjectToCloud(latestProject, undefined, { forceManaged }).then((deployRes) => {
+          if (deployRes.success && deployRes.liveUrl) {
+            setDeploymentResult(deployRes);
+            toast.success("✨ Live Vercel link automatically updated with latest code!");
+          }
+        }).catch((err) => console.warn("Auto Vercel redeploy error:", err));
       } else {
         toast.success("Repository created and pushed to GitHub!");
-        if (isAlreadyDeployed) {
-          toast.info("⚡ Live deployed link will automatically sync with this GitHub repo.");
-        }
+        toast.info("🚀 Deploying to Vercel with your credentials...");
+        deployProjectToCloud(latestProject, undefined, { forceManaged }).then((deployRes) => {
+          if (deployRes.success && deployRes.liveUrl) {
+            setDeploymentResult(deployRes);
+            toast.success("✨ Live Vercel deployment created and active!");
+          }
+        }).catch((err) => console.warn("Auto Vercel deploy error:", err));
         window.open(res.repoUrl, "_blank");
       }
     } else {
@@ -982,12 +990,22 @@ function WorkspaceBuildPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
+              <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
                 <button
                   onClick={() => setIsAlreadyDeployedModalOpen(false)}
                   className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition cursor-pointer"
                 >
                   Close
+                </button>
+                <button
+                  onClick={() => {
+                    setIsAlreadyDeployedModalOpen(false);
+                    executeDeploy(false);
+                  }}
+                  className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-3.5 py-2 text-xs font-bold transition cursor-pointer"
+                >
+                  <Rocket className="size-3.5" />
+                  <span>Redeploy to Vercel Now</span>
                 </button>
                 <button
                   onClick={() => {
@@ -1002,7 +1020,7 @@ function WorkspaceBuildPage() {
                   ) : (
                     <UploadCloud className="size-3.5" />
                   )}
-                  <span>{isExportingGit ? "Pushing to GitHub..." : "🐙 Push Latest to GitHub Now"}</span>
+                  <span>{isExportingGit ? "Pushing to GitHub..." : "🐙 Push Latest & Auto-Deploy"}</span>
                 </button>
               </div>
             </div>
