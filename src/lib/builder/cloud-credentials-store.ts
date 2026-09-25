@@ -19,6 +19,18 @@ export interface CloudCredentials {
 
 const STORAGE_KEY = "bizzmitra_cloud_credentials_v1";
 
+/**
+ * Strips surrounding quotes, whitespace, and 'Bearer' prefix from user-provided API tokens.
+ */
+export function cleanAuthToken(token?: string | null): string {
+  if (!token) return "";
+  let clean = String(token).trim();
+  clean = clean.replace(/^(bearer|token)\s+/i, "");
+  clean = clean.replace(/^["'`]|["'`]$/g, "").trim();
+  clean = clean.replace(/^["'`]|["'`]$/g, "").trim();
+  return clean;
+}
+
 export function loadCloudCredentials(): CloudCredentials {
   if (typeof window === "undefined") {
     return { mode: "managed" };
@@ -26,7 +38,13 @@ export function loadCloudCredentials(): CloudCredentials {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { mode: "managed" };
-    return { mode: "managed", ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    return {
+      mode: "managed",
+      ...parsed,
+      githubToken: cleanAuthToken(parsed.githubToken) || undefined,
+      vercelToken: cleanAuthToken(parsed.vercelToken) || undefined,
+    };
   } catch {
     return { mode: "managed" };
   }
@@ -34,7 +52,12 @@ export function loadCloudCredentials(): CloudCredentials {
 
 export function saveCloudCredentials(creds: Partial<CloudCredentials>): CloudCredentials {
   const current = loadCloudCredentials();
-  const updated = { ...current, ...creds };
+  const sanitized = {
+    ...creds,
+    githubToken: creds.githubToken !== undefined ? cleanAuthToken(creds.githubToken) || undefined : current.githubToken,
+    vercelToken: creds.vercelToken !== undefined ? cleanAuthToken(creds.vercelToken) || undefined : current.vercelToken,
+  };
+  const updated = { ...current, ...sanitized };
   if (typeof window !== "undefined") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   }
@@ -44,19 +67,20 @@ export function saveCloudCredentials(creds: Partial<CloudCredentials>): CloudCre
 /**
  * Validates a user's GitHub Personal Access Token
  */
-export async function testGithubToken(token: string): Promise<{
+export async function testGithubToken(rawToken: string): Promise<{
   valid: boolean;
   username?: string;
   avatarUrl?: string;
   error?: string;
 }> {
-  if (!token || !token.trim()) {
+  const token = cleanAuthToken(rawToken);
+  if (!token) {
     return { valid: false, error: "Please enter a GitHub token." };
   }
   try {
     const res = await fetch("https://api.github.com/user", {
       headers: {
-        Authorization: `Bearer ${token.trim()}`,
+        Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github.v3+json",
       },
     });

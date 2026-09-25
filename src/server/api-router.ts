@@ -2316,15 +2316,22 @@ Return strictly valid JSON with this exact structure:
     }
   }
 
+function sanitizeToken(token?: string | null): string {
+  if (!token) return "";
+  let clean = String(token).trim();
+  clean = clean.replace(/^(bearer|token)\s+/i, "");
+  clean = clean.replace(/^["'`]|["'`]$/g, "").trim();
+  clean = clean.replace(/^["'`]|["'`]$/g, "").trim();
+  return clean;
+}
+
   // 10b. Cloud & Deployment Environment Status: /api/cloud/status
   if (pathname === "/api/cloud/status" && request.method === "GET") {
     const hasManagedGithub = Boolean(
-      (process.env["GITHUB_TOKEN"] && process.env["GITHUB_TOKEN"].trim()) ||
-      ((env as any)?.GITHUB_TOKEN && String((env as any)?.GITHUB_TOKEN).trim())
+      sanitizeToken(process.env["GITHUB_TOKEN"] || ((env as any)?.GITHUB_TOKEN as string))
     );
     const hasManagedVercel = Boolean(
-      (process.env["VERCEL_API_TOKEN"] && process.env["VERCEL_API_TOKEN"].trim()) ||
-      ((env as any)?.VERCEL_API_TOKEN && String((env as any)?.VERCEL_API_TOKEN).trim())
+      sanitizeToken(process.env["VERCEL_API_TOKEN"] || ((env as any)?.VERCEL_API_TOKEN as string))
     );
     return jsonResponse(
       {
@@ -2343,11 +2350,12 @@ Return strictly valid JSON with this exact structure:
     try {
       const urlObj = new URL(request.url);
       const targetUrl = urlObj.searchParams.get("repoUrl");
-      const githubToken =
+      const githubToken = sanitizeToken(
         request.headers.get("x-custom-github-token") ||
         process.env["GITHUB_TOKEN"] ||
         (env as any)?.GITHUB_TOKEN ||
-        "";
+        ""
+      );
 
       if (!targetUrl) {
         return jsonResponse({ exists: false, error: "Missing repoUrl query parameter" }, 400, {}, request);
@@ -2368,8 +2376,8 @@ Return strictly valid JSON with this exact structure:
         Accept: "application/vnd.github.v3+json",
         "User-Agent": "BizzMitra-AI-Platform",
       };
-      if (githubToken && githubToken.trim()) {
-        headers["Authorization"] = `Bearer ${githubToken.trim()}`;
+      if (githubToken) {
+        headers["Authorization"] = `Bearer ${githubToken}`;
       }
 
       const checkRes = await fetch(`https://api.github.com/repos/${owner}/${cleanRepo}`, {
@@ -2391,17 +2399,20 @@ Return strictly valid JSON with this exact structure:
   if (pathname === "/api/github/export" && request.method === "POST") {
     try {
       const body = await request.json().catch(() => ({}));
-      const managedToken =
+      const managedToken = sanitizeToken(
         process.env["GITHUB_TOKEN"] ||
         (env as any)?.GITHUB_TOKEN ||
-        "";
-      let githubToken =
+        ""
+      );
+      const customToken = sanitizeToken(
         body.customGithubToken ||
         request.headers.get("x-custom-github-token") ||
-        managedToken;
+        ""
+      );
+      let githubToken = customToken || managedToken;
 
       // Validate presence of GitHub token before attempting requests
-      if (!githubToken || !String(githubToken).trim()) {
+      if (!githubToken) {
         return jsonResponse(
           {
             success: false,
@@ -2414,7 +2425,6 @@ Return strictly valid JSON with this exact structure:
           request
         );
       }
-      githubToken = String(githubToken).trim();
 
       let targetRepoName = (body.repoName || "bizzmitra-generated-app")
         .toLowerCase()
@@ -2457,13 +2467,13 @@ Return strictly valid JSON with this exact structure:
       }
 
       // If custom token failed validation, seamlessly fall back to managed platform token if available
-      if (!tokenValid && githubToken !== managedToken && managedToken && String(managedToken).trim()) {
+      if (!tokenValid && managedToken && githubToken !== managedToken) {
         console.warn("Custom GitHub token invalid or lacking scopes. Falling back to managed platform credentials.");
-        githubToken = String(managedToken).trim();
+        githubToken = managedToken;
         try {
           const fallbackUserRes = await fetch("https://api.github.com/user", {
             headers: {
-              Authorization: `Bearer ${managedToken.trim()}`,
+              Authorization: `Bearer ${managedToken}`,
               Accept: "application/vnd.github.v3+json",
               "User-Agent": "BizzMitra-AI-Platform",
             },
