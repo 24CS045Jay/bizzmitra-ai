@@ -24,6 +24,7 @@ import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { GenerationSequence } from "@/components/GenerationSequence";
 import { CountUp, Reveal } from "@/components/motion/primitives";
 import { BlueprintConfidenceScore } from "@/components/BlueprintConfidenceScore";
+import { FinancialRoiCard } from "@/components/dashboard/FinancialRoiCard";
 import { ScenarioComparisonModal, type ScenarioData } from "@/components/ScenarioComparisonModal";
 import { ShareBlueprintModal } from "@/components/ShareBlueprintModal";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
@@ -54,7 +55,7 @@ export const Route = createFileRoute("/workspace/roadmap")({
 
 export function RoadmapPage() {
   useStageGate("roadmap");
-  // Read active workspace context reactively
+  // Read active workspace context reactively with synchronous initial load
   const [workspaceContext, setWorkspaceContext] = useState<{
     id?: string;
     name?: string;
@@ -64,7 +65,15 @@ export function RoadmapPage() {
     description?: string;
     budget?: number;
     scale?: string;
-  } | null>(null);
+  } | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return null;
+  });
 
   useEffect(() => {
     function loadContext() {
@@ -93,12 +102,36 @@ export function RoadmapPage() {
       ...fallbackBlueprint,
       ...rawBlueprint,
       phases: (rawBlueprint.phases && Array.isArray(rawBlueprint.phases) && rawBlueprint.phases.length > 0)
-        ? rawBlueprint.phases.map((p: any, idx: number) => ({
-            ...p,
-            milestones: Array.isArray(p.milestones) ? p.milestones : (fallbackBlueprint.phases[idx]?.milestones || []),
-            teamResourcing: Array.isArray(p.teamResourcing) ? p.teamResourcing : (fallbackBlueprint.phases[idx]?.teamResourcing || []),
-            criticalDeliverables: Array.isArray(p.criticalDeliverables) ? p.criticalDeliverables : (fallbackBlueprint.phases[idx]?.criticalDeliverables || []),
-          }))
+        ? rawBlueprint.phases.map((p: any, idx: number) => {
+            const fallbackPhase = fallbackBlueprint.phases[idx] || fallbackBlueprint.phases[0];
+            return {
+              id: p.id || `phase-${idx + 1}`,
+              phaseNumber: p.phaseNumber || idx + 1,
+              name: p.name || p.phase || p.title || fallbackPhase?.name || `Phase ${idx + 1}`,
+              codename: p.codename || p.title || fallbackPhase?.codename || `Sprint ${idx + 1}`,
+              durationWeeks: p.durationWeeks || p.duration || fallbackPhase?.durationWeeks || "Weeks 1–4",
+              startWeek: typeof p.startWeek === "number" ? p.startWeek : idx * 4,
+              durationWeekCount: typeof p.durationWeekCount === "number" ? p.durationWeekCount : 4,
+              objective: p.objective || p.goal || fallbackPhase?.objective || "",
+              status: p.status || (idx === 0 ? "in-progress" : "upcoming"),
+              milestones: Array.isArray(p.milestones) && p.milestones.length > 0
+                ? p.milestones.map((m: any, mIdx: number) => ({
+                    id: m.id || `m-${idx + 1}0${mIdx + 1}`,
+                    title: m.title || m.name || `Milestone ${mIdx + 1}`,
+                    category: m.category || "Backend",
+                    effortDays: typeof m.effortDays === "number" ? m.effortDays : 5,
+                    completed: Boolean(m.completed),
+                    deliverable: m.deliverable || (Array.isArray(m.deliverables) ? m.deliverables.join(", ") : "Milestone deliverable"),
+                  }))
+                : (fallbackPhase?.milestones || []),
+              teamResourcing: Array.isArray(p.teamResourcing) && p.teamResourcing.length > 0
+                ? p.teamResourcing
+                : (fallbackPhase?.teamResourcing || []),
+              criticalDeliverables: Array.isArray(p.criticalDeliverables) && p.criticalDeliverables.length > 0
+                ? p.criticalDeliverables
+                : (fallbackPhase?.criticalDeliverables || []),
+            };
+          })
         : fallbackBlueprint.phases,
       riskRegister: (rawBlueprint.riskRegister && Array.isArray(rawBlueprint.riskRegister) && rawBlueprint.riskRegister.length > 0)
         ? rawBlueprint.riskRegister
@@ -133,10 +166,17 @@ export function RoadmapPage() {
   const [riskFilter, setRiskFilter] = useState<"All" | "Technical" | "Adoption" | "Security" | "Timeline">("All");
   const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [financialVersion, setFinancialVersion] = useState(0);
+
+  useEffect(() => {
+    const handleFinUpdate = () => setFinancialVersion((v) => v + 1);
+    window.addEventListener("bizzmitra:financials-updated", handleFinUpdate);
+    return () => window.removeEventListener("bizzmitra:financials-updated", handleFinUpdate);
+  }, []);
 
   const { flaggedRisks, scoreResult } = useMemo(
     () => evaluateBlueprintRisks(blueprint, workspaceContext),
-    [blueprint, workspaceContext],
+    [blueprint, workspaceContext, financialVersion],
   );
 
   const activePhase = (blueprint.phases?.[activePhaseIndex] ?? blueprint.phases?.[0] ?? fallbackBlueprint.phases[0])!;
@@ -391,6 +431,9 @@ export function RoadmapPage() {
 
           {/* Blueprint Completeness & Confidence Score Indicator */}
           <BlueprintConfidenceScore scoreResult={scoreResult} />
+
+          {/* Financial Runway & ROI Projections Card */}
+          <FinancialRoiCard workspaceContext={workspaceContext} />
 
           {/* Interactive Gantt Timeline */}
           <Reveal className="neu p-6">

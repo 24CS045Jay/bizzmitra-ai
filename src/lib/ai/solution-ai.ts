@@ -150,7 +150,7 @@ function getDomainBuildBuy(industry: string): BuildBuyOption[] {
   ];
 }
 
-function generateDomainSolutionFallback(
+export function generateDomainSolutionFallback(
   problem: string,
   businessName: string,
   industry: string

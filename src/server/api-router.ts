@@ -1909,6 +1909,84 @@ Return strictly valid JSON with this exact structure:
     }
   }
 
+  // 5d.2 Dynamic AI & Google Translation API: POST /api/translate
+  if (pathname === "/api/translate" && request.method === "POST") {
+    try {
+      const body = (await request.json()) as { texts: string[]; targetLang: string };
+      const { texts = [], targetLang = "hi" } = body;
+
+      if (!texts.length || targetLang === "en") {
+        return jsonResponse({ success: true, translations: texts });
+      }
+
+      // 1. Check if a dedicated Google Cloud Translation API Key is configured
+      const googleTranslateKey =
+        (env as any)?.GOOGLE_TRANSLATE_API_KEY ||
+        (env as any)?.VITE_GOOGLE_TRANSLATE_API_KEY ||
+        process.env["GOOGLE_TRANSLATE_API_KEY"] ||
+        process.env["VITE_GOOGLE_TRANSLATE_API_KEY"];
+
+      if (googleTranslateKey) {
+        try {
+          const googleRes = await fetch(
+            `https://translation.googleapis.com/language/translate/v2?key=${googleTranslateKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                q: texts,
+                target: targetLang,
+                format: "text",
+              }),
+            }
+          );
+          if (googleRes.ok) {
+            const gData = await googleRes.json();
+            const translations = (gData?.data?.translations || []).map((t: any) => t.translatedText);
+            if (translations.length === texts.length) {
+              return jsonResponse({ success: true, source: "google-translate-v2", translations });
+            }
+          }
+        } catch (gErr) {
+          console.warn("[/api/translate] Google API error, falling back to LLM pool:", gErr);
+        }
+      }
+
+      // 2. High-speed LLM Translation Engine (Groq Llama 3.3 / Gemini 2.0 Flash)
+      const prompt = `You are a high-speed professional multilingual UI localization engine.
+Translate the following array of JSON strings into target language code "${targetLang}" (e.g. "hi"=Hindi, "gu"=Gujarati, "es"=Spanish, "fr"=French, "de"=German, "ja"=Japanese, "ar"=Arabic).
+
+RULES:
+1. Translate ALL UI text, column headers, actions, metrics, and labels accurately into the native script.
+2. Keep variables, URLs, and numbers intact.
+3. Return an array of strings of EXACTLY the same length (${texts.length} items) in the exact same order.
+
+Input Texts:
+${JSON.stringify(texts, null, 2)}
+
+Return strictly valid JSON with this exact structure:
+{
+  "translations": ["translated_text_1", "translated_text_2", ...]
+}`;
+
+      const result = await callLlmJson(
+        prompt,
+        "You are an enterprise translation engine. Return strictly valid JSON with key 'translations'.",
+        3000,
+        9000
+      );
+
+      const translations = Array.isArray(result?.data?.translations) && result.data.translations.length === texts.length
+        ? result.data.translations
+        : texts;
+
+      return jsonResponse({ success: true, source: result?.source || "llm", translations });
+    } catch (err: any) {
+      console.warn("[/api/translate error]:", err);
+      return jsonResponse({ success: false, error: err?.message || "Translation failed", translations: [] }, 500);
+    }
+  }
+
   // 5e. Chat Sessions: GET /api/chat/sessions?workspaceId=... and POST /api/chat/sessions
   if (pathname === "/api/chat/sessions") {
     const user = await getAuthenticatedUser(request, supabaseAdmin);

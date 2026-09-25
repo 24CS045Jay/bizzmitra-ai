@@ -1,4 +1,5 @@
 import { getRoadmapForWorkspace, type RoadmapBlueprint } from "@/lib/planning-data";
+import { loadFinancialModel } from "@/lib/financial-data";
 
 export interface FlaggedRisk {
   id: string;
@@ -67,17 +68,28 @@ export function evaluateBlueprintRisks(
     });
   }
 
-  // 2. Budget allocation check
-  const budgetAllocated = workspaceContext?.budget ?? (bp.totalPersonDays > 0 ? bp.totalPersonDays * 12500 : 0);
-  if (!workspaceContext?.budget && bp.totalPersonDays > 120) {
+  // 2. Budget allocation & ROI verification check
+  const finModel = loadFinancialModel(workspaceContext);
+  if (!finModel.inputs.isLocked) {
     risks.push({
       id: "risk-budget",
       category: "budget",
       severity: "high",
       title: "CapEx/OpEx Budget Ceiling Not Explicitly Locked",
-      detail: `Estimated effort of ${bp.totalPersonDays} person-days requires explicit financial authorization.`,
+      detail: `Estimated effort of ${bp.totalPersonDays || finModel.inputs.estimatedPersonDays} person-days requires explicit financial authorization.`,
       badgeText: "⚠️ No Budget Locked",
-      remediation: "Formalize CapEx runway and compute target ROI recovery in the Solution Studio.",
+      remediation: "Lock CapEx runway and compute target ROI in Financial Intelligence.",
+      section: "Financial Planning",
+    });
+  } else if (!finModel.computed.isBudgetUnderCeiling) {
+    risks.push({
+      id: "risk-budget",
+      category: "budget",
+      severity: "high",
+      title: "CapEx Build Cost Exceeds Approved Budget Ceiling",
+      detail: `Projected build investment exceeds the allocated ceiling.`,
+      badgeText: "⚠️ Budget Over Ceiling",
+      remediation: "Rebalance sprint effort or increase approved CapEx ceiling in Financial Intelligence.",
       section: "Financial Planning",
     });
   }
@@ -152,8 +164,8 @@ export function evaluateBlueprintRisks(
     {
       domain: "Resource & Budget Allocation",
       weight: 20,
-      completed: Boolean(workspaceContext?.budget),
-      missingHint: "Add your budget in Roadmap & ROI to improve confidence (+20%)",
+      completed: Boolean(finModel.inputs.isLocked && finModel.computed.isBudgetUnderCeiling),
+      missingHint: "Lock CapEx runway & verify positive ROI in Financial Intelligence (+20%)",
     },
     {
       domain: "Delivery Roadmap & Milestones",

@@ -1340,36 +1340,243 @@ export const LOGISTICS_COMPONENTS: ArchitectureComponent[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BLUEPRINT FACTORY: GET ARCHITECTURE FOR ANY PROBLEM INTAKE
+// DYNAMIC ARCHITECTURE GENERATOR & RESOLVER
+// ─────────────────────────────────────────────────────────────────────────────
+export function generateDynamicArchitecture(
+  name: string,
+  industry: string,
+  problem?: string
+): ArchitectureBlueprint {
+  const cleanName = name.replace(/[^a-zA-Z0-9 ]/g, "").trim() || "Enterprise Platform";
+  const cleanInd = industry.replace(/[^a-zA-Z0-9 ]/g, "").trim() || "Digital Business";
+
+  const dynamicHld = `graph TB
+  subgraph Client_Layer["Client & Experience Tier"]
+    A1["${cleanName} Web Portal<br/>(React 19 + TypeScript)"]
+    A2["Stakeholder & Mobile App<br/>(PWA / Responsive Canvas)"]
+  end
+
+  subgraph Edge_Layer["Edge & Security Layer"]
+    B1["Cloudflare CDN & Global Edge WAF<br/>(DDoS Mitigation & Caching)"]
+    B2["API Gateway & Auth Proxy<br/>(JWT Token & Rate Limiter)"]
+  end
+
+  subgraph Service_Mesh["Core Microservices Cluster"]
+    C1["Core ${cleanInd} Workflow Service<br/>(State Machine & Orchestration)"]
+    C2["Transaction & Intake Engine<br/>(Validation & Business Logic)"]
+    C3["Notification & Event Hub<br/>(Webhooks & Dispatch)"]
+  end
+
+  subgraph AI_Pipeline["Intelligence & Async Processing"]
+    D1["Redis Job Queue & Event Stream<br/>(Backpressure Buffering)"]
+    D2["AI Reasoning Copilot Pipeline<br/>(Groq / pgvector Embeddings)"]
+  end
+
+  subgraph Data_Layer["Data & Persistence Layer"]
+    E1[("PostgreSQL 16 Primary<br/>(Row-Level Security)")]
+    E2[("Redis 7 Cache Cluster<br/>(In-Memory State & Sessions)")]
+    E3[("Encrypted S3 Storage<br/>(Documents & Media Vault)")]
+  end
+
+  A1 --> B1
+  A2 --> B1
+  B1 --> B2
+  B2 --> C1
+  B2 --> C2
+  B2 --> C3
+  C1 --> D1
+  C2 --> D1
+  D1 --> D2
+  C1 --> E1
+  C2 --> E1
+  C3 --> E1
+  D2 --> E1
+  C1 --> E2
+  C2 --> E2
+  B2 --> E2
+  C1 --> E3
+  C2 --> E3
+
+  classDef client fill:#0D9488,stroke:#0F766E,stroke-width:2px,color:#FFFFFF
+  classDef edge fill:#4F46E5,stroke:#4338CA,stroke-width:2px,color:#FFFFFF
+  classDef service fill:#0284C7,stroke:#0369A1,stroke-width:2px,color:#FFFFFF
+  classDef ai fill:#7C3AED,stroke:#6D28D9,stroke-width:2px,color:#FFFFFF
+  classDef data fill:#D97706,stroke:#B45309,stroke-width:2px,color:#FFFFFF
+
+  class A1,A2 client
+  class B1,B2 edge
+  class C1,C2,C3 service
+  class D1,D2 ai
+  class E1,E2,E3 data`;
+
+  const dynamicLld = `sequenceDiagram
+  autonumber
+  actor User as End User / Client
+  participant WebClient as Web Client
+  participant Gateway as API Gateway & WAF
+  participant CoreService as Core ${cleanInd} Service
+  participant Queue as Async Redis Queue
+  participant AIEngine as AI Reasoning Worker
+  participant Database as PostgreSQL Database
+
+  User->>WebClient: Submit Operational Request
+  WebClient->>Gateway: HTTPS POST /api/v1/intake (JWT Bearer)
+  Gateway->>Gateway: Verify Rate Limit & Nonce
+  Gateway->>CoreService: Forward Request Payload
+  CoreService->>Database: Write Initial State (Status: Processing)
+  Database-->>CoreService: Record Created (UUID)
+  CoreService->>Queue: Enqueue Async Processing Task
+  Queue->>AIEngine: Ingest & Evaluate Heuristics
+  AIEngine->>Database: Update Structured Embeddings
+  CoreService-->>Gateway: 202 Accepted (Tracking ID)
+  Gateway-->>WebClient: Stream Live Progress Updates
+  WebClient-->>User: Visual Workflow Complete & Notification Sent`;
+
+  const dynamicTopology = `graph TB
+  Edge["Cloudflare Global CDN"] --> Pods["Kubernetes / ECS Container Cluster"]
+  Pods --> DB[("PostgreSQL 16 Multi-AZ")]
+  Pods --> Cache[("Redis Cluster")]`;
+
+  const dynamicSecuritySla = `graph TD
+  WAF["Cloudflare Edge WAF"] --> Auth["JWT & RBAC Gate"] --> Engine["Domain Logic Service"] --> Storage["AES-256 Storage & DB"]`;
+
+  const dynamicComponents: ArchitectureComponent[] = [
+    {
+      id: "comp-web",
+      name: `${cleanName} Unified Web Workspace`,
+      layer: "Client & Presentation",
+      techStack: ["React 19", "TypeScript", "TanStack Router", "Tailwind CSS"],
+      description: `Primary responsive web portal and operational canvas for ${cleanName} stakeholders.`,
+      securityPolicies: ["Strict CSP Nonce", "HTTPS TLS 1.3 Only", "HttpOnly SameSite Cookie"],
+      scalingConsiderations: ["Cloudflare Edge caching", "Code-split dynamic routes"],
+      latencyBudget: "< 80ms FCP",
+      availabilitySla: "99.99%",
+      dependencies: ["API Gateway & Auth Proxy"],
+      dataIngress: "User input & WebSocket feeds",
+      dataEgress: "Rendered interactive DOM",
+    },
+    {
+      id: "comp-gateway",
+      name: "API Gateway & Edge Auth Proxy",
+      layer: "API Gateway & Edge",
+      techStack: ["Cloudflare Workers", "Fastify Reverse Proxy"],
+      description: "Low-latency edge routing, JWT validation, DDoS defense, and rate-limiting.",
+      securityPolicies: ["IP Sliding-Window Rate Limiting", "JWT Signature Verification"],
+      scalingConsiderations: ["Globally distributed edge execution (300+ PoPs)"],
+      latencyBudget: "< 15ms routing overhead",
+      availabilitySla: "99.99%",
+      dependencies: ["Core Microservices Mesh"],
+      dataIngress: "Raw client HTTPS requests",
+      dataEgress: "Sanitized internal payloads",
+    },
+    {
+      id: "comp-core",
+      name: `Core ${cleanInd} Workflow Engine`,
+      layer: "Core Services",
+      techStack: ["Node.js 20 LTS", "TypeScript", "Prisma ORM"],
+      description: `Domain orchestration, state machine transitions, and business rule enforcement for ${cleanName}.`,
+      securityPolicies: ["Tenant-Scoped Execution Context", "mTLS Service Mesh"],
+      scalingConsiderations: ["Auto-scaling container tasks (CPU > 70%)"],
+      latencyBudget: "< 120ms p95 response time",
+      availabilitySla: "99.95%",
+      dependencies: ["PostgreSQL DB", "Redis Cache", "Async Queue"],
+      dataIngress: "Routed API calls",
+      dataEgress: "Database commits & Queue jobs",
+    },
+    {
+      id: "comp-ai",
+      name: "AI Reasoning & Copilot Pipeline",
+      layer: "Async & AI Pipeline",
+      techStack: ["Groq Llama 3.3 70B", "pgvector", "BullMQ Redis"],
+      description: "Sub-second semantic intelligence, document triage, and automated synthesis.",
+      securityPolicies: ["Zero Data Retention for Third Parties", "PII Redaction Layer"],
+      scalingConsiderations: ["Worker concurrency pool auto-scaled via queue depth"],
+      latencyBudget: "< 1.5s streaming latency",
+      availabilitySla: "99.90%",
+      dependencies: ["Redis Cache", "PostgreSQL Vector Store"],
+      dataIngress: "Async queue messages",
+      dataEgress: "Structured semantic outputs",
+    },
+    {
+      id: "comp-db",
+      name: "PostgreSQL 16 Primary Persistence",
+      layer: "Data & Cache",
+      techStack: ["PostgreSQL 16", "Supabase", "Redis 7 Cluster"],
+      description: "Relational data store, encrypted audit log history, and high-speed memory cache.",
+      securityPolicies: ["Row-Level Security (RLS)", "AES-256 Encryption at Rest"],
+      scalingConsiderations: ["Read-replicas with connection pooling via PgBouncer"],
+      latencyBudget: "< 10ms query execution",
+      availabilitySla: "99.99%",
+      dependencies: [],
+      dataIngress: "ACID transactions",
+      dataEgress: "Normalized query sets",
+    },
+  ];
+
+  return {
+    domainId: `custom-${cleanInd.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+    domainTitle: `${name} — Cloud-Native Solution Architecture`,
+    hldDiagram: dynamicHld,
+    lldDiagram: dynamicLld,
+    topologyDiagram: dynamicTopology,
+    securitySlaDiagram: dynamicSecuritySla,
+    components: dynamicComponents,
+    keyDecisions: [
+      {
+        title: "Decoupled Async Queue Architecture",
+        detail: "Ingestion endpoints acknowledge with 202 Accepted to shield user workflows from heavy background processing.",
+        badge: "Performance",
+      },
+      {
+        title: "Row-Level Multi-Tenant Data Isolation",
+        detail: "Tenant-scoped database constraints and RLS policies guarantee strict zero-leakage security.",
+        badge: "Security",
+      },
+      {
+        title: "Sub-Second Semantic Inference",
+        detail: "Groq inference engine provides low-latency AI assistance without blocking transactional threads.",
+        badge: "Innovation",
+      },
+    ],
+    summary: {
+      cloudProvider: "Cloudflare Edge & AWS Multi-AZ",
+      dbEngine: "PostgreSQL 16 + Redis 7",
+      concurrencyTarget: "10,000+ Active Daily Users",
+      primarySla: "99.95% Availability",
+    },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RESOLVER FUNCTION
 // ─────────────────────────────────────────────────────────────────────────────
 export function getArchitectureBlueprint(
   workspaceContext?: {
     businessName?: string;
+    name?: string;
     industry?: string;
     problemStatement?: string;
   } | null
 ): ArchitectureBlueprint {
-  const name = workspaceContext?.businessName?.trim() || "TalentCraft HR Consultancy";
-  const ind = workspaceContext?.industry?.toLowerCase() || "";
-  const prob = workspaceContext?.problemStatement?.toLowerCase() || "";
-  const combined = `${ind} ${prob} ${name.toLowerCase()}`;
+  const name = workspaceContext?.businessName || workspaceContext?.name || "Enterprise Architecture";
+  const industry = workspaceContext?.industry || "General Industry";
+  const problem = workspaceContext?.problemStatement || "";
+  const combined = `${name} ${industry} ${problem}`.toLowerCase();
 
-  // 1. Detect Solar / Clean Tech / Energy / IoT / Grid
+  // 1. Detect Clean Tech / Solar / Inverter
   if (
     combined.includes("solar") ||
+    combined.includes("clean tech") ||
+    combined.includes("renewable") ||
     combined.includes("energy") ||
     combined.includes("inverter") ||
-    combined.includes("clean tech") ||
+    combined.includes("photovoltaic") ||
     combined.includes("grid") ||
-    combined.includes("panel") ||
-    combined.includes("battery") ||
-    combined.includes("iot") ||
-    combined.includes("utility") ||
-    combined.includes("power")
+    combined.includes("curtailment")
   ) {
     return {
       domainId: "solar",
-      domainTitle: `${name} — Clean Tech & IoT Cloud Architecture`,
+      domainTitle: `${name} — Industrial SCADA & Telemetry Architecture`,
       hldDiagram: SOLAR_HLD_DIAGRAM,
       lldDiagram: SOLAR_LLD_DIAGRAM,
       topologyDiagram: SOLAR_TOPOLOGY_DIAGRAM,
@@ -1377,47 +1584,45 @@ export function getArchitectureBlueprint(
       components: SOLAR_COMPONENTS,
       keyDecisions: [
         {
-          title: "Edge Inverter Telemetry Decoupling",
-          detail: "IoT Core terminates MQTT connections and buffers raw sensor streams into Apache Kafka, insulating the database from 10,000+ simultaneous second-by-second inverter bursts.",
-          badge: "Resilience",
+          title: "Edge Gateway Protocol Translation",
+          detail: "Industrial Modbus TCP/RTU telemetry is ingested at the plant edge via Rust daemon and converted into lightweight MQTT JSON payloads to minimize satellite uplink bandwidth.",
+          badge: "Edge IoT",
         },
         {
-          title: "Time-Series Hypertable Partitioning",
-          detail: "TimescaleDB chunks high-frequency metrics into 7-day intervals with 92% columnar compression, keeping query latency sub-15ms across hundreds of gigabytes.",
+          title: "TimescaleDB Metric Partitioning",
+          detail: "Continuous aggregates and automatic 7-day chunk rollups reduce disk footprint by 88% while enabling sub-50ms queries over billions of inverter voltage readings.",
           badge: "Performance",
         },
         {
-          title: "Hardware Cryptographic Device Auth",
-          detail: "Mutual X.509 device certificates ensure zero unauthorized hardware can inject fraudulent kilowatt generation or grid metering metrics.",
-          badge: "Security",
+          title: "Automated Curtailment Constraint Engine",
+          detail: "Solves linear optimization matrices at 1-minute intervals to enforce IEEE 1547 utility dispatch caps without manual SCADA operator intervention.",
+          badge: "Automation",
         },
       ],
       summary: {
-        cloudProvider: "AWS (IoT Core + ECS Fargate)",
-        dbEngine: "TimescaleDB + Aurora PostgreSQL 16",
-        concurrencyTarget: "100,000 sensor writes/sec",
-        primarySla: "99.99% Telemetry Ingestion Uptime",
+        cloudProvider: "AWS (ECS + TimescaleDB Cloud)",
+        dbEngine: "PostgreSQL 16 + TimescaleDB 2.14",
+        concurrencyTarget: "100,000 data points/sec",
+        primarySla: "99.99% Plant Telemetry Uptime",
       },
     };
   }
 
-  // 2. Detect Healthcare / Diagnostic Labs / Clinical / Pharma
+  // 2. Detect Healthcare / Diagnostics / Clinic / Hospital / Laboratory
   if (
     combined.includes("health") ||
     combined.includes("clinic") ||
-    combined.includes("doctor") ||
     combined.includes("diagnostic") ||
-    combined.includes("lab") ||
     combined.includes("patient") ||
-    combined.includes("pharma") ||
+    combined.includes("hospital") ||
     combined.includes("medical") ||
-    combined.includes("specimen") ||
-    combined.includes("pathology") ||
-    combined.includes("hospital")
+    combined.includes("phlebotomy") ||
+    combined.includes("lab") ||
+    combined.includes("sample")
   ) {
     return {
       domainId: "healthcare",
-      domainTitle: `${name} — HIPAA Certified Diagnostic Architecture`,
+      domainTitle: `${name} — HIPAA / NABL Clinical Architecture`,
       hldDiagram: HEALTHCARE_HLD_DIAGRAM,
       lldDiagram: HEALTHCARE_LLD_DIAGRAM,
       topologyDiagram: HEALTHCARE_TOPOLOGY_DIAGRAM,
@@ -1425,26 +1630,26 @@ export function getArchitectureBlueprint(
       components: HEALTHCARE_COMPONENTS,
       keyDecisions: [
         {
-          title: "Sub-3s Critical Value Emergency Pipeline",
-          detail: "Abnormal blood panels trigger priority RabbitMQ workers with automated telephony dispatch to notify the attending doctor within seconds.",
-          badge: "Life-Safety",
+          title: "Universal HL7 v2 / FHIR Interface Engine",
+          detail: "Bi-directional analyzer connectors normalize proprietary Siemens/Roche ASTM serial outputs into standardized FHIR Observation resources in real time.",
+          badge: "Interoperability",
         },
         {
-          title: "HIPAA Zero-Trust Data Isolation",
-          detail: "Row-Level Security (RLS) and AWS KMS Customer Managed Keys guarantee strict patient record isolation across laboratory clinics.",
-          badge: "Security",
-        },
-        {
-          title: "FHIR v4 Interoperability Standard",
-          detail: "Standardized HL7 FHIR v4 schema validation permits automated bidirectional synchronization between clinic EMRs and automated blood analyzers.",
+          title: "Cryptographic Specimen Chain-of-Custody",
+          detail: "Each barcode scan generates an immutable SHA-256 audit ledger entry with phlebotomist GPS and timestamp to guarantee sample integrity for NABL compliance.",
           badge: "Compliance",
+        },
+        {
+          title: "Encrypted WhatsApp Report Delivery Gateway",
+          detail: "Automated PDF generator compiles clinical reports with password protection (patient DOB) and dispatches them via Meta Verified WhatsApp Cloud API.",
+          badge: "Patient Experience",
         },
       ],
       summary: {
-        cloudProvider: "AWS (HIPAA BAA + ECS Fargate)",
-        dbEngine: "PostgreSQL 16 Multi-AZ (Encrypted PHI)",
-        concurrencyTarget: "25,000 lab orders/hour",
-        primarySla: "99.99% Emergency Lab Result Availability",
+        cloudProvider: "AWS (HIPAA-Compliant Dedicated VPC)",
+        dbEngine: "PostgreSQL 16 Enterprise with pgcrypto",
+        concurrencyTarget: "25,000 lab orders/day",
+        primarySla: "99.95% Diagnostic Service SLA",
       },
     };
   }
@@ -1496,39 +1701,55 @@ export function getArchitectureBlueprint(
     };
   }
 
-  // 4. Default: TalentCraft / HR Consultancy / Recruitment / Custom Business
-  return {
-    domainId: "hr",
-    domainTitle: `${name} — Multi-Tenant Cloud Architecture`,
-    hldDiagram: HR_HLD_DIAGRAM,
-    lldDiagram: HR_LLD_DIAGRAM,
-    topologyDiagram: HR_TOPOLOGY_DIAGRAM,
-    securitySlaDiagram: HR_SECURITY_SLA_DIAGRAM,
-    components: HR_COMPONENTS,
-    keyDecisions: [
-      {
-        title: "Decoupled Webhook & Application Ingress",
-        detail: "Candidate applications are acknowledged with 202 Accepted and offloaded to Celery worker queues to isolate heavy resume parsing from client response times.",
-        badge: "Resilience",
+  // 4. Detect HR Consultancy & TalentCraft
+  if (
+    combined.includes("talentcraft") ||
+    combined.includes("recruitment") ||
+    combined.includes("staffing") ||
+    combined.includes("ats") ||
+    combined.includes("candidate") ||
+    combined.includes("hr consultancy")
+  ) {
+    return {
+      domainId: "hr",
+      domainTitle: `${name} — Multi-Tenant Cloud Architecture`,
+      hldDiagram: HR_HLD_DIAGRAM,
+      lldDiagram: HR_LLD_DIAGRAM,
+      topologyDiagram: HR_TOPOLOGY_DIAGRAM,
+      securitySlaDiagram: HR_SECURITY_SLA_DIAGRAM,
+      components: HR_COMPONENTS,
+      keyDecisions: [
+        {
+          title: "Decoupled Webhook & Application Ingress",
+          detail: "Candidate applications are acknowledged with 202 Accepted and offloaded to Celery worker queues to isolate heavy resume parsing from client response times.",
+          badge: "Resilience",
+        },
+        {
+          title: "Multi-Tenant Row-Level Security (RLS)",
+          detail: "Strict workspace isolation at the database layer ensures recruiters cannot query cross-agency candidate or client compensation records.",
+          badge: "Security",
+        },
+        {
+          title: "In-Memory Attendance Clock Synchronization",
+          detail: "Session punch timers write to Redis hyperlogs with atomic TTL keys to support sub-millisecond clock-ins without overwhelming disk IOPS.",
+          badge: "Performance",
+        },
+      ],
+      summary: {
+        cloudProvider: "AWS (ECS Fargate + Aurora)",
+        dbEngine: "PostgreSQL 16 Multi-AZ + Redis 7",
+        concurrencyTarget: "5,000 concurrent active sessions",
+        primarySla: "99.95% Core Service Availability",
       },
-      {
-        title: "Multi-Tenant Row-Level Security (RLS)",
-        detail: "Strict workspace isolation at the database layer ensures recruiters cannot query cross-agency candidate or client compensation records.",
-        badge: "Security",
-      },
-      {
-        title: "In-Memory Attendance Clock Synchronization",
-        detail: "Session punch timers write to Redis hyperlogs with atomic TTL keys to support sub-millisecond clock-ins without overwhelming disk IOPS.",
-        badge: "Performance",
-      },
-    ],
-    summary: {
-      cloudProvider: "AWS (ECS Fargate + Aurora)",
-      dbEngine: "PostgreSQL 16 Multi-AZ + Redis 7",
-      concurrencyTarget: "5,000 concurrent active sessions",
-      primarySla: "99.95% Core Service Availability",
-    },
-  };
+    };
+  }
+
+  // 5. Arbitrary bespoke domain -> Generate fully dynamic architecture
+  if (workspaceContext?.businessName || workspaceContext?.problemStatement || workspaceContext?.industry) {
+    return generateDynamicArchitecture(name, industry, problem);
+  }
+
+  return generateDynamicArchitecture(name, industry, problem);
 }
 
 // Backward-compatible exports
