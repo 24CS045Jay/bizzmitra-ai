@@ -16,8 +16,10 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as PreviewSolutionRouteImport } from './routes/preview.solution'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as WorkspaceArchitectureRouteImport } from './routes/workspace.architecture'
+import { Route as WorkspaceBuildRouteImport } from './routes/workspace.build'
 import { Route as WorkspaceCollaborationRouteImport } from './routes/workspace.collaboration'
 import { Route as WorkspaceDataRouteImport } from './routes/workspace.data'
 import { Route as WorkspaceDiscoveryRouteImport } from './routes/workspace.discovery'
@@ -66,6 +68,11 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PreviewSolutionRoute = PreviewSolutionRouteImport.update({
+  id: '/preview/solution',
+  path: '/preview/solution',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShareTokenRoute = ShareTokenRouteImport.update({
   id: '/share/$token',
   path: '/share/$token',
@@ -74,6 +81,11 @@ const ShareTokenRoute = ShareTokenRouteImport.update({
 const WorkspaceArchitectureRoute = WorkspaceArchitectureRouteImport.update({
   id: '/workspace/architecture',
   path: '/workspace/architecture',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceBuildRoute = WorkspaceBuildRouteImport.update({
+  id: '/workspace/build',
+  path: '/workspace/build',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceCollaborationRoute = WorkspaceCollaborationRouteImport.update({
@@ -145,8 +157,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/preview/solution': typeof PreviewSolutionRoute
   '/share/$token': typeof ShareTokenRoute
   '/workspace/architecture': typeof WorkspaceArchitectureRoute
+  '/workspace/build': typeof WorkspaceBuildRoute
   '/workspace/collaboration': typeof WorkspaceCollaborationRoute
   '/workspace/data': typeof WorkspaceDataRoute
   '/workspace/discovery': typeof WorkspaceDiscoveryRoute
@@ -168,8 +182,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/preview/solution': typeof PreviewSolutionRoute
   '/share/$token': typeof ShareTokenRoute
   '/workspace/architecture': typeof WorkspaceArchitectureRoute
+  '/workspace/build': typeof WorkspaceBuildRoute
   '/workspace/collaboration': typeof WorkspaceCollaborationRoute
   '/workspace/data': typeof WorkspaceDataRoute
   '/workspace/discovery': typeof WorkspaceDiscoveryRoute
@@ -192,8 +208,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/preview/solution': typeof PreviewSolutionRoute
   '/share/$token': typeof ShareTokenRoute
   '/workspace/architecture': typeof WorkspaceArchitectureRoute
+  '/workspace/build': typeof WorkspaceBuildRoute
   '/workspace/collaboration': typeof WorkspaceCollaborationRoute
   '/workspace/data': typeof WorkspaceDataRoute
   '/workspace/discovery': typeof WorkspaceDiscoveryRoute
@@ -217,8 +235,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/signup'
+    | '/preview/solution'
     | '/share/$token'
     | '/workspace/architecture'
+    | '/workspace/build'
     | '/workspace/collaboration'
     | '/workspace/data'
     | '/workspace/discovery'
@@ -240,8 +260,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/signup'
+    | '/preview/solution'
     | '/share/$token'
     | '/workspace/architecture'
+    | '/workspace/build'
     | '/workspace/collaboration'
     | '/workspace/data'
     | '/workspace/discovery'
@@ -263,8 +285,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/settings'
     | '/signup'
+    | '/preview/solution'
     | '/share/$token'
     | '/workspace/architecture'
+    | '/workspace/build'
     | '/workspace/collaboration'
     | '/workspace/data'
     | '/workspace/discovery'
@@ -287,8 +311,10 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  PreviewSolutionRoute: typeof PreviewSolutionRoute
   ShareTokenRoute: typeof ShareTokenRoute
   WorkspaceArchitectureRoute: typeof WorkspaceArchitectureRoute
+  WorkspaceBuildRoute: typeof WorkspaceBuildRoute
   WorkspaceCollaborationRoute: typeof WorkspaceCollaborationRoute
   WorkspaceDataRoute: typeof WorkspaceDataRoute
   WorkspaceDiscoveryRoute: typeof WorkspaceDiscoveryRoute
@@ -354,6 +380,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/preview/solution': {
+      id: '/preview/solution'
+      path: '/preview/solution'
+      fullPath: '/preview/solution'
+      preLoaderRoute: typeof PreviewSolutionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/share/$token': {
       id: '/share/$token'
       path: '/share/$token'
@@ -366,6 +399,13 @@ declare module '@tanstack/react-router' {
       path: '/workspace/architecture'
       fullPath: '/workspace/architecture'
       preLoaderRoute: typeof WorkspaceArchitectureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/build': {
+      id: '/workspace/build'
+      path: '/workspace/build'
+      fullPath: '/workspace/build'
+      preLoaderRoute: typeof WorkspaceBuildRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace/collaboration': {
@@ -463,8 +503,10 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  PreviewSolutionRoute: PreviewSolutionRoute,
   ShareTokenRoute: ShareTokenRoute,
   WorkspaceArchitectureRoute: WorkspaceArchitectureRoute,
+  WorkspaceBuildRoute: WorkspaceBuildRoute,
   WorkspaceCollaborationRoute: WorkspaceCollaborationRoute,
   WorkspaceDataRoute: WorkspaceDataRoute,
   WorkspaceDiscoveryRoute: WorkspaceDiscoveryRoute,

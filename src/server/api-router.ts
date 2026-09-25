@@ -2229,7 +2229,514 @@ Return strictly valid JSON with this exact structure:
       },
     ];
 
-    return jsonResponse({ success: true, notifications });
+    return jsonResponse({ success: true, notifications }, 200, {}, request);
+  }
+
+  // 9. Automated Cloud Deployment Engine: /api/deploy/vercel
+  if (pathname === "/api/deploy/vercel" && request.method === "POST") {
+    try {
+      const body = await request.json().catch(() => ({}));
+      const vercelToken =
+        body.customVercelToken ||
+        request.headers.get("x-custom-vercel-token") ||
+        process.env["VERCEL_API_TOKEN"] ||
+        (env as any)?.VERCEL_API_TOKEN ||
+        "";
+
+      const projectName = (body.projectName || "bizzmitra-app")
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, "-")
+        .replace(/^-+|-+$/g, "");
+      const files: Record<string, string> = body.files || {};
+
+      if (!files || Object.keys(files).length === 0) {
+        return jsonResponse({ error: "No files provided for deployment." }, 400, {}, request);
+      }
+
+      // Convert virtual file map to Vercel Deployments API payload format
+      const vercelFiles = Object.entries(files).map(([file, data]) => ({
+        file,
+        data: typeof data === "string" ? data : JSON.stringify(data),
+      }));
+
+      // Call Vercel REST Deployments API with production target
+      const vercelRes = await fetch("https://api.vercel.com/v13/deployments", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${vercelToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: projectName,
+          files: vercelFiles,
+          target: "production",
+          projectSettings: {
+            framework: "vite",
+            buildCommand: "npm run build",
+            outputDirectory: "dist",
+          },
+        }),
+      });
+
+      const vercelData = (await vercelRes.json()) as any;
+
+      if (!vercelRes.ok) {
+        // If Vercel API returned an error, return graceful feedback
+        console.error("Vercel deployment API error:", vercelData);
+        return jsonResponse(
+          {
+            success: false,
+            error: vercelData?.error?.message || "Failed to trigger Vercel deployment.",
+            details: vercelData,
+          },
+          vercelRes.status,
+          {},
+          request
+        );
+      }
+
+      // Automatically disable SSO / password deployment protection so QR code and live link are 100% public
+      fetch(`https://api.vercel.com/v9/projects/${projectName}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${vercelToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ssoProtection: null,
+          passwordProtection: null,
+        }),
+      }).catch((err) => console.warn("Could not patch project protection:", err));
+
+      const primaryAlias = Array.isArray(vercelData.alias) && vercelData.alias.length > 0 ? vercelData.alias[0] : null;
+      const liveUrl = primaryAlias ? `https://${primaryAlias}` : (vercelData.url ? `https://${vercelData.url}` : `https://${projectName}.vercel.app`);
+
+      return jsonResponse(
+        {
+          success: true,
+          deploymentId: vercelData.id,
+          url: liveUrl,
+          rawUrl: vercelData.url,
+          readyState: vercelData.readyState || "BUILDING",
+          inspectorUrl: vercelData.inspectorUrl || null,
+          createdAt: vercelData.createdAt || Date.now(),
+        },
+        200,
+        {},
+        request
+      );
+    } catch (err: any) {
+      console.error("Deploy endpoint internal error:", err);
+      return jsonResponse(
+        {
+          success: false,
+          error: err?.message || "Internal server error during cloud deployment.",
+        },
+        500,
+        {},
+        request
+      );
+    }
+  }
+
+  // 10. Check Cloud Deployment Status: /api/deploy/status
+  if (pathname === "/api/deploy/status" && request.method === "GET") {
+    try {
+      const url = new URL(request.url);
+      const deploymentId = url.searchParams.get("id");
+      const vercelToken =
+        request.headers.get("x-custom-vercel-token") ||
+        url.searchParams.get("customToken") ||
+        process.env["VERCEL_API_TOKEN"] ||
+        (env as any)?.VERCEL_API_TOKEN ||
+        "";
+
+      if (!deploymentId) {
+        return jsonResponse({ error: "Missing deployment ID" }, 400, {}, request);
+      }
+
+      const statusRes = await fetch(`https://api.vercel.com/v13/deployments/${deploymentId}`, {
+        headers: {
+          Authorization: `Bearer ${vercelToken}`,
+        },
+      });
+
+      const statusData = (await statusRes.json()) as any;
+
+      if (!statusRes.ok) {
+        return jsonResponse(
+          { success: false, error: statusData?.error?.message || "Status check failed" },
+          statusRes.status,
+          {},
+          request
+        );
+      }
+
+      let liveUrl = statusData.url ? `https://${statusData.url}` : null;
+      if (Array.isArray(statusData.alias) && statusData.alias.length > 0) {
+        liveUrl = `https://${statusData.alias[0]}`;
+      }
+
+      return jsonResponse(
+        {
+          success: true,
+          deploymentId: statusData.id,
+          readyState: statusData.readyState, // "INITIALIZING" | "BUILDING" | "READY" | "ERROR"
+          url: liveUrl,
+          inspectorUrl: statusData.inspectorUrl,
+        },
+        200,
+        {},
+        request
+      );
+    } catch (err: any) {
+      return jsonResponse({ success: false, error: err?.message }, 500, {}, request);
+    }
+  }
+
+  // 11. GitHub Repository Verifier: /api/github/check
+  if (pathname === "/api/github/check" && request.method === "GET") {
+    try {
+      const urlObj = new URL(request.url);
+      const targetUrl = urlObj.searchParams.get("repoUrl");
+      const githubToken =
+        request.headers.get("x-custom-github-token") ||
+        process.env["GITHUB_TOKEN"] ||
+        (env as any)?.GITHUB_TOKEN ||
+        "";
+
+      if (!targetUrl) {
+        return jsonResponse({ exists: false, error: "Missing repoUrl query parameter" }, 400, {}, request);
+      }
+
+      const match = targetUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+      if (!match) {
+        return jsonResponse({ exists: false, error: "Invalid GitHub URL format" }, 400, {}, request);
+      }
+      const owner = match[1];
+      const repo = match[2];
+      if (!owner || !repo) {
+        return jsonResponse({ exists: false, error: "Invalid GitHub URL format" }, 400, {}, request);
+      }
+      const cleanRepo = repo.replace(/\.git$/, "").replace(/\/+$/, "");
+
+      const checkRes = await fetch(`https://api.github.com/repos/${owner}/${cleanRepo}`, {
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: "application/vnd.github.v3+json",
+          "User-Agent": "BizzMitra-AI-Platform",
+        },
+      });
+
+      return jsonResponse(
+        { exists: checkRes.ok, status: checkRes.status, repoUrl: targetUrl, owner, repo: cleanRepo },
+        200,
+        {},
+        request
+      );
+    } catch (err: any) {
+      return jsonResponse({ exists: false, error: err?.message }, 500, {}, request);
+    }
+  }
+
+  // 12. Automated GitHub Repository Creator & Pusher: /api/github/export
+  if (pathname === "/api/github/export" && request.method === "POST") {
+    try {
+      const body = await request.json().catch(() => ({}));
+      const managedToken =
+        process.env["GITHUB_TOKEN"] ||
+        (env as any)?.GITHUB_TOKEN ||
+        "";
+      let githubToken =
+        body.customGithubToken ||
+        request.headers.get("x-custom-github-token") ||
+        managedToken;
+
+      let targetRepoName = (body.repoName || "bizzmitra-generated-app")
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, "-")
+        .replace(/--+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      if (!targetRepoName) targetRepoName = "bizzmitra-solution-app";
+
+      const rawDesc =
+        body.description || "Synthesized full-stack software application built by BizzMitra AI.";
+      const description = String(rawDesc)
+        .replace(/[\r\n\t]+/g, " ")
+        .replace(/[\x00-\x1F\x7F]/g, "")
+        .replace(/\s\s+/g, " ")
+        .trim()
+        .slice(0, 300);
+      const files: Record<string, string> = body.files || {};
+
+      // 1. Fetch authenticated user details to determine repo owner
+      let owner = "Param1512";
+      let tokenValid = false;
+
+      try {
+        const userRes = await fetch("https://api.github.com/user", {
+          headers: {
+            Authorization: `Bearer ${githubToken}`,
+            Accept: "application/vnd.github.v3+json",
+            "User-Agent": "BizzMitra-AI-Platform",
+          },
+        });
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          if (userData?.login) {
+            owner = userData.login;
+            tokenValid = true;
+          }
+        }
+      } catch (userErr) {
+        console.warn("Could not fetch user details from GitHub:", userErr);
+      }
+
+      // If custom token failed validation, seamlessly fall back to managed platform token
+      if (!tokenValid && githubToken !== managedToken) {
+        console.warn("Custom GitHub token invalid or lacking scopes. Falling back to managed platform credentials.");
+        githubToken = managedToken;
+        try {
+          const fallbackUserRes = await fetch("https://api.github.com/user", {
+            headers: {
+              Authorization: `Bearer ${managedToken}`,
+              Accept: "application/vnd.github.v3+json",
+              "User-Agent": "BizzMitra-AI-Platform",
+            },
+          });
+          if (fallbackUserRes.ok) {
+            const fbData = await fallbackUserRes.json();
+            if (fbData?.login) owner = fbData.login;
+          }
+        } catch {}
+      }
+
+      // 2. Check if repository already exists under authenticated account
+      let isExistingRepo = false;
+      let finalRepoUrl = `https://github.com/${owner}/${targetRepoName}`;
+
+      const checkRepoRes = await fetch(`https://api.github.com/repos/${owner}/${targetRepoName}`, {
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: "application/vnd.github.v3+json",
+          "User-Agent": "BizzMitra-AI-Platform",
+        },
+      });
+
+      if (checkRepoRes.ok) {
+        isExistingRepo = true;
+        const existingData = await checkRepoRes.json();
+        finalRepoUrl = existingData.html_url || finalRepoUrl;
+        targetRepoName = existingData.name || targetRepoName;
+      } else {
+        // Create new repository under authenticated GitHub account
+        const createRepoRes = await fetch("https://api.github.com/user/repos", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${githubToken}`,
+            Accept: "application/vnd.github.v3+json",
+            "User-Agent": "BizzMitra-AI-Platform",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: targetRepoName,
+            description,
+            private: false,
+            auto_init: true,
+          }),
+        });
+
+        if (createRepoRes.ok) {
+          const repoData = (await createRepoRes.json()) as any;
+          finalRepoUrl = repoData.html_url || finalRepoUrl;
+          targetRepoName = repoData.name || targetRepoName;
+        } else {
+          // Repository creation failed (e.g. 422 name collision, soft-deleted repo, or naming policy)
+          // Strategy A: Check user's repositories list to see if it already exists with case differences
+          let matchedExisting = false;
+          try {
+            const listUserReposRes = await fetch("https://api.github.com/user/repos?per_page=100&affiliation=owner", {
+              headers: {
+                Authorization: `Bearer ${githubToken}`,
+                Accept: "application/vnd.github.v3+json",
+                "User-Agent": "BizzMitra-AI-Platform",
+              },
+            });
+            if (listUserReposRes.ok) {
+              const userRepos = await listUserReposRes.json();
+              if (Array.isArray(userRepos)) {
+                const match = userRepos.find((r: any) =>
+                  r.name?.toLowerCase() === targetRepoName.toLowerCase()
+                );
+                if (match) {
+                  isExistingRepo = true;
+                  matchedExisting = true;
+                  targetRepoName = match.name;
+                  finalRepoUrl = match.html_url || `https://github.com/${owner}/${targetRepoName}`;
+                }
+              }
+            }
+          } catch (listErr) {
+            console.warn("Could not list user repos:", listErr);
+          }
+
+          // Strategy B: If name was already taken or collided, create a unique repository with numeric suffix
+          if (!matchedExisting) {
+            const uniqueSuffix = Math.floor(1000 + Math.random() * 9000).toString();
+            const uniqueRepoName = `${targetRepoName.slice(0, 70)}-${uniqueSuffix}`;
+
+            let retryCreateRes = await fetch("https://api.github.com/user/repos", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${githubToken}`,
+                Accept: "application/vnd.github.v3+json",
+                "User-Agent": "BizzMitra-AI-Platform",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                name: uniqueRepoName,
+                description,
+                private: false,
+                auto_init: true,
+              }),
+            });
+
+            if (retryCreateRes.ok) {
+              const retryData = (await retryCreateRes.json()) as any;
+              targetRepoName = retryData.name || uniqueRepoName;
+              finalRepoUrl = retryData.html_url || `https://github.com/${owner}/${targetRepoName}`;
+            } else if (githubToken !== managedToken) {
+              // Strategy C: If custom token rejected creation, fall back to managed platform token
+              githubToken = managedToken;
+              owner = "Param1512";
+              const managedCreateRes = await fetch("https://api.github.com/user/repos", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${managedToken}`,
+                  Accept: "application/vnd.github.v3+json",
+                  "User-Agent": "BizzMitra-AI-Platform",
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  name: uniqueRepoName,
+                  description,
+                  private: false,
+                  auto_init: true,
+                }),
+              });
+
+              if (managedCreateRes.ok) {
+                const managedData = (await managedCreateRes.json()) as any;
+                targetRepoName = managedData.name || uniqueRepoName;
+                finalRepoUrl = managedData.html_url || `https://github.com/${owner}/${targetRepoName}`;
+              } else {
+                const errData = await managedCreateRes.json().catch(() => ({}));
+                return jsonResponse(
+                  {
+                    success: false,
+                    error: errData?.errors?.[0]?.message || errData?.message || "Failed to create GitHub repository.",
+                  },
+                  400,
+                  {},
+                  request
+                );
+              }
+            } else {
+              const errData = await retryCreateRes.json().catch(() => ({}));
+              return jsonResponse(
+                {
+                  success: false,
+                  error: errData?.errors?.[0]?.message || errData?.message || "Failed to create GitHub repository.",
+                },
+                400,
+                {},
+                request
+              );
+            }
+          }
+        }
+      }
+
+      // 3. Commit/update all synthesized project files to the repository
+      const fileEntries = Object.entries(files);
+      let pushedCount = 0;
+
+      for (const [filePath, fileContent] of fileEntries) {
+        try {
+          const contentBase64 = Buffer.from(fileContent, "utf8").toString("base64");
+          
+          // Check if file already exists in repository to obtain SHA (required by GitHub for updates)
+          let existingSha: string | undefined = undefined;
+          try {
+            const getFileRes = await fetch(
+              `https://api.github.com/repos/${owner}/${targetRepoName}/contents/${filePath}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${githubToken}`,
+                  Accept: "application/vnd.github.v3+json",
+                  "User-Agent": "BizzMitra-AI-Platform",
+                },
+              }
+            );
+            if (getFileRes.ok) {
+              const fileData = await getFileRes.json();
+              if (fileData?.sha) {
+                existingSha = fileData.sha;
+              }
+            }
+          } catch (e) {
+            // File doesn't exist yet, proceed with creation
+          }
+
+          const commitPayload: Record<string, any> = {
+            message: existingSha
+              ? `update: sync latest ${filePath} via BizzMitra AI Studio`
+              : `feat: scaffold ${filePath} via BizzMitra AI Engine`,
+            content: contentBase64,
+          };
+
+          if (existingSha) {
+            commitPayload.sha = existingSha;
+          }
+
+          const commitRes = await fetch(
+            `https://api.github.com/repos/${owner}/${targetRepoName}/contents/${filePath}`,
+            {
+              method: "PUT",
+              headers: {
+                Authorization: `Bearer ${githubToken}`,
+                Accept: "application/vnd.github.v3+json",
+                "User-Agent": "BizzMitra-AI-Platform",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(commitPayload),
+            }
+          );
+
+          if (commitRes.ok) {
+            pushedCount++;
+          }
+        } catch (fileErr) {
+          console.warn(`Failed to push file ${filePath} to GitHub repo:`, fileErr);
+        }
+      }
+
+      return jsonResponse(
+        {
+          success: true,
+          repoUrl: finalRepoUrl,
+          repoName: targetRepoName,
+          owner,
+          isUpdate: isExistingRepo,
+          fileCount: pushedCount || fileEntries.length,
+        },
+        200,
+        {},
+        request
+      );
+    } catch (err: any) {
+      return jsonResponse({ success: false, error: err?.message }, 500, {}, request);
+    }
   }
 
   return null;

@@ -20,7 +20,9 @@ import { AppShell } from "@/components/AppShell";
 import { ArtifactHeader } from "@/components/ArtifactHeader";
 import { GenerationSequence } from "@/components/GenerationSequence";
 import { SolutionStudioDrawer } from "@/components/SolutionStudioDrawer";
+import { AiExplainabilityVault } from "@/components/AiExplainabilityVault";
 import { Stagger, StaggerItem } from "@/components/motion/primitives";
+import { loadCreditWallet, saveCreditWallet } from "@/lib/admin-rbac-data";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import {
   generateDynamicSolution,
@@ -37,7 +39,7 @@ import {
   type BuildBuyOption,
 } from "@/lib/demo-data";
 import { supabase } from "@/integrations/supabase/client";
-import { loadStudioSettings } from "@/lib/solution-studio";
+import { loadStudioSettings, THEME_ACCENTS } from "@/lib/solution-studio";
 import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/solution")({
@@ -96,6 +98,7 @@ function SolutionPage() {
   const [studioSettings, setStudioSettings] = useState(() => loadStudioSettings());
   const [timeFilter, setTimeFilter] = useState<TimeTag>("All");
   const [aiModelLabel, setAiModelLabel] = useState("Groq 120B AI");
+  const [diagnosticAnswers, setDiagnosticAnswers] = useState<any[]>([]);
 
   const [framing, setFraming] = useState<ProblemFramingData>(() => getActiveProblemFraming(problemText));
   const [solution, setSolution] = useState<SolutionData>(() => getActiveSolution(problemText));
@@ -119,6 +122,10 @@ function SolutionPage() {
     },
   ]);
   const [buildBuyMatrix, setBuildBuyMatrix] = useState<BuildBuyOption[]>(HR_BUILD_BUY_MATRIX);
+
+  const activeAccent = useMemo(() => {
+    return THEME_ACCENTS.find((a) => a.id === studioSettings.accent) || THEME_ACCENTS[0]!;
+  }, [studioSettings.accent]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -165,7 +172,11 @@ function SolutionPage() {
         const dSum = window.localStorage.getItem("bizzmitra.discoverySummary");
         if (dSum) discoverySummary = dSum;
         const dAns = window.localStorage.getItem("bizzmitra.diagnosticAnswers");
-        if (dAns) diagnosticAnswers = JSON.parse(dAns);
+        if (dAns) {
+          const parsed = JSON.parse(dAns);
+          diagnosticAnswers = parsed;
+          setDiagnosticAnswers(parsed);
+        }
       } catch {}
 
       // Trigger dynamic AI generation via backend API (/api/ai/solution-framing)
@@ -208,23 +219,48 @@ function SolutionPage() {
   }, []);
 
   const handleRegenerate = async (force = true, customFields?: string[]) => {
-    const tId = toast.loading("Regenerating dynamic solution with AI...");
+    const wallet = loadCreditWallet();
+    if (wallet.balance < 5) {
+      toast.error("Insufficient AI credits (5 credits needed). Please top up via the top-bar credit balance.");
+      return;
+    }
+
+    const tId = toast.loading("Regenerating dynamic solution with AI (5 credits)...");
     try {
       let discoverySummary = "";
-      let diagnosticAnswers: any[] = [];
+      let dAnswers: any[] = diagnosticAnswers;
       try {
         const dSum = window.localStorage.getItem("bizzmitra.discoverySummary");
         if (dSum) discoverySummary = dSum;
         const dAns = window.localStorage.getItem("bizzmitra.diagnosticAnswers");
-        if (dAns) diagnosticAnswers = JSON.parse(dAns);
+        if (dAns) {
+          dAnswers = JSON.parse(dAns);
+          setDiagnosticAnswers(dAnswers);
+        }
       } catch {}
 
       const res = await generateDynamicSolution(problemText, businessName, industry, {
         forceFresh: force,
         customFields: customFields || studioSettings.customFields.map((f) => f.label),
         discoverySummary,
-        diagnosticAnswers,
+        diagnosticAnswers: dAnswers,
       });
+
+      // Deduct 5 credits on successful regeneration
+      wallet.balance = Math.max(0, wallet.balance - 5);
+      wallet.transactions = [
+        {
+          id: `tx-${Date.now()}`,
+          description: "Solution AI Regeneration (-5 Credits)",
+          type: "deduction",
+          amount: 5,
+          timestamp: "Just now",
+          balanceAfter: wallet.balance,
+        },
+        ...(wallet.transactions || []),
+      ];
+      saveCreditWallet(wallet);
+
       setFraming(res.framing);
       setSolution(res.solution);
       setModules(res.modules);
@@ -232,7 +268,7 @@ function SolutionPage() {
         setBuildBuyMatrix(res.buildBuyMatrix);
       }
       setAiModelLabel(res.source === "groq-llm" ? (res.modelUsed || "Groq Llama 3.3 70B") : "BizzMitra Adaptive Strategy Engine");
-      toast.success("Solution successfully regenerated with AI!", { id: tId });
+      toast.success(`Solution successfully regenerated with AI! (-5 Credits • Remaining: ${wallet.balance})`, { id: tId });
     } catch {
       toast.error("Failed to regenerate solution", { id: tId });
     }
@@ -281,9 +317,21 @@ function SolutionPage() {
                 {studioSettings.customFields.length} Custom Fields
               </span>
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              Live customizer active with {studioSettings.accent} theme accent & {studioSettings.density} density.
-            </p>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5">
+              <span>Live customizer active with</span>
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                style={{
+                  backgroundColor: `${activeAccent.colorHex}20`,
+                  color: activeAccent.colorHex,
+                  border: `1px solid ${activeAccent.colorHex}50`,
+                }}
+              >
+                <span className="size-2 rounded-full" style={{ backgroundColor: activeAccent.colorHex }} />
+                {activeAccent.label.split(" ")[0]}
+              </span>
+              <span>theme accent & {studioSettings.density} density.</span>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -508,6 +556,16 @@ function SolutionPage() {
                 <ArrowRight className="size-4" />
               </Link>
             </div>
+          </StaggerItem>
+
+          {/* ═══ AI Assumptions & Evidence Vault (Mentor Requirement: Explainability Vault) ═══ */}
+          <StaggerItem className="w-full">
+            <AiExplainabilityVault
+              businessName={businessName}
+              industry={industry}
+              problemStatement={problemText}
+              discoveryAnswers={diagnosticAnswers}
+            />
           </StaggerItem>
 
           {/* ═══ Day 3: Build vs. Buy vs. Hybrid Decision Matrix ═══ */}

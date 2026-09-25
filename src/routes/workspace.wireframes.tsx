@@ -205,11 +205,19 @@ function WireframesPage() {
   };
 
   const handleApplyProblem = (bName: string, ind: string, prob: string) => {
-    setWorkspaceContext({
+    const updated = {
       businessName: bName || "Enterprise Workspace",
       industry: ind || "Cross-Industry",
       problemStatement: prob,
-    });
+    };
+    setWorkspaceContext(updated);
+    try {
+      const raw = localStorage.getItem("bizzmitra.workspaceContext");
+      const prev = raw ? JSON.parse(raw) : {};
+      const full = { ...prev, ...updated };
+      localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(full));
+      window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated", { detail: full }));
+    } catch {}
     setDynamicBlueprint(null);
     setIsEditorOpen(false);
     toast.success("Synthesizing wireframes for new problem context...");

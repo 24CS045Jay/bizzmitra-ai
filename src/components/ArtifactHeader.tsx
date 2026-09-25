@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { ROLE_DEFINITIONS, UserRole, loadCurrentRole } from "@/lib/admin-rbac-data";
 import { useTranslation } from "@/lib/i18n";
 import { isStageUnlocked, getUnlockedStages } from "@/lib/workspace-stage-gate";
+import { CreditsBadge } from "@/components/CreditsBadge";
 
 export const CHAIN = [
   { id: "intake", label: "Intake", to: "/workspace/new" },
@@ -139,6 +140,7 @@ export function ArtifactHeader({
           <h1 className="mt-1 font-display text-2xl font-extrabold sm:text-3xl lg:text-4xl break-words leading-tight text-foreground">{title}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <CreditsBadge variant="compact" />
           <button
             type="button"
             onClick={() => setVersionDrawerOpen(true)}
