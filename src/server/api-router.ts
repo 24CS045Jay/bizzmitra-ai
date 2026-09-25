@@ -1722,7 +1722,9 @@ Return strictly valid JSON with this exact structure:
   // 5d. Intelligent AI Copilot Chat: POST /api/ai/copilot
   if (pathname === "/api/ai/copilot" && request.method === "POST") {
     try {
+      const user = await getAuthenticatedUser(request, supabaseAdmin);
       const body = (await request.json()) as {
+        sessionId?: string;
         message: string;
         history?: Array<{ sender: "user" | "assistant"; text: string; bullets?: string[] }>;
         workspaceContext?: {
@@ -1739,22 +1741,63 @@ Return strictly valid JSON with this exact structure:
       };
 
       const {
+        sessionId,
         message = "",
         history = [],
         workspaceContext = {},
         activeModelId = "claude-3-7-sonnet",
       } = body;
 
+      const wsId = workspaceContext.workspaceId;
+      let session: any = null;
+
+      // If a sessionId is provided and user is authenticated, check ownership and insert user turn
+      if (sessionId && user) {
+        const { data: sData } = await supabaseAdmin
+          .from("chat_sessions")
+          .select("*")
+          .eq("id", sessionId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (sData) {
+          session = sData;
+          await supabaseAdmin.from("chat_messages").insert({
+            session_id: sessionId,
+            workspace_id: session.workspace_id || wsId,
+            user_id: user.id,
+            sender: "user",
+            text: message,
+          });
+        }
+      }
+
       const bName = workspaceContext.businessName || "Active Business Workspace";
       const ind = workspaceContext.industry || "General Enterprise";
       const prob = workspaceContext.problemStatement || "Operational workflow and system modernization";
       const roadmapData = workspaceContext.roadmap;
 
-      // Format conversation history for context memory
-      const formattedHistory = (history || [])
-        .slice(-8)
-        .map((m) => `${m.sender === "user" ? "Client" : "Copilot"}: ${m.text}${m.bullets && m.bullets.length ? `\n- ${m.bullets.join("\n- ")}` : ""}`)
-        .join("\n\n");
+      // Format conversation history for context memory (from client or persisted session)
+      let formattedHistory = "";
+      if (history && history.length > 0) {
+        formattedHistory = history
+          .slice(-8)
+          .map((m) => `${m.sender === "user" ? "Client" : "Copilot"}: ${m.text}${m.bullets && m.bullets.length ? `\n- ${m.bullets.join("\n- ")}` : ""}`)
+          .join("\n\n");
+      } else if (sessionId && user) {
+        const { data: recentMsgs } = await supabaseAdmin
+          .from("chat_messages")
+          .select("sender, text, bullets")
+          .eq("session_id", sessionId)
+          .order("created_at", { ascending: true })
+          .limit(8);
+
+        if (recentMsgs && recentMsgs.length > 0) {
+          formattedHistory = recentMsgs
+            .map((m: any) => `${m.sender === "user" ? "Client" : "Copilot"}: ${m.text}${Array.isArray(m.bullets) && m.bullets.length ? `\n- ${m.bullets.join("\n- ")}` : ""}`)
+            .join("\n\n");
+        }
+      }
 
       // Format roadmap phases & milestones
       let roadmapSummary = "";
@@ -1820,18 +1863,178 @@ Return strictly valid JSON with this exact structure:
         250,
         3500
       );
+
+      const replyText = llmResult.data.text || "";
+      const replyBadge = llmResult.data.badge || "Blueprint Copilot";
+      const replyBullets = Array.isArray(llmResult.data.bullets) && llmResult.data.bullets.length > 0 ? llmResult.data.bullets : [];
+
+      let updatedTitle: string | undefined = undefined;
+
+      // Persist assistant message and auto-title session if needed
+      if (sessionId && user && session) {
+        await supabaseAdmin.from("chat_messages").insert({
+          session_id: sessionId,
+          workspace_id: session.workspace_id || wsId,
+          user_id: user.id,
+          sender: "assistant",
+          text: replyText,
+          badge: replyBadge,
+          bullets: replyBullets,
+        });
+
+        // Auto-title if still default "New chat"
+        if (session.title === "New chat" || !session.title) {
+          const cleanTitle = message.trim().slice(0, 40) + (message.trim().length > 40 ? "…" : "");
+          if (cleanTitle) {
+            await supabaseAdmin.from("chat_sessions").update({ title: cleanTitle }).eq("id", sessionId);
+            updatedTitle = cleanTitle;
+          }
+        }
+      }
+
       return jsonResponse({
         success: true,
         modelUsed: llmResult.modelUsed,
         source: llmResult.source,
-        badge: llmResult.data.badge || "Blueprint Copilot",
-        text: llmResult.data.text || "",
-        bullets: Array.isArray(llmResult.data.bullets) && llmResult.data.bullets.length > 0 ? llmResult.data.bullets : [],
+        badge: replyBadge,
+        text: replyText,
+        bullets: replyBullets,
         isOutOfScope: Boolean(llmResult.data.isOutOfScope),
+        sessionId,
+        sessionTitle: updatedTitle,
       });
     } catch (err: any) {
       console.error("[api/ai/copilot error]:", err);
       return jsonResponse({ error: err?.message || "Internal error" }, 500);
+    }
+  }
+
+  // 5e. Chat Sessions: GET /api/chat/sessions?workspaceId=... and POST /api/chat/sessions
+  if (pathname === "/api/chat/sessions") {
+    const user = await getAuthenticatedUser(request, supabaseAdmin);
+    if (!user) return jsonResponse({ error: "Unauthorized" }, 401, {}, request);
+
+    if (request.method === "GET") {
+      const workspaceId = url.searchParams.get("workspaceId");
+      if (!workspaceId) return jsonResponse({ error: "workspaceId is required" }, 400, {}, request);
+
+      const authCheck = await assertWorkspaceOwnership(user.id, workspaceId, supabaseAdmin);
+      if (!authCheck.allowed) {
+        return jsonResponse({ error: authCheck.error || "Forbidden: You do not own this workspace" }, 403, {}, request);
+      }
+
+      const { data: sessions, error } = await supabaseAdmin
+        .from("chat_sessions")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", user.id)
+        .order("is_pinned", { ascending: false })
+        .order("updated_at", { ascending: false });
+
+      if (error) return jsonResponse({ error: error.message }, 500, {}, request);
+      return jsonResponse({ success: true, sessions: sessions || [] }, 200, {}, request);
+    }
+
+    if (request.method === "POST") {
+      try {
+        const body = (await request.json()) as { workspaceId: string; title?: string; isPinned?: boolean };
+        const { workspaceId, title, isPinned } = body;
+        if (!workspaceId) return jsonResponse({ error: "workspaceId is required" }, 400, {}, request);
+
+        const authCheck = await assertWorkspaceOwnership(user.id, workspaceId, supabaseAdmin);
+        if (!authCheck.allowed) {
+          return jsonResponse({ error: authCheck.error || "Forbidden: You do not own this workspace" }, 403, {}, request);
+        }
+
+        const { data: newSession, error } = await supabaseAdmin
+          .from("chat_sessions")
+          .insert({
+            workspace_id: workspaceId,
+            user_id: user.id,
+            title: title?.trim() || "New chat",
+            is_pinned: Boolean(isPinned),
+          })
+          .select()
+          .single();
+
+        if (error) return jsonResponse({ error: error.message }, 500, {}, request);
+        return jsonResponse({ success: true, session: newSession }, 201, {}, request);
+      } catch (err: any) {
+        return jsonResponse({ error: err?.message || "Internal error" }, 500, {}, request);
+      }
+    }
+  }
+
+  // 5f. Chat Session Messages & Details: /api/chat/sessions/:id/...
+  if (pathname.startsWith("/api/chat/sessions/")) {
+    const user = await getAuthenticatedUser(request, supabaseAdmin);
+    if (!user) return jsonResponse({ error: "Unauthorized" }, 401, {}, request);
+
+    const subPath = pathname.replace("/api/chat/sessions/", "");
+
+    // GET /api/chat/sessions/:id/messages
+    if (subPath.endsWith("/messages") && request.method === "GET") {
+      const sessionId = subPath.replace("/messages", "").trim();
+      if (!sessionId) return jsonResponse({ error: "sessionId is required" }, 400, {}, request);
+
+      // Verify user owns the session
+      const { data: session, error: sErr } = await supabaseAdmin
+        .from("chat_sessions")
+        .select("id, workspace_id")
+        .eq("id", sessionId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (sErr || !session) {
+        return jsonResponse({ error: "Chat session not found or access denied" }, 404, {}, request);
+      }
+
+      const { data: messages, error } = await supabaseAdmin
+        .from("chat_messages")
+        .select("*")
+        .eq("session_id", sessionId)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
+
+      if (error) return jsonResponse({ error: error.message }, 500, {}, request);
+      return jsonResponse({ success: true, messages: messages || [] }, 200, {}, request);
+    }
+
+    // PATCH /api/chat/sessions/:id (Rename or pin)
+    if (request.method === "PATCH") {
+      const sessionId = subPath.trim();
+      try {
+        const body = (await request.json()) as { title?: string; isPinned?: boolean };
+        const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (typeof body.title === "string") updates.title = body.title.trim();
+        if (typeof body.isPinned === "boolean") updates.is_pinned = body.isPinned;
+
+        const { data: updatedSession, error } = await supabaseAdmin
+          .from("chat_sessions")
+          .update(updates)
+          .eq("id", sessionId)
+          .eq("user_id", user.id)
+          .select()
+          .single();
+
+        if (error) return jsonResponse({ error: error.message }, 500, {}, request);
+        return jsonResponse({ success: true, session: updatedSession }, 200, {}, request);
+      } catch (err: any) {
+        return jsonResponse({ error: err?.message || "Internal error" }, 500, {}, request);
+      }
+    }
+
+    // DELETE /api/chat/sessions/:id
+    if (request.method === "DELETE") {
+      const sessionId = subPath.trim();
+      const { error } = await supabaseAdmin
+        .from("chat_sessions")
+        .delete()
+        .eq("id", sessionId)
+        .eq("user_id", user.id);
+
+      if (error) return jsonResponse({ error: error.message }, 500, {}, request);
+      return jsonResponse({ success: true, deletedId: sessionId }, 200, {}, request);
     }
   }
 
