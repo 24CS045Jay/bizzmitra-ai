@@ -562,13 +562,16 @@ export function InteractiveAppSandbox({
           </div>
 
           {/* Open in New Tab Button */}
-          <button
-            onClick={handleOpenTab}
+          <a
+            href={liveUrl || "/preview/solution"}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 px-3 py-1.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500/25 transition cursor-pointer shadow-xs"
+            title="Open standalone solution in new tab"
           >
             <span>Open in New Tab</span>
             <ExternalLink className="size-3.5" />
-          </button>
+          </a>
         </div>
       )}
 
