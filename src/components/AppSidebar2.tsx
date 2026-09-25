@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -298,6 +298,7 @@ export function AppSidebar2({
   const { user, signOut } = useAuth();
   const { t } = useTranslation();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
   const isSuperAdmin = isSuperAdminEmail(user?.email);
 
   const { isLimitReached, workspaceCount, refresh: refreshLimit } = useWorkspaceLimit();
@@ -349,11 +350,29 @@ export function AppSidebar2({
   const isTest = isTestingAccount(user?.email);
 
   // Active workspace state
-  const [activeWs, setActiveWs] = React.useState({
-    name: isTest ? "TalentCraft HR Consultancy" : "No Active Workspace",
-    industry: isTest ? "HR & Recruitment Services" : "Create new workspace",
-    mode: "consult",
-    lang: "en",
+  const [activeWs, setActiveWs] = React.useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.businessName) {
+            return {
+              name: parsed.businessName,
+              industry: parsed.industry || "Custom Workspace",
+              mode: parsed.intakeMode || "consult",
+              lang: window.localStorage.getItem("bizzmitra.language") || "en",
+            };
+          }
+        }
+      } catch {}
+    }
+    return {
+      name: "No Active Workspace",
+      industry: "Create new workspace",
+      mode: "consult",
+      lang: "en",
+    };
   });
 
   const [unlockedStages, setUnlockedStages] = React.useState<string[]>(() => getUnlockedStages());
@@ -395,31 +414,6 @@ export function AppSidebar2({
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const storedLang = window.localStorage.getItem("bizzmitra.language") || "en";
-    const isTestAcc = isTestingAccount(user?.email);
-
-    // 1. Testing account: allow fallback to TalentCraft demo workspace
-    if (isTestAcc) {
-      const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          setActiveWs({
-            name: parsed.businessName || "TalentCraft HR Consultancy",
-            industry: parsed.industry || "HR & Recruitment Services",
-            mode: parsed.intakeMode || "consult",
-            lang: storedLang,
-          });
-          return;
-        } catch {}
-      }
-      setActiveWs({
-        name: "TalentCraft HR Consultancy",
-        industry: "HR & Recruitment Services",
-        mode: "consult",
-        lang: storedLang,
-      });
-      return;
-    }
 
     // 2. Standard user: Load their own workspace from Supabase
     if (user?.id) {
@@ -656,8 +650,8 @@ export function AppSidebar2({
                 const Icon = item.icon;
                 const isActive = pathname === item.to;
                 const isItemHovered = activeFlyout === item.id;
-                const isStage = WORKSPACE_STAGES.some((s) => s.id === item.id) || item.id === "crm";
-                const isGated = isStage && item.id !== "discovery" && item.id !== "export" && item.id !== "settings";
+                const isStage = WORKSPACE_STAGES.some((s) => s.id === item.id) || item.id === "crm" || item.id === "build";
+                const isGated = isStage && item.id !== "discovery" && item.id !== "dashboard" && item.id !== "new-intake";
                 const isUnlocked = !isGated || isStageUnlocked(item.id);
 
                 return (
@@ -676,7 +670,12 @@ export function AppSidebar2({
                           return;
                         }
                         if (!isUnlocked) {
-                          completeDiscoveryAndUnlockAll();
+                          e.preventDefault();
+                          toast.error("🔒 Please complete AI Diagnostic Discovery first before accessing this module.", {
+                            id: "discovery-required-gate",
+                          });
+                          navigate({ to: "/workspace/discovery" });
+                          return;
                         }
                         onNavigate?.();
                       }}
@@ -851,7 +850,7 @@ export function AppSidebar2({
               {(() => {
                 const allItems = filteredPortalGroups.flatMap((g) => g.items);
                 const cur = allItems.find((i) => i.id === activeFlyout);
-                const curIsGated = cur && (WORKSPACE_STAGES.some((s) => s.id === cur.id) || cur.id === "crm") && cur.id !== "discovery";
+                const curIsGated = cur && (WORKSPACE_STAGES.some((s) => s.id === cur.id) || cur.id === "crm" || cur.id === "build") && cur.id !== "discovery";
                 const curIsUnlocked = !curIsGated || (cur ? isStageUnlocked(cur.id) : true);
 
                 return cur?.subItems?.map((sub) => {
@@ -861,7 +860,11 @@ export function AppSidebar2({
                         key={sub.label}
                         type="button"
                         onClick={() => {
-                          toast.warning(`Please complete earlier stages to unlock ${getItemLabel(cur!)}.`);
+                          if (cur?.id === "build") {
+                            toast.error("🔒 Software Studio is Locked: The software generation module is currently locked.");
+                          } else {
+                            toast.warning(`Please complete earlier stages to unlock ${getItemLabel(cur!)}.`);
+                          }
                         }}
                         className="group flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground/50 cursor-not-allowed hover:bg-transparent"
                       >

@@ -26,6 +26,7 @@ export const HR_DEMO_WORKSPACE = {
 };
 
 export const EXAMPLE_CHIPS = [
+  "Scaling IT & Software Services delivery with automated client onboarding & SLA tracking",
   "I am starting an HR consultancy with candidate, client & attendance needs",
   "Support team drowning in repetitive tickets and 14h response times",
   "Manual invoice reconciliation takes 3 days across finance spreadsheets",
