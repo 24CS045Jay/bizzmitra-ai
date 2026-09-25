@@ -54,7 +54,7 @@ type IntakeTab = "prompt" | "upload" | "url" | "voice" | "legacy";
 type OperatingMode = "know" | "consult";
 
 const INDUSTRIES = [
-  "HR & Recruitment Services",
+  "Cross-Industry Transformation",
   "D2C E-Commerce",
   "Healthcare & MedTech",
   "Fintech & Financial Services",
@@ -62,6 +62,7 @@ const INDUSTRIES = [
   "Manufacturing & Industry 4.0",
   "Professional & Legal Services",
   "SaaS & Enterprise Software",
+  "HR & Recruitment Services",
 ];
 
 function IntakePage() {
@@ -73,7 +74,7 @@ function IntakePage() {
   const [mode, setMode] = useState<OperatingMode>("consult");
   const [activeTab, setActiveTab] = useState<IntakeTab>("prompt");
   const [businessName, setBusinessName] = useState("");
-  const [industry, setIndustry] = useState("HR & Recruitment Services");
+  const [industry, setIndustry] = useState("Cross-Industry Transformation");
   const [problemStatement, setProblemStatement] = useState("");
   const [goals, setGoals] = useState("");
   const [constraints, setConstraints] = useState("");
@@ -101,7 +102,7 @@ function IntakePage() {
   } | null>(null);
 
   // URL Analyzer Simulator State
-  const [urlInput, setUrlInput] = useState("https://talentcraft-staffing.in");
+  const [urlInput, setUrlInput] = useState("https://example-enterprise.com");
   const [analyzingUrl, setAnalyzingUrl] = useState(false);
   const [urlExtracted, setUrlExtracted] = useState<boolean>(false);
 
@@ -110,8 +111,8 @@ function IntakePage() {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
 
   // Legacy Systems State
-  const [legacyTools, setLegacyTools] = useState("Excel spreadsheets (5 sheets), WhatsApp groups, Google Drive folders");
-  const [legacyBottlenecks, setLegacyBottlenecks] = useState("Candidate status lost after round 2, manual daily timesheets, 10-day client contract lag");
+  const [legacyTools, setLegacyTools] = useState("Excel spreadsheets, team chat groups, shared cloud folders");
+  const [legacyBottlenecks, setLegacyBottlenecks] = useState("Repetitive manual data entry, lost status updates, slow turnaround across disconnected tools");
 
   const strings = INTAKE_LANGUAGES[lang];
 
@@ -426,7 +427,7 @@ function IntakePage() {
         }
 
         saveActiveWorkspaceLocally(createdWorkspaceId, safeBusinessName, contextPayload, user?.id);
-        completeDiscoveryAndUnlockAll(createdWorkspaceId, contextPayload);
+        resetWorkspaceStages(createdWorkspaceId);
         toast.success("Workspace created successfully!");
         navigate({ to: "/workspace/discovery" });
         return;
@@ -436,7 +437,7 @@ function IntakePage() {
       // Even on exception, create workspace locally so user's work is never lost
       const fallbackId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ws-${Date.now()}`;
       saveActiveWorkspaceLocally(fallbackId, safeBusinessName, contextPayload, user?.id);
-      completeDiscoveryAndUnlockAll(fallbackId, contextPayload);
+      resetWorkspaceStages(fallbackId);
       toast.success("Workspace created!");
       navigate({ to: "/workspace/discovery" });
     } finally {

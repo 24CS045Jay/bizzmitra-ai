@@ -47,7 +47,7 @@ import { DeployTargetConfirmModal } from "@/components/builder/DeployTargetConfi
 import { CloudCredentials, loadCloudCredentials } from "@/lib/builder/cloud-credentials-store";
 import { cn } from "@/lib/utils";
 import { Cloud, Settings } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useStageGate } from "@/lib/workspace-stage-gate";
 
 export const Route = createFileRoute("/workspace/build")({
   head: () => ({
@@ -61,6 +61,7 @@ export const Route = createFileRoute("/workspace/build")({
 });
 
 function WorkspaceBuildPage() {
+  useStageGate("build");
   const [activeTab, setActiveTab] = useState<"preview" | "code" | "spec">("preview");
   const [workspaceContext, setWorkspaceContext] = useState<any>(() => {
     try {
