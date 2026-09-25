@@ -19,6 +19,7 @@ import {
   CloudCredentials,
   loadCloudCredentials,
   saveCloudCredentials,
+  cleanAuthToken,
   testGithubToken,
   testVercelToken,
 } from "@/lib/builder/cloud-credentials-store";
@@ -76,12 +77,14 @@ export function CloudAccountsModal({ isOpen, onClose, onSaved }: CloudAccountsMo
 
   const handleVerifyGithub = async () => {
     setTestingGithub(true);
-    const res = await testGithubToken(githubInput);
+    const cleanTok = cleanAuthToken(githubInput);
+    setGithubInput(cleanTok);
+    const res = await testGithubToken(cleanTok);
     setTestingGithub(false);
     if (res.valid) {
       const updated = {
         ...creds,
-        githubToken: githubInput.trim(),
+        githubToken: cleanTok,
         githubUsername: res.username,
         githubAvatar: res.avatarUrl,
       };
@@ -113,12 +116,14 @@ export function CloudAccountsModal({ isOpen, onClose, onSaved }: CloudAccountsMo
   };
 
   const handleSaveAndApply = () => {
+    const cleanGit = cleanAuthToken(githubInput);
+    const cleanVercel = cleanAuthToken(vercelInput);
     const updated = saveCloudCredentials({
       mode: creds.mode,
-      githubToken: githubInput.trim() || undefined,
+      githubToken: cleanGit || undefined,
       githubUsername: creds.githubUsername,
       githubAvatar: creds.githubAvatar,
-      vercelToken: vercelInput.trim() || undefined,
+      vercelToken: cleanVercel || undefined,
       vercelUsername: creds.vercelUsername,
       vercelTeamName: creds.vercelTeamName,
       supabaseUrl: supabaseUrlInput.trim() || undefined,

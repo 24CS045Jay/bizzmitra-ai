@@ -92,8 +92,28 @@ function WorkspaceBuildPage() {
   const [deploymentLogs, setDeploymentLogs] = useState<DeploymentProgressLog[]>([]);
   const [deploymentResult, setDeploymentResult] = useState<DeploymentResult | null>(null);
   const [isAlreadyDeployedModalOpen, setIsAlreadyDeployedModalOpen] = useState(false);
-  const [githubUrl, setGithubUrl] = useState<string | null>(null);
-  const [lastPushedAt, setLastPushedAt] = useState<string | null>(null);
+  const [githubUrl, setGithubUrl] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const activeWsId = localStorage.getItem("bizzmitra.activeWorkspaceId");
+      if (activeWsId) {
+        const wsUrl = localStorage.getItem(`bizzmitra.githubUrl_${activeWsId}`);
+        if (wsUrl) return wsUrl;
+      }
+    } catch {}
+    return null;
+  });
+  const [lastPushedAt, setLastPushedAt] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const activeWsId = localStorage.getItem("bizzmitra.activeWorkspaceId");
+      if (activeWsId) {
+        const wsTime = localStorage.getItem(`bizzmitra.githubLastPushedAt_${activeWsId}`);
+        if (wsTime) return wsTime;
+      }
+    } catch {}
+    return null;
+  });
   const [isExportingGit, setIsExportingGit] = useState(false);
   const [isVerifyingRepo, setIsVerifyingRepo] = useState(false);
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
@@ -496,20 +516,17 @@ function WorkspaceBuildPage() {
                   )}
                 </button>
 
-                <button
-                  onClick={handleViewRepo}
-                  disabled={isVerifyingRepo || isExportingGit}
-                  className="flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer disabled:opacity-60"
-                  title="Open Repository on GitHub (Verifies existence)"
+                <a
+                  href={githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-700/80 bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 text-xs font-semibold transition cursor-pointer"
+                  title="Open Repository on GitHub"
                 >
-                  {isVerifyingRepo ? (
-                    <Loader2 className="size-3.5 animate-spin text-indigo-400" />
-                  ) : (
-                    <Github className="size-3.5" />
-                  )}
-                  <span className="hidden md:inline">{isVerifyingRepo ? "Verifying..." : "View Repo"}</span>
+                  <Github className="size-3.5" />
+                  <span className="hidden md:inline">View Repo</span>
                   <ExternalLink className="size-3 text-slate-400" />
-                </button>
+                </a>
               </div>
             ) : (
               <button
@@ -527,19 +544,16 @@ function WorkspaceBuildPage() {
               </button>
             )}
 
-            <button
-              onClick={() => {
-                const targetUrl = typeof window !== "undefined"
-                  ? `${window.location.origin}/preview/solution`
-                  : "/preview/solution";
-                window.open(targetUrl, "_blank");
-              }}
+            <a
+              href="/preview/solution"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 text-xs font-bold shadow-md transition cursor-pointer"
               title="Launch standalone full-screen website in new tab"
             >
               <ExternalLink className="size-3.5" />
               <span>Open in New Tab</span>
-            </button>
+            </a>
 
             <button
               onClick={() => setIsCloudModalOpen(true)}

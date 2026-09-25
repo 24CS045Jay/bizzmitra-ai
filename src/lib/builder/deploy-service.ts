@@ -5,7 +5,7 @@
 
 import JSZip from "jszip";
 import { GeneratedAppProject, scaffoldApplication, WorkspaceContextForScaffold } from "./app-scaffolder";
-import { loadCloudCredentials } from "./cloud-credentials-store";
+import { loadCloudCredentials, cleanAuthToken } from "./cloud-credentials-store";
 
 export interface DeploymentProgressLog {
   id: string;
@@ -198,7 +198,7 @@ export async function exportToGitHub(
     const creds = loadCloudCredentials();
     const customGithubToken =
       !options?.forceManaged && (creds.mode === "custom" || Boolean(creds.githubToken))
-        ? creds.githubToken
+        ? cleanAuthToken(creds.githubToken)
         : undefined;
 
     const res = await fetch("/api/github/export", {
@@ -219,6 +219,12 @@ export async function exportToGitHub(
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.success) {
+      // If custom token failed validation / bad credentials, seamlessly retry with managed platform credentials
+      if (!options?.forceManaged && (data?.code === "INVALID_GITHUB_TOKEN" || data?.error?.toLowerCase().includes("bad credentials"))) {
+        console.warn("[exportToGitHub] Custom token rejected. Retrying seamlessly with platform credentials...");
+        return await exportToGitHub(project, { ...options, forceManaged: true });
+      }
+
       return {
         success: false,
         error:
