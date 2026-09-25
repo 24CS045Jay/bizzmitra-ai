@@ -48,6 +48,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      chat_sessions: {
+        Row: {
+          id: string
+          workspace_id: string
+          user_id: string
+          title: string
+          is_pinned: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          workspace_id: string
+          user_id: string
+          title?: string
+          is_pinned?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          workspace_id?: string
+          user_id?: string
+          title?: string
+          is_pinned?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_sessions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          id: string
+          session_id: string
+          workspace_id: string
+          user_id: string
+          sender: "user" | "assistant"
+          text: string
+          badge: string | null
+          bullets: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          workspace_id: string
+          user_id: string
+          sender: "user" | "assistant"
+          text: string
+          badge?: string | null
+          bullets?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          workspace_id?: string
+          user_id?: string
+          sender?: "user" | "assistant"
+          text?: string
+          badge?: string | null
+          bullets?: Json | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       discovery_messages: {
         Row: {
