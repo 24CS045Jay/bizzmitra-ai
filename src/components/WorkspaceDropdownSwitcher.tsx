@@ -90,7 +90,7 @@ export function WorkspaceDropdownSwitcher({
         const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed.businessName && !parsed.businessName.toLowerCase().includes("talentcraft")) {
+          if (parsed.businessName) {
             return {
               name: parsed.businessName,
               industry: parsed.industry || "Custom Workspace",
@@ -99,14 +99,14 @@ export function WorkspaceDropdownSwitcher({
           }
         }
         const act = window.localStorage.getItem("bizzmitra.activeWorkspaceName");
-        if (act && !act.toLowerCase().includes("talentcraft")) {
+        if (act && act !== "TalentCraft HR Consultancy") {
           return {
             name: act,
             industry: "Custom Workspace",
             mode: "consult",
           };
         }
-      } catch {}
+      } catch { }
     }
     return {
       name: "No Active Workspace",
@@ -155,7 +155,7 @@ export function WorkspaceDropdownSwitcher({
               }
             }
           }
-        } catch {}
+        } catch { }
       }
     }
 
@@ -172,15 +172,12 @@ export function WorkspaceDropdownSwitcher({
     if (rawLocalCtx) {
       try {
         localParsed = JSON.parse(rawLocalCtx);
-      } catch {}
+      } catch { }
     }
 
     // If no workspaces in database but local context exists, create a virtual workspace item
     if (list.length === 0) {
-      if (
-        localParsed?.["businessName"] &&
-        !String(localParsed["businessName"]).toLowerCase().includes("talentcraft")
-      ) {
+      if (localParsed?.["businessName"]) {
         const localWs: WorkspaceRecord = {
           id: currentActiveId || "local-workspace",
           name: (localParsed?.["businessName"] as string) || "My Workspace",

@@ -528,7 +528,7 @@ export function getCollaborationStateForWorkspace(
     (combined.includes("candidate") && combined.includes("hire"))
   ) {
     return {
-      workspaceId: context?.id || "ws-hr-default",
+      workspaceId: (workspaceContext as any)?.id || "ws-hr-default",
       scenarioName: name,
       overallStatus: "approved",
       signOffs: [
@@ -596,7 +596,7 @@ export function getCollaborationStateForWorkspace(
 
   // 6. Universal Enterprise Operations Governance Blueprint
   return {
-    workspaceId: context?.id || "ws-enterprise-default",
+    workspaceId: (workspaceContext as any)?.id || "ws-enterprise-default",
     scenarioName: name,
     overallStatus: "approved",
     signOffs: [

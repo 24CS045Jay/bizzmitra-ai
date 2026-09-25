@@ -120,7 +120,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             };
           }
         }
-      } catch {}
+      } catch { }
     }
     return {
       name: "No Active Workspace",
@@ -223,7 +223,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   lang: storedLang,
                 });
                 return;
-              } catch {}
+              } catch { }
             }
             setActiveWs({
               name: "New Workspace",
@@ -245,7 +245,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             lang: storedLang,
           });
           return;
-        } catch {}
+        } catch { }
       }
       setActiveWs({
         name: "New Workspace",
@@ -269,7 +269,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             mode: parsed.intakeMode || "consult",
             lang: storedLang,
           });
-        } catch {}
+        } catch { }
       }
     };
 
@@ -475,13 +475,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed.businessName && !parsed.businessName.toLowerCase().includes("talentcraft")) {
-            return parsed.businessName;
-          }
+          if (parsed.businessName) return parsed.businessName;
         }
         const act = window.localStorage.getItem("bizzmitra.activeWorkspaceName");
-        if (act && !act.toLowerCase().includes("talentcraft")) return act;
-      } catch {}
+        if (act && act !== "TalentCraft HR Consultancy") return act;
+      } catch { }
     }
     return "No Active Workspace";
   });
@@ -492,18 +490,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed.businessName && !parsed.businessName.toLowerCase().includes("talentcraft")) {
+          if (parsed.businessName) {
             setActiveWsName(parsed.businessName);
             return;
           }
         }
         const act = window.localStorage.getItem("bizzmitra.activeWorkspaceName");
-        if (act && !act.toLowerCase().includes("talentcraft")) {
+        if (act && act !== "TalentCraft HR Consultancy") {
           setActiveWsName(act);
           return;
         }
         setActiveWsName("No Active Workspace");
-      } catch {}
+      } catch { }
     };
     updateWsName();
     window.addEventListener("bizzmitra:workspace-updated", updateWsName);
