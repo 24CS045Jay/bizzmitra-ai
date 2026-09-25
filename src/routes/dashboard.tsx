@@ -29,6 +29,7 @@ import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
 import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
 import { completeDiscoveryAndUnlockAll } from "@/lib/workspace-stage-gate";
 import { saveActiveWorkspaceLocally, type WorkspaceContextData } from "@/lib/workspace-persistence";
+import { FinancialRoiCard } from "@/components/dashboard/FinancialRoiCard";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
@@ -361,6 +362,14 @@ function DashboardPage() {
     toast.success("Loaded TalentCraft demo workspace!");
   }
 
+  const [financialVersion, setFinancialVersion] = useState(0);
+
+  useEffect(() => {
+    const handleFinUpdate = () => setFinancialVersion((v) => v + 1);
+    window.addEventListener("bizzmitra:financials-updated", handleFinUpdate);
+    return () => window.removeEventListener("bizzmitra:financials-updated", handleFinUpdate);
+  }, []);
+
   // Evaluate risks and action items for the active workspace using comprehensive context
   const blueprint = useMemo(
     () =>
@@ -370,16 +379,18 @@ function DashboardPage() {
         industry: effectiveIndustry,
         problemStatement: effectiveProblemStatement,
       }),
-    [effectiveBusinessName, effectiveIndustry, effectiveProblemStatement],
+    [effectiveBusinessName, effectiveIndustry, effectiveProblemStatement, financialVersion],
   );
 
   const { topRisks, actionItems, scoreResult, flaggedRisks } = useMemo(
     () =>
-      evaluateBlueprintRisks(blueprint, {
+      evaluateBlueprintRisks(blueprint, activeContext || {
         name: effectiveBusinessName,
+        businessName: effectiveBusinessName,
+        industry: effectiveIndustry,
         problemStatement: effectiveProblemStatement,
       }),
-    [blueprint, effectiveBusinessName, effectiveProblemStatement],
+    [blueprint, effectiveBusinessName, effectiveProblemStatement, activeContext, financialVersion],
   );
 
   const currentMaturity =
@@ -707,6 +718,20 @@ function DashboardPage() {
             </button>
           </StaggerItem>
         </Stagger>
+
+        {/* ═══ Section: Financial Budget Runway & ROI Projections ═══ */}
+        <Reveal className="mt-8">
+          <FinancialRoiCard
+            workspaceContext={
+              activeContext || {
+                name: effectiveBusinessName,
+                businessName: effectiveBusinessName,
+                industry: effectiveIndustry,
+                problemStatement: effectiveProblemStatement,
+              }
+            }
+          />
+        </Reveal>
 
         {/* ═══ Section: Top 3 Flagged Risks & Next 3 Action Items Grid ═══ */}
         <div className="mt-8 grid gap-6 lg:grid-cols-2">

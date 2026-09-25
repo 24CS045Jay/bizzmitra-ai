@@ -71,10 +71,25 @@ function ArchitecturePage() {
     businessName: string;
     industry: string;
     problemStatement: string;
-  }>({
-    businessName: "TalentCraft HR Consultancy",
-    industry: "HR & Recruitment Services",
-    problemStatement: "",
+  }>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = window.localStorage.getItem("bizzmitra.workspaceContext");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            businessName: parsed.businessName || "Custom Workspace",
+            industry: parsed.industry || "General Industry",
+            problemStatement: parsed.problemStatement || "",
+          };
+        }
+      } catch {}
+    }
+    return {
+      businessName: "TalentCraft HR Consultancy",
+      industry: "HR & Recruitment Services",
+      problemStatement: "",
+    };
   });
 
   useEffect(() => {

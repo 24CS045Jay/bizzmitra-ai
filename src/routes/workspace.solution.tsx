@@ -26,6 +26,7 @@ import { loadCreditWallet, saveCreditWallet } from "@/lib/admin-rbac-data";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import {
   generateDynamicSolution,
+  generateDomainSolutionFallback,
   type ProblemFramingData,
   type SolutionData,
   type DynamicSolutionModule,
@@ -137,28 +138,14 @@ function SolutionPage() {
   const [aiModelLabel, setAiModelLabel] = useState("Groq 120B AI");
   const [diagnosticAnswers, setDiagnosticAnswers] = useState<any[]>([]);
 
-  const [framing, setFraming] = useState<ProblemFramingData>(() => getActiveProblemFraming(problemText));
-  const [solution, setSolution] = useState<SolutionData>(() => getActiveSolution(problemText));
-  const [modules, setModules] = useState<DynamicSolutionModule[]>(() => [
-    ...HR_SOLUTION_MODULES.map((m) => ({
-      ...m,
-      timeTag: MODULE_TIME_TAGS[m.key] ?? ("Invest" as const),
-    })),
-    {
-      key: "legacy-tracker",
-      name: "Legacy Manual Spreadsheets & Tracker",
-      description: "Informal, untracked manual coordination with zero auditability.",
-      icon: "Clock",
-      status: "Optional" as const,
-      timeTag: "Eliminate" as const,
-      features: [
-        "Unmitigated data leakage risk",
-        "Manual re-entry overhead",
-        "Decommission scheduled in Phase 2",
-      ],
-    },
-  ]);
-  const [buildBuyMatrix, setBuildBuyMatrix] = useState<BuildBuyOption[]>(HR_BUILD_BUY_MATRIX);
+  const initialDomainSolution = useMemo(() => {
+    return generateDomainSolutionFallback(problemText, businessName, industry);
+  }, []);
+
+  const [framing, setFraming] = useState<ProblemFramingData>(() => initialDomainSolution.framing);
+  const [solution, setSolution] = useState<SolutionData>(() => initialDomainSolution.solution);
+  const [modules, setModules] = useState<DynamicSolutionModule[]>(() => initialDomainSolution.modules);
+  const [buildBuyMatrix, setBuildBuyMatrix] = useState<BuildBuyOption[]>(() => initialDomainSolution.buildBuyMatrix);
 
   const activeAccent = useMemo(() => {
     return THEME_ACCENTS.find((a) => a.id === studioSettings.accent) || THEME_ACCENTS[0]!;
