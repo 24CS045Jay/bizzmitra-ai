@@ -13,6 +13,8 @@ export interface ArchitectureComponent {
   dataEgress: string;
 }
 
+import { isHealthcareDomain, isProjectManagementDomain } from "./domain-classifier";
+
 export interface ArchitectureBlueprint {
   domainId: string;
   domainTitle: string;
@@ -1608,18 +1610,13 @@ export function getArchitectureBlueprint(
     };
   }
 
+  // 0. Project Management, TaskFlow & Leave Management
+  if (isProjectManagementDomain(combined)) {
+    return generateDynamicArchitecture(name, "Project Management & Leave Orchestration", problem);
+  }
+
   // 2. Detect Healthcare / Diagnostics / Clinic / Hospital / Laboratory
-  if (
-    combined.includes("health") ||
-    combined.includes("clinic") ||
-    combined.includes("diagnostic") ||
-    combined.includes("patient") ||
-    combined.includes("hospital") ||
-    combined.includes("medical") ||
-    combined.includes("phlebotomy") ||
-    combined.includes("lab") ||
-    combined.includes("sample")
-  ) {
+  if (isHealthcareDomain(combined)) {
     return {
       domainId: "healthcare",
       domainTitle: `${name} — HIPAA / NABL Clinical Architecture`,

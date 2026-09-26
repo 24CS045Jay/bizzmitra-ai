@@ -1,4 +1,5 @@
 import type { BuildBuyOption } from "../demo-data";
+import { isHealthcareDomain, isProjectManagementDomain } from "../domain-classifier";
 
 export type ProblemFramingData = {
   statement: string;
@@ -155,10 +156,95 @@ export function generateDomainSolutionFallback(
   businessName: string,
   industry: string
 ): SolutionGenerationResult {
-  const p = (problem || "").toLowerCase();
+  // 0. Project Management, TaskFlow & Leave-Aware Scheduling
+  if (isProjectManagementDomain(problem) || isProjectManagementDomain(industry)) {
+    return {
+      source: "domain-heuristic",
+      modelUsed: "BizzMitra TaskFlow & Project Orchestrator",
+      framing: {
+        statement: `${businessName} struggles with project deadline risks and mid-sprint work stalls caused by blind task scheduling that fails to account for employee leave, team availability gaps, and unbuffered handovers.`,
+        impact: [
+          { metric: "Task Overlap Delivery Stalls", value: "-94%" },
+          { metric: "Sprint Schedule Reliability", value: "97.2%" },
+          { metric: "Unplanned Handover Delays", value: "-86%" },
+          { metric: "On-Time Project Delivery Lift", value: "+42%" },
+        ],
+        rootCauses: [
+          { title: "Blind Deadline Scheduling", detail: "Project deadlines are fixed without cross-referencing team member leave calendars, creating avoidable delivery bottlenecks." },
+          { title: "Zero Handover Buffers", detail: "When a team member goes on leave mid-task, work stalls or gets rushed at the last minute with no planned handover preparation." },
+          { title: "Disconnected Task & Leave Silos", detail: "Task tracking spreadsheets and employee leave records live in separate places without automated assignment validation." },
+        ],
+        constraints: [
+          "Local storage only — zero backend, zero authentication, client data persists in-browser across sessions.",
+          "Single-user PM cockpit — team members and leaves are managed as lightweight records without multi-tenant login overhead.",
+          "Leave-Aware Assignment Block — strictly blocks task assignment when date range overlaps scheduled employee leave.",
+        ],
+      },
+      solution: {
+        headline: `Leave-Aware Task & Sprint Delivery Cockpit (TaskFlow) for ${businessName}`,
+        summary: "A local-first project management system for project managers that actively prevents task assignment during employee leave, orchestrates visual Kanban boards, and maintains a real-time team availability radar.",
+        pillars: [
+          { title: "Leave-Aware Assignment Guard", detail: "Compares task start and due dates against employee leave schedules in real time, throwing clear inline errors that prevent overlapping assignments." },
+          { title: "Interactive Kanban Project Board", detail: "Visual task management categorized by To Do, In Progress, and Done stages with instant assignee availability badges." },
+          { title: "Team Availability & Leave Radar", detail: "Consolidated team schedule view displaying upcoming and past leave records so the PM can plan assignments before hitting blocks." },
+          { title: "Local-First Storage & Offline State", detail: "Client-side persistence engine saving all projects, tasks, and leave records in-browser without external server dependencies." },
+        ],
+        tradeoffs: [
+          { option: "Complex Heavy Enterprise PPM Suite (Jira / Workfront)", verdict: "Rejected", why: "Prohibitive license costs, steep learning curve, and excessive configuration overhead for a single PM." },
+          { option: "TaskFlow Local-First Architecture (Recommended)", verdict: "Recommended", why: "Instant zero-backend startup, active leave-overlap blocking, and 100% offline reliability." },
+          { option: "Manual Spreadsheets & WhatsApp Coordination", verdict: "Rejected", why: "Causes 100% of blind deadline collisions, forgotten handovers, and project delivery fire-fighting." },
+        ],
+        stack: [
+          { layer: "Presentation & Kanban Board", choice: "React 19 + TypeScript + Tailwind CSS", why: "Zero-latency interactive task management, modal editors, and fluid status transitions." },
+          { layer: "Leave Collision Rule Engine", choice: "Client-Side Date Overlap Validator", why: "Sub-millisecond date interval verification blocking invalid assignments with inline PM warnings." },
+          { layer: "Persistence Layer", choice: "Browser LocalStorage Native Engine", why: "Guaranteed single-user session persistence without backend latency or database hosting costs." },
+          { layer: "Team Availability Visualizer", choice: "Chronological Leave Calendar Radar", why: "Clear at-a-glance visibility into team availability windows and planned PTO." },
+        ],
+      },
+      modules: [
+        {
+          key: "leave-guard-engine",
+          name: "Leave-Aware Assignment Guard & Overlap Blocker",
+          description: "Intelligent date validation blocking task assignments when scheduled dates collide with approved employee leave.",
+          icon: "Clock",
+          status: "Core",
+          timeTag: "Invest",
+          features: ["Real-time date range overlap detection", "Inline PM collision warning banner", "Automatic handover preparation alert"],
+        },
+        {
+          key: "kanban-project-board",
+          name: "Interactive Kanban Board & Project Manager",
+          description: "Project management board grouping tasks into To Do, In Progress, and Done with live assignee status badges.",
+          icon: "BarChart3",
+          status: "Core",
+          timeTag: "Invest",
+          features: ["Projects list & detail views", "Status columns (To Do / In Progress / Done)", "Manual task status toggle without complex workflows"],
+        },
+        {
+          key: "team-availability-radar",
+          name: "Team Availability & Leave Timeline Radar",
+          description: "Centralized dashboard displaying all team members, upcoming leave records, and availability at a glance.",
+          icon: "Users",
+          status: "Core",
+          timeTag: "Invest",
+          features: ["Team member roster management", "Upcoming & past leave calendar view", "Pre-planning availability overview"],
+        },
+        {
+          key: "blind-spreadsheets",
+          name: "Blind Scheduling in Spreadsheets & Chat",
+          description: "Disconnected manual task tracking without leave visibility or assignment safeguards.",
+          icon: "Clock",
+          status: "Optional",
+          timeTag: "Eliminate",
+          features: ["High mid-task stall risk", "Decommission in Phase 1", "Zero leave overlap visibility"],
+        },
+      ],
+      buildBuyMatrix: getDomainBuildBuy("Project Management & Operations"),
+    };
+  }
 
   // 1. Healthcare / Clinical / Diagnostics
-  if (p.includes("health") || p.includes("clinic") || p.includes("patient") || p.includes("lab") || p.includes("sample")) {
+  if (isHealthcareDomain(problem) || isHealthcareDomain(industry)) {
     return {
       source: "domain-heuristic",
       modelUsed: "BizzMitra Clinical Intelligence Engine",

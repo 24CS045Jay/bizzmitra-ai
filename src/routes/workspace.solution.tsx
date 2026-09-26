@@ -6,6 +6,7 @@ import {
   Check,
   Clock,
   Filter,
+  Rocket,
   Sliders,
   Sparkles,
   Users,
@@ -567,6 +568,13 @@ function SolutionPage() {
               >
                 Inspect Prototype CRM
                 <ArrowRight className="size-3.5" />
+              </Link>
+              <Link
+                to="/workspace/build"
+                className="neu-press inline-flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-4 py-2.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 transition-transform hover:scale-[1.02]"
+              >
+                <Rocket className="size-3.5" />
+                Open Software Studio
               </Link>
               <Link
                 to="/workspace/architecture"

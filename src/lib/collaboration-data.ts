@@ -6,6 +6,8 @@
 
 export type ApprovalStatus = "draft" | "in_review" | "approved";
 
+import { isHealthcareDomain, isProjectManagementDomain } from "./domain-classifier";
+
 export type ApproverSignOff = {
   role: string;
   name: string;
@@ -291,18 +293,91 @@ export function getCollaborationStateForWorkspace(
     };
   }
 
+  // 0. Project Management, TaskFlow & Leave Management
+  if (isProjectManagementDomain(combined)) {
+    return {
+      workspaceId: "ws-taskflow-pm",
+      scenarioName: name,
+      overallStatus: "approved",
+      signOffs: [
+        {
+          role: "Lead Project Manager",
+          name: "Siddharth Rao",
+          email: "siddharth@taskflow.dev",
+          signed: true,
+          signedAt: "Sep 26, 2026 · 10:15 AM",
+          comments: "Leave-aware assignment block verified. Tested date collisions against upcoming employee PTO windows.",
+        },
+        {
+          role: "Frontend Engineering Lead",
+          name: "Priya Sharma",
+          email: "priya@taskflow.dev",
+          signed: true,
+          signedAt: "Sep 26, 2026 · 11:30 AM",
+          comments: "Kanban drag-and-drop state verified with zero-latency localStorage persistence.",
+        },
+        {
+          role: "Scrum Master & Agile Coach",
+          name: "Rohan Varma",
+          email: "rohan@taskflow.dev",
+          signed: true,
+          signedAt: "Sep 26, 2026 · 01:45 PM",
+          comments: "Eliminates mid-sprint stalls by ensuring team availability is validated at task creation time.",
+        },
+        {
+          role: "Platform Architect",
+          name: "Marcus Vance",
+          email: "marcus@bizzmitra.ai",
+          signed: true,
+          signedAt: "Sep 26, 2026 · 03:00 PM",
+          comments: "Single-user local-first architecture approved for production rollout with zero hosting overhead.",
+        },
+      ],
+      comments: [
+        {
+          id: "comm-tf-1",
+          artifactId: "leave-guard-engine",
+          artifactName: "Leave-Aware Assignment Guard",
+          author: { name: "Siddharth Rao", role: "Project Manager" },
+          content: "Confirmed: Task assignment is strictly blocked when start-due dates overlap any recorded leave for the selected team member.",
+          timestamp: "Yesterday · 04:15 PM",
+          severity: "approved",
+          resolved: true,
+        },
+        {
+          id: "comm-tf-2",
+          artifactId: "kanban-project-board",
+          artifactName: "Interactive Kanban Board",
+          author: { name: "Priya Sharma", role: "Frontend Lead" },
+          content: "Added visual status badges in each Kanban column to highlight pending handovers before scheduled PTO.",
+          timestamp: "Today · 09:30 AM",
+          severity: "feedback",
+          resolved: true,
+        },
+      ],
+      auditLogs: [
+        {
+          id: "log-tf-1",
+          actor: { name: "Leave Validation Engine", type: "system", role: "Rule Enforcer" },
+          action: "Blocked Overlapping Task Assignment",
+          category: "governance",
+          details: "Prevented assigning 'API Validation' to Priya Sharma due to approved leave window June 5–8.",
+          timestamp: "12:10 PM",
+        },
+        {
+          id: "log-tf-2",
+          actor: { name: "BizzMitra AI Engine", type: "ai", role: "AI Architecture Engine" },
+          action: "Generated Local-First TaskFlow Architecture",
+          category: "ai_generation",
+          details: "Synthesized leave collision rules, Kanban state machines, and team availability radar.",
+          timestamp: "11:20 AM",
+        },
+      ],
+    };
+  }
+
   // 2. Healthcare & Clinical Diagnostics
-  if (
-    combined.includes("health") ||
-    combined.includes("clinic") ||
-    combined.includes("hospital") ||
-    combined.includes("medical") ||
-    combined.includes("lab") ||
-    combined.includes("doctor") ||
-    combined.includes("patient") ||
-    combined.includes("diagnostic") ||
-    combined.includes("pathology")
-  ) {
+  if (isHealthcareDomain(combined)) {
     return {
       workspaceId: "ws-healthcare-lis",
       scenarioName: name,

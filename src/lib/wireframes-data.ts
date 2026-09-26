@@ -1,6 +1,8 @@
 export type ViewportMode = "desktop" | "tablet" | "mobile";
 export type ScreenConceptId = "dashboard" | "pipeline" | "insights" | "settings";
 
+import { isHealthcareDomain, isProjectManagementDomain } from "./domain-classifier";
+
 export interface ScreenConcept {
   id: ScreenConceptId;
   title: string;
@@ -1757,19 +1759,13 @@ export function getWireframeBlueprint(context?: {
     };
   }
 
+  // 0. Project Management, TaskFlow & Leave Management
+  if (isProjectManagementDomain(combined)) {
+    return generateUniversalWireframeBlueprint(context);
+  }
+
   // 4. Healthcare & Diagnostic Lab
-  if (
-    combined.includes("health") ||
-    combined.includes("clinic") ||
-    combined.includes("hospital") ||
-    combined.includes("medical") ||
-    combined.includes("lab") ||
-    combined.includes("doctor") ||
-    combined.includes("patient") ||
-    combined.includes("diagnostic") ||
-    combined.includes("pathology") ||
-    combined.includes("lis")
-  ) {
+  if (isHealthcareDomain(combined)) {
     return {
       ...HEALTHCARE_WIREFRAME_BLUEPRINT,
       domainTitle: `${name} — Clinical Diagnostics & LIS Telemetry`,
