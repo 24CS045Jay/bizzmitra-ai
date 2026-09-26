@@ -108,19 +108,19 @@ export interface FeatureCostConfig {
 }
 
 export const FEATURE_COSTS: Record<FeatureAction, FeatureCostConfig> = {
-  discovery_chat_turn:        { action: "discovery_chat_turn",        label: "Discovery interview turn",         baseCredits: 2,  tokenMetered: true,  minPlan: "free_starter" },
-  ai_copilot_turn:            { action: "ai_copilot_turn",            label: "AI Copilot question",              baseCredits: 1,  tokenMetered: true,  minPlan: "free_starter" },
-  solution_studio_regenerate: { action: "solution_studio_regenerate", label: "Solution Studio regeneration",     baseCredits: 15, tokenMetered: false, minPlan: "free_starter" },
-  architecture_regenerate:    { action: "architecture_regenerate",    label: "HLD/LLD regeneration",             baseCredits: 25, tokenMetered: false, minPlan: "free_starter" },
-  data_model_regenerate:      { action: "data_model_regenerate",      label: "PostgreSQL DDL + REST API spec",   baseCredits: 20, tokenMetered: false, minPlan: "free_starter" },
-  process_bpmn_regenerate:    { action: "process_bpmn_regenerate",    label: "BPMN pipeline generation",         baseCredits: 20, tokenMetered: false, minPlan: "growth_pro" },
-  roadmap_regenerate:         { action: "roadmap_regenerate",         label: "Roadmap regeneration",             baseCredits: 12, tokenMetered: false, minPlan: "free_starter" },
-  wireframe_generate:         { action: "wireframe_generate",         label: "Wireframe generation",             baseCredits: 18, tokenMetered: false, minPlan: "growth_pro" },
-  insights_analysis:          { action: "insights_analysis",          label: "CRM / insights AI analysis",       baseCredits: 10, tokenMetered: false, minPlan: "growth_pro" },
-  confidence_score_recalc:    { action: "confidence_score_recalc",    label: "Confidence score recalculation",   baseCredits: 3,  tokenMetered: false, minPlan: "free_starter" },
-  export_basic_hld:           { action: "export_basic_hld",           label: "Basic HLD export (PDF)",           baseCredits: 5,  tokenMetered: false, minPlan: "free_starter" },
-  export_full_deliverable:    { action: "export_full_deliverable",    label: "Full deliverable pack + pitch deck", baseCredits: 20, tokenMetered: false, minPlan: "growth_pro" },
-  full_blueprint_synthesis:   { action: "full_blueprint_synthesis",   label: "Full blueprint synthesis (all artifacts)", baseCredits: 50, tokenMetered: false, minPlan: "free_starter" },
+  discovery_chat_turn:        { action: "discovery_chat_turn",        label: "Discovery interview turn",         baseCredits: 2,  tokenMetered: false, minPlan: "free_starter" },
+  ai_copilot_turn:            { action: "ai_copilot_turn",            label: "AI Copilot question",              baseCredits: 1,  tokenMetered: false, minPlan: "free_starter" },
+  solution_studio_regenerate: { action: "solution_studio_regenerate", label: "Solution Studio regeneration",     baseCredits: 5,  tokenMetered: false, minPlan: "free_starter" },
+  architecture_regenerate:    { action: "architecture_regenerate",    label: "HLD/LLD regeneration",             baseCredits: 5,  tokenMetered: false, minPlan: "free_starter" },
+  data_model_regenerate:      { action: "data_model_regenerate",      label: "PostgreSQL DDL + REST API spec",   baseCredits: 5,  tokenMetered: false, minPlan: "free_starter" },
+  process_bpmn_regenerate:    { action: "process_bpmn_regenerate",    label: "BPMN pipeline generation",         baseCredits: 5,  tokenMetered: false, minPlan: "free_starter" },
+  roadmap_regenerate:         { action: "roadmap_regenerate",         label: "Roadmap regeneration",             baseCredits: 3,  tokenMetered: false, minPlan: "free_starter" },
+  wireframe_generate:         { action: "wireframe_generate",         label: "Wireframe generation",             baseCredits: 5,  tokenMetered: false, minPlan: "free_starter" },
+  insights_analysis:          { action: "insights_analysis",          label: "CRM / insights AI analysis",       baseCredits: 3,  tokenMetered: false, minPlan: "free_starter" },
+  confidence_score_recalc:    { action: "confidence_score_recalc",    label: "Confidence score recalculation",   baseCredits: 1,  tokenMetered: false, minPlan: "free_starter" },
+  export_basic_hld:           { action: "export_basic_hld",           label: "Basic HLD export (PDF)",           baseCredits: 0,  tokenMetered: false, minPlan: "free_starter" },
+  export_full_deliverable:    { action: "export_full_deliverable",    label: "Full deliverable pack + pitch deck", baseCredits: 0, tokenMetered: false, minPlan: "free_starter" },
+  full_blueprint_synthesis:   { action: "full_blueprint_synthesis",   label: "Full blueprint synthesis (all artifacts)", baseCredits: 10, tokenMetered: false, minPlan: "free_starter" },
 };
 
 /** Real credit cost of one action call, given the active model. */

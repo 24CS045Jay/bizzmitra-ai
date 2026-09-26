@@ -10,8 +10,34 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { PAYLOADS, type ArtifactKind } from "./generate-artifact-payloads";
+import { deductFeatureCredits } from "@/lib/admin-rbac-data";
+import { FeatureAction } from "@/lib/pricing-config";
+import { toast } from "sonner";
 
 export type { ArtifactKind };
+
+const KIND_TO_ACTION: Partial<Record<ArtifactKind, FeatureAction>> = {
+  architecture: "architecture_regenerate",
+  process: "process_bpmn_regenerate",
+  ux: "wireframe_generate",
+  database: "data_model_regenerate",
+  roadmap: "roadmap_regenerate",
+  solution: "solution_studio_regenerate",
+};
+
+function trackDeduction(kind: ArtifactKind) {
+  const action = KIND_TO_ACTION[kind];
+  if (action && typeof window !== "undefined") {
+    try {
+      const deduction = deductFeatureCredits(action);
+      if (deduction.success) {
+        toast.info(`⚡ ${deduction.creditsDeducted} Credits used for AI generation · Balance: ${deduction.newBalance} Credits`);
+      }
+    } catch (e) {
+      console.warn("Credit deduction notice:", e);
+    }
+  }
+}
 
 export type GenerationContext = {
   problem?: string;
@@ -147,6 +173,7 @@ export async function generateArtifact<T = unknown>(
           }
         }
 
+        trackDeduction(kind);
         return data.content as T;
       }
     } else {
@@ -172,5 +199,6 @@ export async function generateArtifact<T = unknown>(
     } catch {}
   }
 
+  trackDeduction(kind);
   return fallbackPayload as T;
 }

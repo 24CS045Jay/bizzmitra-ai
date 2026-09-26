@@ -86,32 +86,36 @@ export function CreditsBadge({
         type="button"
         onClick={() => setIsOpen(true)}
         className={cn(
-          "group relative flex items-center gap-1.5 rounded-full border transition-all active:scale-95",
+          "group relative inline-flex items-center gap-2 rounded-full border transition-all duration-200 active:scale-95 cursor-pointer shadow-xs",
           isLow
-            ? "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:border-amber-500"
-            : "border-primary/30 bg-primary/10 text-primary hover:border-primary/60 hover:bg-primary/15",
+            ? "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15 hover:border-amber-500"
+            : "border-primary/30 bg-primary/8 text-foreground hover:bg-primary/12 hover:border-primary/50",
           variant === "compact"
-            ? "px-2 py-0.5 text-[10px] font-bold"
+            ? "px-2 py-0.5 text-[11px]"
             : variant === "sidebar"
             ? "w-full justify-between px-3 py-2 text-xs font-semibold"
-            : "px-2.5 py-1 text-xs font-bold shadow-xs",
+            : "px-3 py-1.5 text-xs font-medium",
           className,
         )}
         title="View AI Credit Balance & Generation Costs"
       >
-        <span className="flex items-center gap-1">
-          <Zap
-            className={cn(
-              "size-3.5 transition-transform group-hover:scale-110",
-              isLow ? "text-amber-500 animate-bounce" : "text-primary animate-pulse",
-            )}
-          />
-          <span className="font-mono">{wallet.balance}</span>
-          <span className="opacity-75 font-normal text-[10px]">Credits</span>
+        <span className="flex items-center gap-1.5">
+          <span className={cn(
+            "grid size-4.5 place-items-center rounded-full transition-transform group-hover:scale-110",
+            isLow ? "bg-amber-500/20 text-amber-500" : "bg-primary/20 text-primary"
+          )}>
+            <Zap className={cn("size-2.5 fill-current", isLow ? "animate-bounce" : "animate-pulse")} />
+          </span>
+          <span className="font-sans font-extrabold tracking-tight tabular-nums text-foreground">
+            {wallet.balance}
+          </span>
+          <span className="text-[11px] font-medium text-muted-foreground">
+            Credits
+          </span>
         </span>
 
         {variant !== "compact" && (
-          <span className="hidden sm:inline-flex items-center rounded-full bg-primary/20 px-1.5 py-0.2 text-[9px] font-mono text-primary font-bold">
+          <span className="hidden sm:inline-flex items-center rounded-full bg-primary/15 border border-primary/25 px-2 py-0.5 text-[10px] font-semibold text-primary tracking-wide">
             Pay-Per-Gen
           </span>
         )}
@@ -138,7 +142,7 @@ export function CreditsBadge({
                 onClick={() => setIsOpen(false)}
                 aria-label="Close credit modal"
                 title="Close (Esc)"
-                className="absolute right-4 top-4 grid size-8.5 place-items-center rounded-full border border-border/70 bg-surface-2/90 text-foreground hover:bg-muted hover:border-border transition-all active:scale-95 shadow-xs z-10"
+                className="absolute right-4 top-4 grid size-8.5 place-items-center rounded-full border border-border/70 bg-surface-2/90 text-foreground hover:bg-muted hover:border-border transition-all active:scale-95 shadow-xs z-10 cursor-pointer"
               >
                 <X className="size-4 text-foreground" />
               </button>
@@ -171,14 +175,14 @@ export function CreditsBadge({
                       Available Balance
                     </span>
                     <p className="font-display text-3xl font-extrabold text-foreground flex items-baseline gap-1 mt-0.5">
-                      <span className="text-primary font-mono">{wallet.balance}</span>
+                      <span className="text-primary font-sans font-black tabular-nums">{wallet.balance}</span>
                       <span className="text-xs font-medium text-muted-foreground">
                         / {wallet.monthlyQuota} monthly credits
                       </span>
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-bold text-foreground font-mono">
+                    <span className="text-xs font-bold text-foreground font-sans tabular-nums">
                       {percentRemaining}% Quota Left
                     </span>
                   </div>
@@ -219,7 +223,7 @@ export function CreditsBadge({
                       </div>
                       <span
                         className={cn(
-                          "shrink-0 rounded-md px-2 py-0.5 font-mono text-[11px] font-bold",
+                          "shrink-0 rounded-lg px-2.5 py-1 font-sans text-xs font-bold tabular-nums",
                           item.cost.startsWith("0")
                             ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                             : "bg-primary/10 text-primary border border-primary/20",
@@ -237,10 +241,10 @@ export function CreditsBadge({
                 <button
                   type="button"
                   onClick={() => handleGrantTestCredits(25)}
-                  className="neu-sm neu-press flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors"
+                  className="flex items-center gap-1.5 rounded-xl border border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition-all active:scale-95 cursor-pointer"
                   title="Evaluator testing shortcut: adds 25 sandbox test credits immediately"
                 >
-                  <Sparkles className="size-3.5" />
+                  <Sparkles className="size-3.5 text-primary" />
                   <span>Test Top-Up (+25 Credits)</span>
                 </button>
 
@@ -248,7 +252,7 @@ export function CreditsBadge({
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
-                    className="neu-sm neu-press flex items-center gap-1 rounded-xl px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors border border-border/50"
+                    className="flex items-center gap-1 rounded-xl px-3.5 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border/60 cursor-pointer"
                   >
                     <X className="size-3.5" />
                     <span>Close</span>
@@ -260,7 +264,7 @@ export function CreditsBadge({
                       setIsOpen(false);
                       onUpgradeClick?.();
                     }}
-                    className="neu-press flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground glow-primary shadow-sm hover:brightness-105"
+                    className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-primary to-primary/90 hover:brightness-105 px-4 py-2 text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 transition-all cursor-pointer"
                   >
                     <CreditCard className="size-3.5" />
                     <span>Upgrade Plan</span>

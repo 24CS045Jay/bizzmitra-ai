@@ -29,6 +29,7 @@ import {
   saveUiCustomization,
   DEFAULT_UI_CUSTOMIZATION,
 } from "@/lib/builder/ui-customization-store";
+import { deductFeatureCredits } from "@/lib/admin-rbac-data";
 import { cn } from "@/lib/utils";
 
 interface AiUiRefinementBarProps {
@@ -63,7 +64,18 @@ export function AiUiRefinementBar({ customization, onChange }: AiUiRefinementBar
       setHistory((prev) => [customization, ...prev]);
       const res = await refineUiWithAi(inputQuery, customization);
       onChange(res.updated);
-      toast.success(res.explanation || "AI UI Refinement applied successfully!");
+
+      try {
+        const deduction = deductFeatureCredits("discovery_chat_turn");
+        if (deduction.success) {
+          toast.success(`⚡ 2 Credits deducted for AI UI Refinement · Balance: ${deduction.newBalance} Credits`);
+        } else {
+          toast.success(res.explanation || "AI UI Refinement applied successfully!");
+        }
+      } catch {
+        toast.success(res.explanation || "AI UI Refinement applied successfully!");
+      }
+
       if (!textToUse) setPrompt("");
     } catch (e: any) {
       toast.error(e?.message || "Failed to refine UI with AI");

@@ -37,6 +37,7 @@ import { completeDiscoveryAndUnlockAll, resetWorkspaceStages } from "@/lib/works
 import { saveActiveWorkspaceLocally } from "@/lib/workspace-persistence";
 import { useWorkspaceLimit } from "@/lib/workspace-plan-limit";
 import { WorkspaceUpgradeModal } from "@/components/WorkspaceUpgradeModal";
+import { deductFeatureCredits } from "@/lib/admin-rbac-data";
 
 export const Route = createFileRoute("/workspace/new")({
   head: () => ({
@@ -431,7 +432,18 @@ function IntakePage() {
 
         saveActiveWorkspaceLocally(createdWorkspaceId, safeBusinessName, contextPayload, user?.id);
         resetWorkspaceStages(createdWorkspaceId);
-        toast.success("Workspace created successfully!");
+
+        try {
+          const deduction = deductFeatureCredits("full_blueprint_synthesis");
+          if (deduction.success) {
+            toast.success(`⚡ 10 Credits used for Blueprint Synthesis · Balance: ${deduction.newBalance} Credits`);
+          } else {
+            toast.success("Workspace created successfully!");
+          }
+        } catch {
+          toast.success("Workspace created successfully!");
+        }
+
         navigate({ to: "/workspace/discovery" });
         return;
       }

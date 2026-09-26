@@ -23,7 +23,7 @@ import { GenerationSequence } from "@/components/GenerationSequence";
 import { SolutionStudioDrawer } from "@/components/SolutionStudioDrawer";
 import { AiExplainabilityVault } from "@/components/AiExplainabilityVault";
 import { Stagger, StaggerItem } from "@/components/motion/primitives";
-import { loadCreditWallet, saveCreditWallet } from "@/lib/admin-rbac-data";
+import { loadCreditWallet, saveCreditWallet, deductFeatureCredits } from "@/lib/admin-rbac-data";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
 import {
   generateDynamicSolution,
@@ -268,19 +268,8 @@ function SolutionPage() {
       });
 
       // Deduct 5 credits on successful regeneration
-      wallet.balance = Math.max(0, wallet.balance - 5);
-      wallet.transactions = [
-        {
-          id: `tx-${Date.now()}`,
-          description: "Solution AI Regeneration (-5 Credits)",
-          type: "deduction",
-          amount: 5,
-          timestamp: "Just now",
-          balanceAfter: wallet.balance,
-        },
-        ...(wallet.transactions || []),
-      ];
-      saveCreditWallet(wallet);
+      const deduction = deductFeatureCredits("solution_studio_regenerate");
+      const currentBalance = deduction.success ? deduction.newBalance : wallet.balance;
 
       setFraming(res.framing);
       setSolution(res.solution);
@@ -289,7 +278,7 @@ function SolutionPage() {
         setBuildBuyMatrix(res.buildBuyMatrix);
       }
       setAiModelLabel(res.source === "groq-llm" ? (res.modelUsed || "Groq Llama 3.3 70B") : "BizzMitra Adaptive Strategy Engine");
-      toast.success(`Solution successfully regenerated with AI! (-5 Credits • Remaining: ${wallet.balance})`, { id: tId });
+      toast.success(`Solution successfully regenerated with AI! (-5 Credits • Remaining: ${currentBalance})`, { id: tId });
     } catch {
       toast.error("Failed to regenerate solution", { id: tId });
     }
