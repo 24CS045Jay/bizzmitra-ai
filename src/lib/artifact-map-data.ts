@@ -11,6 +11,8 @@ export type ArtifactLayer =
   | "blueprint"
   | "execution";
 
+import { isHealthcareDomain, isProjectManagementDomain } from "./domain-classifier";
+
 export type ArtifactNode = {
   id: string;
   name: string;
@@ -333,18 +335,156 @@ export function getArtifactMapForWorkspace(
     };
   }
 
+  // 0. Project Management, TaskFlow & Leave Management
+  if (isProjectManagementDomain(combined)) {
+    return {
+      domainId: "taskflow",
+      domainTitle: "TaskFlow Project & Leave Management",
+      scenarioName: `${name} — Connected Artifact Dependency Map`,
+      edges: DEFAULT_ARTIFACT_MAP_EDGES,
+      metrics: {
+        traceabilityScore: 100,
+        verifiedPathways: 14,
+        orphanedArtifacts: 0,
+        activeWorkspace: name,
+        provenanceChain:
+          "Problem Statement ──► Discovery Intake ──► Solution Framing ──► TaskFlow Cockpit ──► Leave Guard Architecture ──► Collision BPMN ──► Local Storage & APIs ──► Sprint Roadmap ──► Delivery ROI",
+      },
+      nodes: [
+        {
+          id: "intake",
+          name: "Project Problem Intake",
+          kicker: "Stage 01",
+          layer: "foundation",
+          layerLabel: "Foundation & Problem Space",
+          route: "/workspace/new",
+          version: "v1.0",
+          status: "ready",
+          x: 12,
+          y: 20,
+          summary: "Captures unbuffered deadline scheduling bottlenecks, employee leave blind spots, and mid-sprint handover risks.",
+          inputsConsumed: ["PM user requirements", "Team size", "Scheduling constraints"],
+          outputsProduced: ["Structured project context", "Domain tagging", "Maturity score"],
+          metrics: [{ label: "Input Completeness", value: "98%" }],
+        },
+        {
+          id: "framing",
+          name: "Problem Framing & Gaps",
+          kicker: "Stage 02",
+          layer: "foundation",
+          layerLabel: "Foundation & Problem Space",
+          route: "/workspace/framing",
+          version: "v1.0",
+          status: "ready",
+          x: 12,
+          y: 64,
+          summary: "Identifies core delivery risks: blind task deadlines, sudden mid-task stalls, and unbuffered handovers.",
+          inputsConsumed: ["Intake problem statement"],
+          outputsProduced: ["Root cause breakdown", "Delivery impact metrics", "Core constraints"],
+          metrics: [{ label: "Impact Accuracy", value: "96%" }],
+        },
+        {
+          id: "solution",
+          name: "TaskFlow Solution Blueprint",
+          kicker: "Stage 03",
+          layer: "solution",
+          layerLabel: "Architecture & Solution Pillars",
+          route: "/workspace/solution",
+          version: "v1.0",
+          status: "ready",
+          x: 37,
+          y: 20,
+          summary: "Recommends leave-aware assignment blocker, interactive Kanban board, and team availability radar.",
+          inputsConsumed: ["Problem framing", "Operational gaps"],
+          outputsProduced: ["Architecture pillars", "Build-vs-buy matrix", "Core modules"],
+          metrics: [{ label: "Recommendation Fit", value: "98%" }],
+        },
+        {
+          id: "prototype",
+          name: "TaskFlow PM Cockpit",
+          kicker: "Stage 03.5",
+          layer: "solution",
+          layerLabel: "Architecture & Solution Pillars",
+          route: "/workspace/solution/crm",
+          version: "v1.0",
+          status: "ready",
+          x: 37,
+          y: 64,
+          summary: "Interactive project cockpit with To Do / In Progress / Done status tracking and inline leave collision alerts.",
+          inputsConsumed: ["Solution modules", "Team roster"],
+          outputsProduced: ["Live task records", "Leave conflict warnings", "Availability register"],
+          metrics: [{ label: "Guard Active", value: "100%" }],
+        },
+        {
+          id: "architecture",
+          name: "Local-First System Architecture",
+          kicker: "Stage 04",
+          layer: "blueprint",
+          layerLabel: "Technical Blueprint & Specs",
+          route: "/workspace/architecture",
+          version: "v1.0",
+          status: "ready",
+          x: 62,
+          y: 20,
+          summary: "High-level and low-level architecture for single PM local-first execution with zero backend latency.",
+          inputsConsumed: ["Solution pillars", "Offline storage requirements"],
+          outputsProduced: ["HLD / LLD diagrams", "Component topology", "Security policies"],
+          metrics: [{ label: "Architecture SLA", value: "99.99%" }],
+        },
+        {
+          id: "process",
+          name: "Leave-Collision BPMN Engine",
+          kicker: "Stage 05",
+          layer: "blueprint",
+          layerLabel: "Technical Blueprint & Specs",
+          route: "/workspace/process",
+          version: "v1.0",
+          status: "ready",
+          x: 62,
+          y: 64,
+          summary: "BPMN decision flow modeling pre-assignment leave overlap checks, blocking actions, and handover alerts.",
+          inputsConsumed: ["Task scheduling workflows", "Leave policies"],
+          outputsProduced: ["As-Is vs To-Be BPMN", "Decision tiers", "Swimlane diagrams"],
+          metrics: [{ label: "Conflict Elimination", value: "-100%" }],
+        },
+        {
+          id: "roadmap",
+          name: "Sprint Delivery Roadmap",
+          kicker: "Stage 08",
+          layer: "execution",
+          layerLabel: "Execution & Economics",
+          route: "/workspace/planning",
+          version: "v1.0",
+          status: "ready",
+          x: 88,
+          y: 20,
+          summary: "Phased release schedule covering leave-guard engine, Kanban UI, and availability radar.",
+          inputsConsumed: ["Architecture components", "Process workflows"],
+          outputsProduced: ["Sprint Gantt schedule", "Milestone deliverables", "Capacity model"],
+          metrics: [{ label: "Schedule Reliability", value: "97%" }],
+        },
+        {
+          id: "roi",
+          name: "Delivery ROI Cockpit",
+          kicker: "Stage 09",
+          layer: "execution",
+          layerLabel: "Execution & Economics",
+          route: "/workspace/insights",
+          version: "v1.0",
+          status: "ready",
+          x: 88,
+          y: 64,
+          summary: "Calculates time reclaimed from avoided handover stalls and improved sprint completion velocity.",
+          inputsConsumed: ["Team size", "Average sprint stall hours", "Hourly labor rate"],
+          outputsProduced: ["Net hours saved", "Sprint reliability gains", "Delivery multiple"],
+          metrics: [{ label: "Hours Reclaimed", value: "+38%" }],
+        },
+      ],
+    };
+  }
+
   // 2. Healthcare & Clinical Diagnostics
-  if (
-    combined.includes("health") ||
-    combined.includes("clinic") ||
-    combined.includes("hospital") ||
-    combined.includes("medical") ||
-    combined.includes("lab") ||
-    combined.includes("doctor") ||
-    combined.includes("patient") ||
-    combined.includes("diagnostic") ||
-    combined.includes("pathology")
-  ) {
+  if (isHealthcareDomain(combined)) {
     return {
       domainId: "healthcare",
       domainTitle: "Clinical Diagnostics & LIS",

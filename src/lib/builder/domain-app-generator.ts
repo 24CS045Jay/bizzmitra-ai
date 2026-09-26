@@ -11,6 +11,8 @@ export interface DomainKpi {
   trend: "up" | "down" | "neutral";
 }
 
+import { isHealthcareDomain, isProjectManagementDomain } from "../domain-classifier";
+
 export interface DomainFunnelStage {
   stage: string;
   count: number | string;
@@ -424,19 +426,58 @@ function resolveRawDomainAppModel(context: WorkspaceContextInput = {}): any {
     };
   }
 
+  // 0. PROJECT MANAGEMENT / TASKFLOW & LEAVE MANAGEMENT
+  if (isProjectManagementDomain(combined)) {
+    return {
+      domainKey: "project_management",
+      domainName: "TaskFlow Project & Leave Management",
+      appTitle: solutionTitle || `${businessName} — TaskFlow Project & Leave Cockpit`,
+      entityName: "Project Task",
+      entityPlural: "Tasks",
+      tagline: "Leave-aware task assignment blocking, interactive Kanban status tracking, and team availability radar.",
+      problemStatement: problem || "Project managers setting task deadlines without employee leave visibility causing mid-sprint delivery stalls.",
+      kpis: [
+        { label: "Assignment Overlap Blocks", value: "0 Collisions", change: "100% collision free", trend: "up" },
+        { label: "Sprint Delivery Velocity", value: "96.4%", change: "+38% on-time completion", trend: "up" },
+        { label: "Active Projects / Tasks", value: "18 Tasks", change: "4 active initiatives", trend: "up" },
+        { label: "Team Availability Status", value: "100% Tracked", change: "Zero unbuffered leaves", trend: "up" },
+      ],
+      funnelStages: [
+        { stage: "Backlog / To Do", count: "8 Tasks", pct: 100 },
+        { stage: "In Progress", count: "6 Tasks", pct: 75 },
+        { stage: "Blocked / Review", count: "1 Task", pct: 15 },
+        { stage: "Completed / Done", count: "3 Tasks", pct: 37 },
+      ],
+      columns: {
+        idLabel: "Task ID",
+        col1Label: "Assigned Team Member",
+        col2Label: "Scheduled Duration",
+        statusLabel: "Kanban State",
+        assigneeLabel: "Task Owner",
+        metricLabel: "Leave Overlap Status",
+      },
+      statuses: ["To Do", "In Progress", "Blocked", "Done"],
+      initialRecords: [
+        { id: "TASK-101", title: "Core Leave Overlap Validation Logic", col1: "Priya Sharma", col2: "June 5–9", status: "Blocked", badge: "Leave Collision", assignee: "Priya Sharma", metricVal: "High", createdAt: "2h ago" },
+        { id: "TASK-102", title: "Interactive Kanban Board Implementation", col1: "Rohan Varma", col2: "June 10–14", status: "In Progress", badge: "On Track", assignee: "Rohan Varma", metricVal: "Normal", createdAt: "4h ago" },
+        { id: "TASK-103", title: "Team Availability Radar Dashboard", col1: "Ananya Iyer", col2: "June 12–16", status: "To Do", badge: "Ready", assignee: "Ananya Iyer", metricVal: "Medium", createdAt: "1d ago" },
+        { id: "TASK-104", title: "Local-First Storage Persistence", col1: "Devendra Patel", col2: "June 1–4", status: "Done", badge: "Verified", assignee: "Devendra Patel", metricVal: "Low", createdAt: "2d ago" },
+      ],
+      activities: [
+        { title: "Task Assignment Blocked", subtitle: "Priya Sharma is on leave June 5-8 (dates overlap)", timeAgo: "10m ago" },
+        { title: "Sprint Deliverable Completed", subtitle: "Devendra Patel marked Local-First Store Done", timeAgo: "1h ago" },
+        { title: "Availability Radar Updated", subtitle: "Upcoming PTO logged for sprint planning", timeAgo: "3h ago" },
+      ],
+      modules: [
+        { id: "overview", title: "Project Kanban & Availability Radar", description: "Leave-aware sprint board, team availability radar, and collision prevention", icon: "Building2" },
+        { id: "portal", title: "Task Allocation Registry", description: "Active tasks, scheduled date ranges, and verified member leave checks", icon: "Layout" },
+        { id: "analytics", title: "Sprint Delivery Telemetry", description: "On-time delivery rates, leave collision block logs, and capacity charts", icon: "BarChart3" },
+      ],
+    };
+  }
+
   // 4. HEALTHCARE / CLINICAL DIAGNOSTICS / PATHOLOGY LAB / LIS
-  if (
-    combined.includes("health") ||
-    combined.includes("clinic") ||
-    combined.includes("hospital") ||
-    combined.includes("medical") ||
-    combined.includes("lab") ||
-    combined.includes("doctor") ||
-    combined.includes("patient") ||
-    combined.includes("diagnostic") ||
-    combined.includes("pathology") ||
-    combined.includes("lis")
-  ) {
+  if (isHealthcareDomain(combined)) {
     return {
       domainKey: "healthcare",
       domainName: "Clinical Diagnostics & LIS Telemetry",
@@ -1149,6 +1190,53 @@ export function enrichDomainAppModel(raw: any, context: WorkspaceContextInput = 
         permissions: ["Client Candidate Review", "Background Check Trigger", "Offer Negotiation"],
       },
     ];
+  } else if (dKey === "project_management") {
+    demoUsers = [
+      {
+        id: "usr-pm-1",
+        name: "Devendra Patel",
+        email: "pm@taskflow.dev",
+        password: "admin123",
+        role: "Lead Project Manager",
+        badge: "Admin & Sprint Lead",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=60",
+        department: "Project Management Office",
+        permissions: ["All Task Management", "Leave Approvals", "Sprint Allocations", "User Administration"],
+      },
+      {
+        id: "usr-pm-2",
+        name: "Priya Sharma",
+        email: "priya@taskflow.dev",
+        password: "user123",
+        role: "Senior Fullstack Engineer",
+        badge: "Core Developer",
+        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60",
+        department: "Engineering",
+        permissions: ["Task Execution", "Leave Request", "Kanban Updates"],
+      },
+      {
+        id: "usr-pm-3",
+        name: "Rohan Varma",
+        email: "rohan@taskflow.dev",
+        password: "user123",
+        role: "Backend & Systems Engineer",
+        badge: "Systems Lead",
+        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=60",
+        department: "Engineering",
+        permissions: ["Task Execution", "Leave Request", "API Gateway Maintenance"],
+      },
+      {
+        id: "usr-pm-4",
+        name: "Ananya Iyer",
+        email: "ananya@taskflow.dev",
+        password: "user123",
+        role: "Frontend & UI/UX Specialist",
+        badge: "UI Architect",
+        avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=60",
+        department: "Product Design",
+        permissions: ["Task Execution", "Leave Request", "Design System Audits"],
+      },
+    ];
   } else {
     // Universal Custom Domain Demo Users (Tailored to custom business & industry)
     const indClean = (raw.domainName || "Operations").replace(/Operations.*|Platform.*/, "").trim();
@@ -1285,8 +1373,43 @@ export function enrichDomainAppModel(raw: any, context: WorkspaceContextInput = 
     },
   ];
 
+  // 5. Robust fallbacks for columns, statuses, and initialRecords to guarantee 0 runtime crashes
+  const columns = raw.columns || {
+    idLabel: `${entitySingular} ID`,
+    col1Label: "Primary Attribute",
+    col2Label: "Secondary Attribute",
+    statusLabel: "Lifecycle State",
+    assigneeLabel: "Owner / Lead",
+    metricLabel: "Performance Metric",
+  };
+
+  const statuses = Array.isArray(raw.statuses) && raw.statuses.length > 0
+    ? raw.statuses
+    : ["Intake", "In Progress", "Review", "Completed"];
+
+  const initialRecords = Array.isArray(raw.initialRecords) && raw.initialRecords.length > 0
+    ? raw.initialRecords
+    : Array.isArray(raw.records) && raw.records.length > 0
+    ? raw.records
+    : [
+        {
+          id: `${entitySingular.slice(0, 3).toUpperCase()}-101`,
+          title: `Initial ${entitySingular} Operation Workflow`,
+          col1: "Standard Processing",
+          col2: "Verified",
+          status: statuses[0] || "Active",
+          badge: "Production Ready",
+          assignee: "Lead Engineer",
+          metricVal: "99.9%",
+          createdAt: "Just now",
+        },
+      ];
+
   return {
     ...raw,
+    columns,
+    statuses,
+    initialRecords,
     modules,
     demoUsers,
     architecture,

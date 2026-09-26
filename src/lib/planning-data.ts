@@ -14,6 +14,8 @@ export type MilestoneItem = {
   deliverable: string;
 };
 
+import { isHealthcareDomain, isProjectManagementDomain } from "./domain-classifier";
+
 export type SprintPhase = {
   id: string;
   phaseNumber: number;
@@ -1655,18 +1657,17 @@ export function getRoadmapForWorkspace(
     };
   }
 
+  // 0. Project Management, TaskFlow & Leave Management
+  if (isProjectManagementDomain(combined)) {
+    return generateDynamicRoadmap(
+      workspaceContext?.businessName || workspaceContext?.name || "TaskFlow Project Management",
+      "Leave-Aware Task & Sprint Delivery",
+      workspaceContext?.problemStatement || "Project managers setting task deadlines without employee leave visibility causing mid-sprint stalls"
+    );
+  }
+
   // 2. Healthcare & Diagnostic Lab
-  if (
-    combined.includes("health") ||
-    combined.includes("clinic") ||
-    combined.includes("hospital") ||
-    combined.includes("medical") ||
-    combined.includes("lab") ||
-    combined.includes("doctor") ||
-    combined.includes("patient") ||
-    combined.includes("diagnostic") ||
-    combined.includes("pathology")
-  ) {
+  if (isHealthcareDomain(combined)) {
     const raw = HEALTHCARE_ROADMAP;
     return {
       ...raw,

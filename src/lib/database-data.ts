@@ -41,6 +41,8 @@ export interface DatabaseBlueprint {
   };
 }
 
+import { isHealthcareDomain, isProjectManagementDomain } from "./domain-classifier";
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. HR & RECRUITMENT SERVICES (TalentCraft Default)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1116,18 +1118,275 @@ export function getDatabaseBlueprint(context?: {
     };
   }
 
+  // 0. Project Management, TaskFlow & Leave-Aware Scheduling
+  if (isProjectManagementDomain(combined)) {
+    return {
+      domainId: "taskflow",
+      domainTitle: `${name} — TaskFlow & Leave Management Data Architecture`,
+      tables: [
+        {
+          id: "projects",
+          name: "projects",
+          description: "Project records defining project scope, overall timeline, and status.",
+          category: "core",
+          columns: [
+            { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Unique project identifier" },
+            { name: "name", type: "VARCHAR(255)", constraints: "NOT NULL", description: "Project title or initiative name" },
+            { name: "start_date", type: "DATE", constraints: "NOT NULL", description: "Scheduled project launch date" },
+            { name: "end_date", type: "DATE", constraints: "NOT NULL", description: "Scheduled project completion date" },
+            { name: "status", type: "VARCHAR(32)", constraints: "DEFAULT 'active'", description: "Project status (active, completed, archived)" },
+            { name: "created_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Record creation timestamp" },
+          ],
+        },
+        {
+          id: "team_members",
+          name: "team_members",
+          description: "Minimal team member roster managed by the single project manager.",
+          category: "operations",
+          columns: [
+            { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Unique team member ID" },
+            { name: "name", type: "VARCHAR(128)", constraints: "NOT NULL", description: "Full name of the team member (e.g. Priya Sharma)" },
+            { name: "created_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Enrollment timestamp" },
+          ],
+        },
+        {
+          id: "leave_records",
+          name: "leave_records",
+          description: "Scheduled time-off intervals for team members used to enforce assignment boundaries.",
+          category: "operations",
+          columns: [
+            { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Unique leave record ID" },
+            { name: "member_id", type: "UUID", constraints: "REFERENCES team_members(id) ON DELETE CASCADE", description: "Team member on leave" },
+            { name: "start_date", type: "DATE", constraints: "NOT NULL", description: "Leave start date (inclusive)" },
+            { name: "end_date", type: "DATE", constraints: "NOT NULL", description: "Leave end date (inclusive)" },
+            { name: "reason", type: "VARCHAR(255)", constraints: "DEFAULT 'Approved PTO'", description: "Leave category or notes" },
+            { name: "created_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Log timestamp" },
+          ],
+        },
+        {
+          id: "tasks",
+          name: "tasks",
+          description: "Project deliverables with strict leave-collision validation against assignee schedules.",
+          category: "core",
+          columns: [
+            { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Unique task identifier" },
+            { name: "project_id", type: "UUID", constraints: "REFERENCES projects(id) ON DELETE CASCADE", description: "Parent project ID" },
+            { name: "assigned_to", type: "UUID", constraints: "REFERENCES team_members(id) ON DELETE SET NULL", description: "Assigned team member" },
+            { name: "title", type: "VARCHAR(255)", constraints: "NOT NULL", description: "Task headline / action item" },
+            { name: "start_date", type: "DATE", constraints: "NOT NULL", description: "Task execution start date" },
+            { name: "due_date", type: "DATE", constraints: "NOT NULL", description: "Task deadline" },
+            { name: "status", type: "VARCHAR(32)", constraints: "NOT NULL DEFAULT 'To Do'", description: "Kanban column: 'To Do' | 'In Progress' | 'Done'" },
+            { name: "created_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Creation timestamp" },
+          ],
+        },
+      ],
+      erdDiagram: `erDiagram
+    PROJECTS ||--o{ TASKS : "contains"
+    TEAM_MEMBERS ||--o{ TASKS : "assigned_to"
+    TEAM_MEMBERS ||--o{ LEAVE_RECORDS : "schedules"
+    
+    PROJECTS {
+      uuid id PK
+      string name
+      date start_date
+      date end_date
+      string status
+    }
+    TEAM_MEMBERS {
+      uuid id PK
+      string name
+    }
+    LEAVE_RECORDS {
+      uuid id PK
+      uuid member_id FK
+      date start_date
+      date end_date
+    }
+    TASKS {
+      uuid id PK
+      uuid project_id FK
+      uuid assigned_to FK
+      string title
+      date start_date
+      date due_date
+      string status
+    }`,
+      ddlSchema: `-- TaskFlow: Leave-Aware Project Management Schema
+CREATE TABLE projects (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  status VARCHAR(32) DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT clock_timestamp()
+);
+
+CREATE TABLE team_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(128) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT clock_timestamp()
+);
+
+CREATE TABLE leave_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  member_id UUID NOT NULL REFERENCES team_members(id) ON DELETE CASCADE,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT clock_timestamp(),
+  CONSTRAINT valid_leave_range CHECK (end_date >= start_date)
+);
+
+CREATE TABLE tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  assigned_to UUID REFERENCES team_members(id) ON DELETE SET NULL,
+  title VARCHAR(255) NOT NULL,
+  start_date DATE NOT NULL,
+  due_date DATE NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'To Do' CHECK (status IN ('To Do', 'In Progress', 'Done')),
+  created_at TIMESTAMPTZ DEFAULT clock_timestamp(),
+  CONSTRAINT valid_task_range CHECK (due_date >= start_date)
+);
+
+-- Leave-Aware Assignment Block Validation Trigger
+CREATE OR REPLACE FUNCTION validate_task_leave_overlap()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_conflict RECORD;
+  v_member_name VARCHAR(128);
+BEGIN
+  IF NEW.assigned_to IS NOT NULL THEN
+    SELECT l.start_date, l.end_date INTO v_conflict
+    FROM leave_records l
+    WHERE l.member_id = NEW.assigned_to
+      AND (NEW.start_date <= l.end_date AND NEW.due_date >= l.start_date)
+    LIMIT 1;
+
+    IF FOUND THEN
+      SELECT name INTO v_member_name FROM team_members WHERE id = NEW.assigned_to;
+      RAISE EXCEPTION 'Assignment Blocked: % is on leave from % to %, overlapping task schedule.',
+        v_member_name, v_conflict.start_date, v_conflict.end_date;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_check_task_leave_overlap
+BEFORE INSERT OR UPDATE OF assigned_to, start_date, due_date ON tasks
+FOR EACH ROW EXECUTE FUNCTION validate_task_leave_overlap();`,
+      apiCategories: ["All", "Projects", "Tasks & Kanban", "Team & Leaves"],
+      apiSpecifications: [
+        {
+          method: "POST",
+          path: "/api/v1/tasks",
+          summary: "Create Task with Leave-Aware Collision Guard",
+          auth: "Local PM Context",
+          category: "Tasks & Kanban",
+          requestBody: '{\n  "projectId": "uuid",\n  "assignedTo": "uuid",\n  "title": "Build Kanban Drag-and-Drop",\n  "startDate": "2026-06-05",\n  "dueDate": "2026-06-08"\n}',
+          responseBody: '{\n  "success": true,\n  "taskId": "uuid",\n  "leaveCollision": false,\n  "message": "Task assigned with verified member availability"\n}',
+          curlExample: "curl -X POST /api/v1/tasks -H 'Content-Type: application/json' -d '{\"title\":\"API Ingress\",\"assignedTo\":\"p-1\"}'",
+        },
+        {
+          method: "GET",
+          path: "/api/v1/team/availability",
+          summary: "Team Availability Overview & Upcoming Leave",
+          auth: "Local PM Context",
+          category: "Team & Leaves",
+          responseBody: '{\n  "members": [\n    { "id": "p-1", "name": "Priya Sharma", "upcomingLeave": { "from": "2026-06-05", "to": "2026-06-08" }, "status": "On Leave Next Week" },\n    { "id": "p-2", "name": "Rohan Varma", "upcomingLeave": null, "status": "Available" }\n  ]\n}',
+          curlExample: "curl /api/v1/team/availability",
+        },
+        {
+          method: "GET",
+          path: "/api/v1/projects/:id/kanban",
+          summary: "Project Kanban View by Status",
+          auth: "Local PM Context",
+          category: "Projects",
+          responseBody: '{\n  "projectId": "uuid",\n  "columns": {\n    "todo": [{ "id": "t-1", "title": "Setup local storage", "assignee": "Devendra" }],\n    "inProgress": [{ "id": "t-2", "title": "Build Leave Guard", "assignee": "Rohan" }],\n    "done": []\n  }\n}',
+          curlExample: "curl /api/v1/projects/proj-101/kanban",
+        },
+        {
+          method: "POST",
+          path: "/api/v1/leaves",
+          summary: "Log Team Member Leave Record",
+          auth: "Local PM Context",
+          category: "Team & Leaves",
+          requestBody: '{\n  "memberId": "uuid",\n  "startDate": "2026-06-05",\n  "endDate": "2026-06-08"\n}',
+          responseBody: '{\n  "success": true,\n  "leaveId": "uuid",\n  "conflictingTasks": 0\n}',
+          curlExample: "curl -X POST /api/v1/leaves -H 'Content-Type: application/json' -d '{\"memberId\":\"uuid\",\"startDate\":\"2026-06-05\",\"endDate\":\"2026-06-08\"}'",
+        },
+        {
+          method: "POST",
+          path: "/api/v1/team-members",
+          summary: "Register Minimal Team Member",
+          auth: "Local PM Context",
+          category: "Team & Leaves",
+          requestBody: '{\n  "name": "Ananya Roy"\n}',
+          responseBody: '{\n  "id": "uuid",\n  "name": "Ananya Roy",\n  "created_at": "2026-09-26T10:00:00Z"\n}',
+          curlExample: "curl -X POST /api/v1/team-members -H 'Content-Type: application/json' -d '{\"name\":\"Ananya Roy\"}'",
+        },
+      ],
+      apiEndpoints: [
+        {
+          method: "POST",
+          path: "/api/v1/tasks",
+          summary: "Create Task with Leave-Aware Collision Guard",
+          auth: "Local PM Context",
+          category: "Tasks & Kanban",
+          requestBody: '{\n  "projectId": "uuid",\n  "assignedTo": "uuid",\n  "title": "Build Kanban Drag-and-Drop",\n  "startDate": "2026-06-05",\n  "dueDate": "2026-06-08"\n}',
+          responseBody: '{\n  "success": true,\n  "taskId": "uuid",\n  "leaveCollision": false,\n  "message": "Task assigned with verified member availability"\n}',
+          curlExample: "curl -X POST /api/v1/tasks -H 'Content-Type: application/json' -d '{\"title\":\"API Ingress\",\"assignedTo\":\"p-1\"}'",
+        },
+        {
+          method: "GET",
+          path: "/api/v1/team/availability",
+          summary: "Team Availability Overview & Upcoming Leave",
+          auth: "Local PM Context",
+          category: "Team & Leaves",
+          responseBody: '{\n  "members": [\n    { "id": "p-1", "name": "Priya Sharma", "upcomingLeave": { "from": "2026-06-05", "to": "2026-06-08" }, "status": "On Leave Next Week" },\n    { "id": "p-2", "name": "Rohan Varma", "upcomingLeave": null, "status": "Available" }\n  ]\n}',
+          curlExample: "curl /api/v1/team/availability",
+        },
+        {
+          method: "GET",
+          path: "/api/v1/projects/:id/kanban",
+          summary: "Project Kanban View by Status",
+          auth: "Local PM Context",
+          category: "Projects",
+          responseBody: '{\n  "projectId": "uuid",\n  "columns": {\n    "todo": [{ "id": "t-1", "title": "Setup local storage", "assignee": "Devendra" }],\n    "inProgress": [{ "id": "t-2", "title": "Build Leave Guard", "assignee": "Rohan" }],\n    "done": []\n  }\n}',
+          curlExample: "curl /api/v1/projects/proj-101/kanban",
+        },
+        {
+          method: "POST",
+          path: "/api/v1/leaves",
+          summary: "Log Team Member Leave Record",
+          auth: "Local PM Context",
+          category: "Team & Leaves",
+          requestBody: '{\n  "memberId": "uuid",\n  "startDate": "2026-06-05",\n  "endDate": "2026-06-08"\n}',
+          responseBody: '{\n  "success": true,\n  "leaveId": "uuid",\n  "conflictingTasks": 0\n}',
+          curlExample: "curl -X POST /api/v1/leaves -H 'Content-Type: application/json' -d '{\"memberId\":\"uuid\",\"startDate\":\"2026-06-05\",\"endDate\":\"2026-06-08\"}'",
+        },
+        {
+          method: "POST",
+          path: "/api/v1/team-members",
+          summary: "Register Minimal Team Member",
+          auth: "Local PM Context",
+          category: "Team & Leaves",
+          requestBody: '{\n  "name": "Ananya Roy"\n}',
+          responseBody: '{\n  "id": "uuid",\n  "name": "Ananya Roy",\n  "created_at": "2026-09-26T10:00:00Z"\n}',
+          curlExample: "curl -X POST /api/v1/team-members -H 'Content-Type: application/json' -d '{\"name\":\"Ananya Roy\"}'",
+        },
+      ],
+      metrics: {
+        tableCount: "4 Entities",
+        apiCount: "5 Routes",
+        multiTenancy: "Single-PM Local Storage",
+        compliance: "Strict Overlap Guard Active",
+      },
+    };
+  }
+
   // 2. Healthcare & Diagnostic Lab
-  if (
-    combined.includes("health") ||
-    combined.includes("clinic") ||
-    combined.includes("hospital") ||
-    combined.includes("medical") ||
-    combined.includes("lab") ||
-    combined.includes("doctor") ||
-    combined.includes("patient") ||
-    combined.includes("diagnostic") ||
-    combined.includes("pathology")
-  ) {
+  if (isHealthcareDomain(combined)) {
     return {
       domainId: "healthcare",
       domainTitle: `${name} — Clinical Diagnostics & LIS Data Architecture`,
@@ -1206,51 +1465,87 @@ export function getDatabaseBlueprint(context?: {
   }
 
   // 5. Universal Enterprise & Workflow Architecture
+  const defaultTables: TableDef[] = [
+    {
+      id: "organizations",
+      name: "organizations",
+      description: "Multi-tenant tenant isolation and security configuration",
+      category: "core",
+      columns: [
+        { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Unique tenant identifier" },
+        { name: "name", type: "VARCHAR(255)", constraints: "NOT NULL", description: "Legal entity or business name" },
+        { name: "industry", type: "VARCHAR(100)", constraints: "NOT NULL", description: "Operating domain and classification" },
+        { name: "status", type: "VARCHAR(50)", constraints: "DEFAULT 'active'", description: "Account state (active/trial/suspended)" },
+        { name: "created_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Tenant inception timestamp" },
+      ],
+    },
+    {
+      id: "workflow_items",
+      name: "workflow_items",
+      description: "Core transactional business records, requests, and pipeline items",
+      category: "operations",
+      columns: [
+        { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Primary record ID" },
+        { name: "org_id", type: "UUID", constraints: "REFERENCES organizations(id) ON DELETE CASCADE", description: "Foreign key linking to organizations" },
+        { name: "title", type: "VARCHAR(255)", constraints: "NOT NULL", description: "Task or transaction identifier" },
+        { name: "stage", type: "VARCHAR(50)", constraints: "NOT NULL DEFAULT 'intake'", description: "Current lifecycle state in workflow engine" },
+        { name: "priority", type: "VARCHAR(20)", constraints: "DEFAULT 'medium'", description: "SLA priority level (low/medium/urgent)" },
+        { name: "assigned_to", type: "UUID", constraints: "NULL", description: "Responsible operator / assignee" },
+        { name: "metadata", type: "JSONB", constraints: "DEFAULT '{}'", description: "Domain-specific attributes and custom fields" },
+        { name: "created_at", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Record creation timestamp" },
+      ],
+    },
+    {
+      id: "audit_events",
+      name: "audit_events",
+      description: "Immutable cryptographically verifiable audit trail for regulatory compliance",
+      category: "security",
+      columns: [
+        { name: "id", type: "UUID", constraints: "PRIMARY KEY DEFAULT gen_random_uuid()", description: "Audit record ID" },
+        { name: "org_id", type: "UUID", constraints: "REFERENCES organizations(id) ON DELETE CASCADE", description: "Tenant scope" },
+        { name: "actor_id", type: "UUID", constraints: "NOT NULL", description: "User or API key performing the action" },
+        { name: "action", type: "VARCHAR(100)", constraints: "NOT NULL", description: "Action type (CREATE, UPDATE, DELETE, APPROVE)" },
+        { name: "payload_diff", type: "JSONB", constraints: "NOT NULL", description: "Before-and-after change diff" },
+        { name: "timestamp", type: "TIMESTAMPTZ", constraints: "DEFAULT NOW()", description: "Event timestamp" },
+      ],
+    },
+  ];
+
+  const defaultApis: ApiEndpointItem[] = [
+    {
+      method: "POST",
+      path: "/api/v1/workflow/items",
+      summary: "Ingest and route operational workflow item",
+      auth: "Bearer Token / API Key",
+      category: "Operations",
+      requestBody: '{\n  "title": "Quarterly Vendor Review",\n  "priority": "medium",\n  "metadata": {}\n}',
+      responseBody: '{\n  "id": "e2a4c100-3498-466d-85fa-7b98a39d8e01",\n  "status": "queued",\n  "created_at": "2026-09-26T10:00:00Z"\n}',
+      curlExample: "curl -X POST https://api.bizzmitra.ai/v1/workflow/items \\\n  -H 'Authorization: Bearer YOUR_TOKEN' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"title\":\"Quarterly Review\"}'",
+    },
+    {
+      method: "GET",
+      path: "/api/v1/workflow/items",
+      summary: "List filtered workflow items",
+      auth: "Bearer Token",
+      category: "Operations",
+      responseBody: '[\n  {\n    "id": "e2a4c100-3498-466d-85fa-7b98a39d8e01",\n    "title": "Quarterly Vendor Review",\n    "stage": "intake",\n    "priority": "medium"\n  }\n]',
+      curlExample: "curl -X GET https://api.bizzmitra.ai/v1/workflow/items \\\n  -H 'Authorization: Bearer YOUR_TOKEN'",
+    },
+    {
+      method: "GET",
+      path: "/api/v1/audit/events",
+      summary: "Query cryptographic audit trail",
+      auth: "Bearer Admin JWT",
+      category: "Audit & Reporting",
+      responseBody: '[\n  {\n    "id": "a901-44bb",\n    "action": "ITEM_CREATED",\n    "actor": "user_sys_01",\n    "timestamp": "2026-09-26T10:00:00Z"\n  }\n]',
+      curlExample: "curl -X GET https://api.bizzmitra.ai/v1/audit/events \\\n  -H 'Authorization: Bearer ADMIN_TOKEN'",
+    },
+  ];
+
   return {
     domainId: "enterprise",
     domainTitle: `${name} — Enterprise Workflow & Operations Data Architecture`,
-    tables: [
-      {
-        name: "organizations",
-        description: "Multi-tenant tenant isolation and security configuration",
-        primaryKey: "id",
-        fields: [
-          { name: "id", type: "UUID", description: "Unique tenant identifier", isRequired: true, isUnique: true },
-          { name: "name", type: "VARCHAR(255)", description: "Legal entity or business name", isRequired: true, isUnique: false },
-          { name: "industry", type: "VARCHAR(100)", description: "Operating domain and classification", isRequired: true, isUnique: false },
-          { name: "status", type: "VARCHAR(50)", description: "Account state (active/trial/suspended)", isRequired: true, isUnique: false },
-          { name: "created_at", type: "TIMESTAMPTZ", description: "Tenant inception timestamp", isRequired: true, isUnique: false },
-        ],
-      },
-      {
-        name: "workflow_items",
-        description: "Core transactional business records, requests, and pipeline items",
-        primaryKey: "id",
-        fields: [
-          { name: "id", type: "UUID", description: "Primary record ID", isRequired: true, isUnique: true },
-          { name: "org_id", type: "UUID", description: "Foreign key linking to organizations", isRequired: true, isUnique: false },
-          { name: "title", type: "VARCHAR(255)", description: "Task or transaction identifier", isRequired: true, isUnique: false },
-          { name: "stage", type: "VARCHAR(50)", description: "Current lifecycle state in workflow engine", isRequired: true, isUnique: false },
-          { name: "priority", type: "VARCHAR(20)", description: "SLA priority level (low/medium/urgent)", isRequired: true, isUnique: false },
-          { name: "assigned_to", type: "UUID", description: "Responsible operator / assignee", isRequired: false, isUnique: false },
-          { name: "metadata", type: "JSONB", description: "Domain-specific attributes and custom fields", isRequired: false, isUnique: false },
-          { name: "created_at", type: "TIMESTAMPTZ", description: "Record creation timestamp", isRequired: true, isUnique: false },
-        ],
-      },
-      {
-        name: "audit_events",
-        description: "Immutable cryptographically verifiable audit trail for regulatory compliance",
-        primaryKey: "id",
-        fields: [
-          { name: "id", type: "UUID", description: "Audit record ID", isRequired: true, isUnique: true },
-          { name: "org_id", type: "UUID", description: "Tenant scope", isRequired: true, isUnique: false },
-          { name: "actor_id", type: "UUID", description: "User or API key performing the action", isRequired: true, isUnique: false },
-          { name: "action", type: "VARCHAR(100)", description: "Action type (CREATE, UPDATE, DELETE, APPROVE)", isRequired: true, isUnique: false },
-          { name: "payload_diff", type: "JSONB", description: "Before-and-after change diff", isRequired: true, isUnique: false },
-          { name: "timestamp", type: "TIMESTAMPTZ", description: "Event timestamp", isRequired: true, isUnique: false },
-        ],
-      },
-    ],
+    tables: defaultTables,
     erdDiagram: `erDiagram
     organizations ||--o{ workflow_items : "manages"
     organizations ||--o{ audit_events : "audits"
@@ -1286,34 +1581,12 @@ CREATE TABLE audit_events (
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workflow_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_events ENABLE ROW LEVEL SECURITY;`,
-    apiCategories: ["All", "Intake & Workflows", "Operations", "Audit & Reporting"],
-    apiSpecifications: [
-      {
-        id: "api-op-1",
-        method: "POST",
-        path: "/api/v1/workflow/items",
-        summary: "Ingest and route operational workflow item",
-        description: "Creates and queues a new transactional business item with automated state evaluation.",
-        parameters: [{ name: "org_id", in: "header", required: true, type: "uuid", description: "Tenant organization identifier" }],
-        requestBody: { type: "application/json", schema: '{\n  "title": "string",\n  "priority": "low | medium | high",\n  "metadata": {}\n}' },
-        responses: [{ status: 201, description: "Workflow item created and dispatched", schema: '{\n  "id": "uuid",\n  "status": "queued"\n}' }],
-        auth: "Bearer Token / API Key",
-      },
-      {
-        id: "api-op-2",
-        method: "GET",
-        path: "/api/v1/workflow/items",
-        summary: "List filtered workflow items",
-        description: "Returns paginated list of items with status and priority filtering.",
-        parameters: [{ name: "stage", in: "query", required: false, type: "string", description: "Filter by lifecycle stage" }],
-        responses: [{ status: 200, description: "Array of workflow records", schema: '[\n  {\n    "id": "uuid",\n    "title": "string",\n    "stage": "string"\n  }\n]' }],
-        auth: "Bearer Token",
-      },
-    ],
-    apiEndpoints: [],
+    apiCategories: ["All", "Operations", "Audit & Reporting"],
+    apiSpecifications: defaultApis,
+    apiEndpoints: defaultApis,
     metrics: {
-      tableCount: "3 Entities",
-      apiCount: "4 Routes",
+      tableCount: `${defaultTables.length} Entities`,
+      apiCount: `${defaultApis.length} Routes`,
       multiTenancy: "org_id RLS",
       compliance: "SOC 2 / ISO 27001",
     },

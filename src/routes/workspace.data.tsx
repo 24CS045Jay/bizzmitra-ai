@@ -118,31 +118,138 @@ function DataPage() {
   const rawBlueprint = dynamicBlueprint || fallbackBlueprint;
 
   const blueprint: DatabaseBlueprint = useMemo(() => {
+    // 1. Tables normalization
+    const rawTables = (rawBlueprint.tables && Array.isArray(rawBlueprint.tables) && rawBlueprint.tables.length > 0)
+      ? rawBlueprint.tables
+      : fallbackBlueprint.tables;
+
+    const normalizedTables: TableDef[] = (rawTables || []).map((t: any, idx: number) => {
+      const rawCols = t.columns || t.fields || [];
+      return {
+        id: t.id || t.name || `table-${idx}`,
+        name: t.name || `table_${idx}`,
+        description: t.description || "Database table entity",
+        category: t.category || "core",
+        columns: Array.isArray(rawCols)
+          ? rawCols.map((c: any) => ({
+              name: c.name || "column",
+              type: c.type || "VARCHAR",
+              constraints:
+                c.constraints ||
+                (c.isRequired ? "NOT NULL" : "") + (c.isUnique ? " UNIQUE" : ""),
+              description: c.description || "",
+            }))
+          : [],
+      };
+    });
+
+    // 2. APIs normalization
+    const candidateApis =
+      rawBlueprint.apiSpecifications ||
+      rawBlueprint.apiEndpoints ||
+      rawBlueprint.endpoints ||
+      rawBlueprint.apis;
+    const rawApis =
+      Array.isArray(candidateApis) && candidateApis.length > 0
+        ? candidateApis
+        : fallbackBlueprint.apiSpecifications ||
+          fallbackBlueprint.apiEndpoints ||
+          [];
+
+    const normalizedApis: ApiEndpointItem[] = (rawApis || []).map((api: any, idx: number) => ({
+      method: (api.method || "GET").toUpperCase() as any,
+      path: api.path || `/api/v1/resource-${idx}`,
+      summary: api.summary || api.description || "RESTful endpoint",
+      auth: api.auth || "Bearer JWT",
+      category: api.category || "General",
+      requestBody:
+        typeof api.requestBody === "object"
+          ? JSON.stringify(api.requestBody, null, 2)
+          : api.requestBody || "",
+      responseBody:
+        typeof api.responseBody === "object"
+          ? JSON.stringify(api.responseBody, null, 2)
+          : api.responseBody ||
+            (Array.isArray(api.responses) && api.responses.length > 0
+              ? typeof api.responses[0].schema === "object"
+                ? JSON.stringify(api.responses[0].schema, null, 2)
+                : api.responses[0].schema || api.responses[0].description || "{}"
+              : "{}"),
+      curlExample:
+        api.curlExample ||
+        `curl -X ${api.method || "GET"} "https://api.bizzmitra.ai${api.path || "/api/v1"}"`,
+    }));
+
+    // 3. Categories normalization
+    const categoriesSet = new Set<string>(["All"]);
+    normalizedApis.forEach((api: any) => {
+      if (api.category && api.category.trim()) categoriesSet.add(api.category.trim());
+    });
+    const categories =
+      rawBlueprint.apiCategories &&
+      Array.isArray(rawBlueprint.apiCategories) &&
+      rawBlueprint.apiCategories.length > 0
+        ? rawBlueprint.apiCategories
+        : Array.from(categoriesSet);
+
+    // 4. Metrics normalization
+    const metrics = {
+      tableCount:
+        typeof rawBlueprint?.metrics?.tableCount === "string"
+          ? rawBlueprint.metrics.tableCount
+          : `${normalizedTables.length} Tables`,
+      apiCount:
+        typeof rawBlueprint?.metrics?.apiCount === "string"
+          ? rawBlueprint.metrics.apiCount
+          : `${normalizedApis.length} Routes`,
+      multiTenancy:
+        typeof rawBlueprint?.metrics?.multiTenancy === "string"
+          ? rawBlueprint.metrics.multiTenancy
+          : "Row Level Security",
+      compliance:
+        typeof rawBlueprint?.metrics?.compliance === "string"
+          ? rawBlueprint.metrics.compliance
+          : "Audit Trail Active",
+    };
+
     return {
       ...fallbackBlueprint,
       ...rawBlueprint,
-      tables: (rawBlueprint.tables && Array.isArray(rawBlueprint.tables) && rawBlueprint.tables.length > 0)
-        ? rawBlueprint.tables
-        : fallbackBlueprint.tables,
-      apiEndpoints: (rawBlueprint.apiEndpoints && Array.isArray(rawBlueprint.apiEndpoints) && rawBlueprint.apiEndpoints.length > 0)
-        ? rawBlueprint.apiEndpoints
-        : fallbackBlueprint.apiEndpoints,
-      erdDiagram: (rawBlueprint as any).erdDiagram || (rawBlueprint as any).erDiagram || (rawBlueprint as any).er || fallbackBlueprint.erdDiagram,
-      ddlSchema: (rawBlueprint as any).ddlSchema || (rawBlueprint as any).ddl || fallbackBlueprint.ddlSchema,
+      tables: normalizedTables,
+      apiSpecifications: normalizedApis,
+      apiEndpoints: normalizedApis,
+      apiCategories: categories,
+      metrics,
+      erdDiagram:
+        (rawBlueprint as any).erdDiagram ||
+        (rawBlueprint as any).erDiagram ||
+        (rawBlueprint as any).er ||
+        fallbackBlueprint.erdDiagram,
+      ddlSchema:
+        (rawBlueprint as any).ddlSchema ||
+        (rawBlueprint as any).ddl ||
+        fallbackBlueprint.ddlSchema,
     };
   }, [rawBlueprint, fallbackBlueprint]);
 
-  const [selectedTable, setSelectedTable] = useState<TableDef>(
-    blueprint.tables?.[1] ?? blueprint.tables?.[0] ?? fallbackBlueprint.tables[0]!
-  );
+  const [selectedTableId, setSelectedTableId] = useState<string>("");
 
-  // Synchronize selected table and active category when domain blueprint switches
   useEffect(() => {
     if (blueprint.tables && blueprint.tables.length > 0) {
-      setSelectedTable(blueprint.tables[0]!);
+      if (!selectedTableId || !blueprint.tables.some((t) => t.id === selectedTableId)) {
+        setSelectedTableId(blueprint.tables[0].id);
+      }
     }
-    setActiveApiCategory("All");
-  }, [blueprint.domainId, blueprint.tables]);
+  }, [blueprint.domainId, blueprint.tables, selectedTableId]);
+
+  const activeTable = useMemo(() => {
+    if (!blueprint.tables || blueprint.tables.length === 0) return null;
+    return (
+      blueprint.tables.find((t) => t.id === selectedTableId) ||
+      blueprint.tables[0] ||
+      null
+    );
+  }, [blueprint.tables, selectedTableId]);
 
   const handleCopySql = () => {
     navigator.clipboard.writeText(blueprint.ddlSchema);
@@ -166,10 +273,14 @@ function DataPage() {
   const handleRegenerate = async () => {
     const tId = toast.loading("Regenerating database & API models with AI...");
     try {
-      const res = await generateArtifact("data", {
-        businessName: workspaceContext.businessName,
-        industry: workspaceContext.industry,
-      }, { forceFresh: true });
+      const res = await generateArtifact(
+        "data",
+        {
+          businessName: workspaceContext.businessName,
+          industry: workspaceContext.industry,
+        },
+        { forceFresh: true }
+      );
 
       if (res) {
         setDynamicBlueprint(res);
@@ -181,10 +292,11 @@ function DataPage() {
     }
   };
 
-  const filteredApis =
-    activeApiCategory === "All"
-      ? (blueprint.apiSpecifications || [])
-      : (blueprint.apiSpecifications || []).filter((api) => api.category === activeApiCategory);
+  const filteredApis = useMemo(() => {
+    const list = blueprint.apiSpecifications || blueprint.apiEndpoints || [];
+    if (activeApiCategory === "All") return list;
+    return list.filter((api) => api.category === activeApiCategory);
+  }, [blueprint.apiSpecifications, blueprint.apiEndpoints, activeApiCategory]);
 
   return (
     <AppShell>
@@ -405,9 +517,9 @@ function DataPage() {
                     <button
                       key={t.id}
                       type="button"
-                      onClick={() => setSelectedTable(t)}
+                      onClick={() => setSelectedTableId(t.id)}
                       className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center justify-between ${
-                        selectedTable.id === t.id
+                        activeTable?.id === t.id
                           ? "bg-primary text-primary-foreground shadow-sm"
                           : "hover:bg-accent/40 text-foreground"
                       }`}
@@ -415,7 +527,7 @@ function DataPage() {
                       <span className="font-mono">{t.name}</span>
                       <span
                         className={`text-[9px] uppercase px-1.5 py-0.5 rounded ${
-                          selectedTable.id === t.id
+                          activeTable?.id === t.id
                             ? "bg-primary-foreground/20 text-primary-foreground"
                             : "bg-muted text-muted-foreground"
                         }`}
@@ -429,51 +541,67 @@ function DataPage() {
 
               {/* Table Schema Details */}
               <div className="neu p-6 lg:col-span-3">
-                <div className="flex flex-wrap items-center justify-between border-b border-border/30 pb-3">
-                  <div>
-                    <h3 className="font-mono text-base font-bold text-foreground">
-                      Table: {selectedTable.name}
-                    </h3>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {selectedTable.description}
-                    </p>
-                  </div>
-                  <span className="rounded-md border border-border/40 bg-background/80 px-2 py-1 font-mono text-[10px] text-muted-foreground">
-                    {selectedTable.columns.length} columns defined
-                  </span>
-                </div>
+                {activeTable ? (
+                  <>
+                    <div className="flex flex-wrap items-center justify-between border-b border-border/30 pb-3">
+                      <div>
+                        <h3 className="font-mono text-base font-bold text-foreground">
+                          Table: {activeTable.name}
+                        </h3>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {activeTable.description}
+                        </p>
+                      </div>
+                      <span className="rounded-md border border-border/40 bg-background/80 px-2 py-1 font-mono text-[10px] text-muted-foreground">
+                        {activeTable.columns?.length || 0} columns defined
+                      </span>
+                    </div>
 
-                <div className="mt-4 overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-border/50 text-muted-foreground">
-                        <th className="pb-2 font-semibold">Column Name</th>
-                        <th className="pb-2 font-semibold">Data Type</th>
-                        <th className="pb-2 font-semibold">Constraints</th>
-                        <th className="pb-2 font-semibold">Description</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/20 font-mono">
-                      {selectedTable.columns.map((col) => (
-                        <tr key={col.name} className="hover:bg-accent/20 transition-colors">
-                          <td className="py-2.5 font-bold text-foreground flex items-center gap-1.5">
-                            {col.constraints.includes("PRIMARY KEY") && (
-                              <Key className="h-3 w-3 text-amber-500 shrink-0" />
-                            )}
-                            {col.name}
-                          </td>
-                          <td className="py-2.5 text-primary">{col.type}</td>
-                          <td className="py-2.5 text-[11px] text-muted-foreground">
-                            {col.constraints}
-                          </td>
-                          <td className="py-2.5 font-sans text-xs text-muted-foreground">
-                            {col.description}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    <div className="mt-4 overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-border/50 text-muted-foreground">
+                            <th className="pb-2 font-semibold">Column Name</th>
+                            <th className="pb-2 font-semibold">Data Type</th>
+                            <th className="pb-2 font-semibold">Constraints</th>
+                            <th className="pb-2 font-semibold">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/20 font-mono">
+                          {activeTable.columns && activeTable.columns.length > 0 ? (
+                            activeTable.columns.map((col) => (
+                              <tr key={col.name} className="hover:bg-accent/20 transition-colors">
+                                <td className="py-2.5 font-bold text-foreground flex items-center gap-1.5">
+                                  {col.constraints?.includes("PRIMARY KEY") && (
+                                    <Key className="h-3 w-3 text-amber-500 shrink-0" />
+                                  )}
+                                  {col.name}
+                                </td>
+                                <td className="py-2.5 text-primary">{col.type}</td>
+                                <td className="py-2.5 text-[11px] text-muted-foreground">
+                                  {col.constraints || "-"}
+                                </td>
+                                <td className="py-2.5 font-sans text-xs text-muted-foreground">
+                                  {col.description || "-"}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={4} className="py-4 text-center text-xs text-muted-foreground font-sans">
+                                No columns defined for this table.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-12 text-center text-muted-foreground">
+                    <p className="text-sm font-medium">No database table selected.</p>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -524,7 +652,7 @@ function DataPage() {
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap gap-1.5">
-                  {blueprint.apiCategories.map((cat) => (
+                  {(blueprint.apiCategories && blueprint.apiCategories.length > 0 ? blueprint.apiCategories : ["All"]).map((cat) => (
                     <button
                       key={cat}
                       type="button"
@@ -545,75 +673,88 @@ function DataPage() {
               </div>
 
               <div className="space-y-4">
-                {filteredApis.map((api, idx) => (
-                  <div key={api.path + api.method} className="neu p-5 transition-all">
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/30 pb-3">
-                      <div className="flex flex-wrap items-center gap-2.5">
-                        <span
-                          className={`rounded border px-2 py-0.5 font-mono text-xs font-bold ${
-                            METHOD_BADGES[api.method] ?? "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {api.method}
-                        </span>
-                        <code className="font-mono text-sm font-semibold text-foreground break-all sm:break-normal">
-                          {api.path}
-                        </code>
-                        <span className="rounded bg-muted/60 px-2 py-0.5 text-[10px] uppercase font-semibold text-muted-foreground">
-                          {api.category}
-                        </span>
+                {filteredApis.length === 0 ? (
+                  <div className="neu p-8 text-center text-muted-foreground">
+                    <p className="text-sm font-medium">No API endpoints found for category "{activeApiCategory}".</p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveApiCategory("All")}
+                      className="mt-2 text-xs text-primary underline font-medium"
+                    >
+                      View all {blueprint.apiSpecifications?.length || 0} endpoints
+                    </button>
+                  </div>
+                ) : (
+                  filteredApis.map((api, idx) => (
+                    <div key={`${api.method}-${api.path}-${idx}`} className="neu p-5 transition-all">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/30 pb-3">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          <span
+                            className={`rounded border px-2 py-0.5 font-mono text-xs font-bold ${
+                              METHOD_BADGES[api.method] ?? "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {api.method}
+                          </span>
+                          <code className="font-mono text-sm font-semibold text-foreground break-all sm:break-normal">
+                            {api.path}
+                          </code>
+                          <span className="rounded bg-muted/60 px-2 py-0.5 text-[10px] uppercase font-semibold text-muted-foreground">
+                            {api.category}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-background/80 border border-border/40 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
+                            {api.auth}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyCurl(api.curlExample, idx)}
+                            className="inline-flex items-center gap-1 rounded bg-accent/60 px-2 py-1 text-[11px] font-medium hover:bg-accent transition-colors"
+                          >
+                            {copiedCurlIndex === idx ? (
+                              <>
+                                <Check className="h-3 w-3 text-emerald-500" />
+                                Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3" />
+                                Copy cURL
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-background/80 border border-border/40 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
-                          {api.auth}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyCurl(api.curlExample, idx)}
-                          className="inline-flex items-center gap-1 rounded bg-accent/60 px-2 py-1 text-[11px] font-medium hover:bg-accent transition-colors"
-                        >
-                          {copiedCurlIndex === idx ? (
-                            <>
-                              <Check className="h-3 w-3 text-emerald-500" />
-                              Copied!
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-3 w-3" />
-                              Copy cURL
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
 
-                    <p className="mt-2.5 text-xs text-muted-foreground font-medium">
-                      {api.summary}
-                    </p>
+                      <p className="mt-2.5 text-xs text-muted-foreground font-medium">
+                        {api.summary}
+                      </p>
 
-                    {/* Payloads Split */}
-                    <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-                      {api.requestBody && (
-                        <div>
+                      {/* Payloads Split */}
+                      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                        {api.requestBody && (
+                          <div>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              Request JSON
+                            </span>
+                            <pre className="mt-1 max-h-40 overflow-auto rounded-lg border border-border/30 bg-background/80 p-2.5 font-mono text-[11px] text-foreground">
+                              {api.requestBody}
+                            </pre>
+                          </div>
+                        )}
+                        <div className={api.requestBody ? "" : "lg:col-span-2"}>
                           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                            Request JSON
+                            Response (200 OK)
                           </span>
                           <pre className="mt-1 max-h-40 overflow-auto rounded-lg border border-border/30 bg-background/80 p-2.5 font-mono text-[11px] text-foreground">
-                            {api.requestBody}
+                            {api.responseBody}
                           </pre>
                         </div>
-                      )}
-                      <div className={api.requestBody ? "" : "lg:col-span-2"}>
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Response (200 OK)
-                        </span>
-                        <pre className="mt-1 max-h-40 overflow-auto rounded-lg border border-border/30 bg-background/80 p-2.5 font-mono text-[11px] text-foreground">
-                          {api.responseBody}
-                        </pre>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </motion.div>
           )}

@@ -22,6 +22,8 @@ export interface DecisionTier {
   status: string;
 }
 
+import { isHealthcareDomain, isProjectManagementDomain } from "./domain-classifier";
+
 export interface ProcessBlueprint {
   domainId: string;
   domainTitle: string;
@@ -1165,18 +1167,79 @@ export function getProcessBlueprint(context?: {
     };
   }
 
+  // 0. Project Management, TaskFlow & Leave Management
+  if (isProjectManagementDomain(combined)) {
+    return {
+      domainId: "taskflow",
+      domainTitle: `${name} — Leave-Aware Task & Sprint Delivery BPMN Process`,
+      metrics: [
+        { label: "Task Leave Collisions", before: "38% Sprints", after: "0% (Hard Blocked)", improvement: "-100% Conflict Elimination", icon: "Clock" },
+        { label: "Mid-Task Handover Lag", before: "4.2 Days", after: "2 Hours", improvement: "-84% Stall Time", icon: "Users" },
+        { label: "Sprint Delivery Reliability", before: "62%", after: "97%", improvement: "+56% On-Time Completion", icon: "CheckCircle2" },
+        { label: "PM Emergency Re-Planning", before: "14 hrs/mo", after: "45 mins/mo", improvement: "-94% Time Reclaimed", icon: "TrendingUp" },
+      ],
+      asIsDiagram: `graph TD
+    A["1. PM Identifies Project Scope"] --> B["2. Fixes Task Deadline Arbitrarily"]
+    B --> C["3. Assigns Team Member in Spreadsheet"]
+    C --> D{"4. Does Assignee Go on Leave Mid-Task?"}
+    D -- "Yes (No Buffer Planned)" --> E["5. Task Stalls & Progress Freezes"]
+    E --> F["6. Last-Minute Panic Reassignment"]
+    F --> G["7. Deadline Missed & Sprint Failure"]
+    D -- "No" --> H["8. Unpredictable Manual Delivery"]`,
+      toBeDiagram: `graph TD
+    A["1. PM Creates Project Task"] --> B["2. TaskFlow Checks Assignee Leave Records"]
+    B --> C{"3. Date Overlap Detected?"}
+    C -- "Yes (Collision)" --> D["4. BLOCK Assignment with Inline PM Alert"]
+    D --> E["5. PM Adjusts Range or Selects Available Member"]
+    E --> B
+    C -- "No (Clear Window)" --> F["6. Confirm Task on Kanban Board"]
+    F --> G["7. Team Availability Radar Updated"]
+    G --> H["8. 100% On-Time Delivery with Zero Stalls"]`,
+      swimlaneDiagram: `sequenceDiagram
+    autonumber
+    actor PM as Project Manager
+    participant TF as TaskFlow Engine
+    participant DB as Local-First Storage
+    actor Member as Team Member
+    
+    PM->>TF: Submit Task(Title, Assignee, StartDate, DueDate)
+    TF->>DB: Query Member Leave Records for Date Range
+    DB-->>TF: Return Scheduled Leave Intervals
+    alt Overlap Detected
+        TF-->>PM: 400 Bad Request: "Priya is on leave June 5-8"
+        Note over PM,TF: Assignment blocked; PM adjusts dates
+    else Clear Availability
+        TF->>DB: Persist Task in Project Kanban Store
+        DB-->>TF: 201 Created
+        TF-->>PM: Task Scheduled & Visible on Kanban
+        TF-->>Member: Availability Confirmed
+    end`,
+      decisionTreeDiagram: `graph TD
+    ROOT["Task Scheduling Request"] --> CHK{"Assignee Leave Conflict?"}
+    CHK -- "Yes" --> BLK["Hard Block: Inline Error"]
+    BLK --> SUG["Suggest Alternative Date or Available Peer"]
+    CHK -- "No" --> KAN["Commit to Kanban Board"]
+    KAN --> RAD["Update Team Availability Radar"]`,
+      decisionTiers: [
+        { tier: "Tier 1: Validation", actor: "Leave Collision Engine", criteria: "Task dates ∩ Leave intervals ≠ ∅", action: "Instantly block submission and surface date conflict warning", status: "Automated" },
+        { tier: "Tier 2: Scheduling", actor: "Project Manager", criteria: "Task assignment verified against team capacity", action: "Confirm start/due dates and assign to sprint backlog", status: "Manual PM" },
+        { tier: "Tier 3: Handover Buffer", actor: "Sprint Planning Rule", criteria: "Task duration > 3 days prior to known leave", action: "Flag required handover checklist before leave start date", status: "Recommended" },
+      ],
+      bottlenecks: [
+        { stage: "Task Assignment", problem: "Deadlines set without checking employee leave calendars", impact: "High risk of sudden mid-task stoppage", solution: "Automated leave-aware assignment blocker", timeSavings: "10 hrs/month" },
+        { stage: "Work Handover", problem: "No buffer or handover preparation when someone goes on leave mid-task", impact: "Work rushed at the last minute or abandoned", solution: "Pre-leave handover alert and buffer scheduling", timeSavings: "6 hrs/month" },
+        { stage: "Status Tracking", problem: "Disconnected spreadsheets and manual WhatsApp queries", impact: "Zero real-time visibility into project health", solution: "Visual Kanban board (To Do / In Progress / Done)", timeSavings: "8 hrs/month" },
+      ],
+      recommendations: [
+        { title: "Enforce Hard Assignment Blocking", description: "Never allow task submission if the assigned team member has an overlapping leave record.", impact: "Zero surprise delivery halts", priority: "Critical" },
+        { title: "Maintain Visual Availability Radar", description: "Keep team availability and upcoming PTO dates visible directly in the PM planning dashboard.", impact: "Pre-emptive conflict avoidance", priority: "High" },
+        { title: "Adopt Local-First Architecture", description: "Persist all projects, tasks, and leave records client-side for zero-friction single PM usability.", impact: "Zero backend hosting cost", priority: "High" },
+      ],
+    };
+  }
+
   // 3. Healthcare & Diagnostic Lab
-  if (
-    combined.includes("health") ||
-    combined.includes("clinic") ||
-    combined.includes("hospital") ||
-    combined.includes("medical") ||
-    combined.includes("lab") ||
-    combined.includes("doctor") ||
-    combined.includes("patient") ||
-    combined.includes("diagnostic") ||
-    combined.includes("pathology")
-  ) {
+  if (isHealthcareDomain(combined)) {
     return {
       domainId: "healthcare",
       domainTitle: `${name} — Clinical Diagnostic BPMN Process Intelligence`,

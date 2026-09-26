@@ -28,6 +28,7 @@ import { GenerationSequence } from "@/components/GenerationSequence";
 import { SolutionStudioDrawer } from "@/components/SolutionStudioDrawer";
 import { Stagger, StaggerItem } from "@/components/motion/primitives";
 import { GENERATION_STEPS, generateArtifact } from "@/lib/ai/generate-artifact";
+import { isHealthcareDomain, isProjectManagementDomain } from "@/lib/domain-classifier";
 import {
   HR_ATTENDANCE_LOG,
   HR_CRM_CANDIDATES,
@@ -81,6 +82,31 @@ interface DomainConfig {
 function getDomainConfig(context?: { businessName?: string; industry?: string; problemStatement?: string } | null): DomainConfig {
   const text = `${context?.businessName ?? ""} ${context?.industry ?? ""} ${context?.problemStatement ?? ""}`.toLowerCase();
 
+  // 0. Project Management, TaskFlow & Leave Management
+  if (isProjectManagementDomain(text)) {
+    return {
+      domainType: "taskflow",
+      title: `${context?.businessName || "TaskFlow"} Project & Leave Management Cockpit`,
+      entityName: "Project Task",
+      entityPlural: "Tasks",
+      roleLabel: "Assigned Team Member & Dates",
+      stages: ["All", "To Do", "In Progress", "Blocked / Conflict", "Done"],
+      stageColors: {
+        "To Do": "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+        "In Progress": "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+        "Blocked / Conflict": "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+        "Done": "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+      },
+      defaultRecords: [
+        { id: "t001", name: "Backend Leave-Overlap Validator", email: "priya@taskflow.dev", role: "Assignee: Priya Sharma (June 5–9)", experience: 4, stage: "Blocked / Conflict" as any, rating: 5, status: "Active", appliedDate: "2026-06-01", notes: "🚨 BLOCKED: Priya is on leave from June 5–8, which overlaps this task's scheduled dates. Reassign or adjust date range." },
+        { id: "t002", name: "Kanban Task Board View", email: "rohan@taskflow.dev", role: "Assignee: Rohan Varma (June 10–14)", experience: 6, stage: "In Progress" as any, rating: 5, status: "Active", appliedDate: "2026-06-02", notes: "Clear availability. Handover buffer confirmed." },
+        { id: "t003", name: "Team Availability Radar Dashboard", email: "ananya@taskflow.dev", role: "Assignee: Ananya Iyer (June 12–16)", experience: 3, stage: "To Do" as any, rating: 4, status: "Active", appliedDate: "2026-06-03", notes: "Upcoming leave: July 1–4. Safe for current sprint." },
+        { id: "t004", name: "Local-First Storage Persistence", email: "dev@taskflow.dev", role: "Assignee: Devendra Patel (June 1–4)", experience: 8, stage: "Done" as any, rating: 5, status: "Hired", appliedDate: "2026-05-28", notes: "Verified in-browser localStorage across browser reloads." },
+      ],
+      attendanceTitle: "Team Availability & Leave Schedule Register",
+    };
+  }
+
   if (text.includes("solar") || text.includes("energy") || text.includes("photovoltaic") || text.includes("green") || text.includes("rooftop")) {
     return {
       domainType: "solar",
@@ -105,7 +131,7 @@ function getDomainConfig(context?: { businessName?: string; industry?: string; p
     };
   }
 
-  if (text.includes("health") || text.includes("hospital") || text.includes("clinic") || text.includes("pharma") || text.includes("lab") || text.includes("diagnostic") || text.includes("blood") || text.includes("patient") || text.includes("trial") || text.includes("medicine")) {
+  if (isHealthcareDomain(text)) {
     return {
       domainType: "health",
       title: `${context?.businessName || "HealthPulse"} Diagnostic & Patient CRM`,
