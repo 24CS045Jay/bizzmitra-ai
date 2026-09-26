@@ -1,20 +1,28 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowRight,
+  ArrowUpRight,
   BarChart3,
+  Calculator,
   Calendar,
   CheckCircle2,
   Clock,
   Coins,
   Copy,
+  DollarSign,
   Download,
   Flame,
   HelpCircle,
   IndianRupee,
   Layers,
+  Lock,
+  ShieldCheck,
+  Sliders,
   Sparkles,
   TrendingUp,
+  Unlock,
   Users,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -44,6 +52,17 @@ import {
   getRoiBlueprint,
   HrRoiInputs,
 } from "@/lib/roi-data";
+import {
+  CURRENCIES,
+  CurrencyCode,
+  FinancialBudgetInputs,
+  FullFinancialModel,
+  computeFinancials,
+  loadFinancialModel,
+  saveFinancialModel,
+} from "@/lib/financial-data";
+import { FinancialConfigModal } from "@/components/dashboard/FinancialConfigModal";
+import { FinancialRoiCard } from "@/components/dashboard/FinancialRoiCard";
 import { useStageGate, StageNextButton } from "@/lib/workspace-stage-gate";
 import { saveAndShareFile } from "@/lib/native-bridge";
 
@@ -62,11 +81,12 @@ export const Route = createFileRoute("/workspace/insights")({
   component: InsightsPage,
 });
 
-type RoiTab = "calculator" | "projection" | "readiness" | "all";
+type RoiTab = "all" | "capex_opex" | "calculator" | "projection" | "readiness";
 
 export function InsightsPage() {
   useStageGate("insights");
   const [activeTab, setActiveTab] = useState<RoiTab>("all");
+  const [isFinModalOpen, setIsFinModalOpen] = useState(false);
   const [workspaceContext, setWorkspaceContext] = useState<{
     id?: string;
     name?: string;
@@ -74,6 +94,7 @@ export function InsightsPage() {
     industry?: string;
     problemStatement?: string;
     description?: string;
+    budget?: number;
   } | null>(null);
 
   useEffect(() => {
@@ -91,6 +112,28 @@ export function InsightsPage() {
     return () => window.removeEventListener("bizzmitra:workspace-updated", loadContext);
   }, []);
 
+  // Financial Model state (CapEx, OpEx, Payback, Lock status)
+  const [finModel, setFinModel] = useState<FullFinancialModel>(() =>
+    loadFinancialModel(workspaceContext)
+  );
+
+  useEffect(() => {
+    function refreshFin() {
+      setFinModel(loadFinancialModel(workspaceContext));
+    }
+    refreshFin();
+
+    window.addEventListener("bizzmitra:financials-updated", refreshFin);
+    window.addEventListener("bizzmitra:workspace-updated", refreshFin);
+    return () => {
+      window.removeEventListener("bizzmitra:financials-updated", refreshFin);
+      window.removeEventListener("bizzmitra:workspace-updated", refreshFin);
+    };
+  }, [workspaceContext]);
+
+  const { inputs: finInputs, computed: finComputed } = finModel;
+  const activeCurrency = CURRENCIES[finInputs.currency] || CURRENCIES.INR;
+
   const blueprint: DomainRoiBlueprint = useMemo(
     () => getRoiBlueprint(workspaceContext),
     [workspaceContext]
@@ -104,35 +147,64 @@ export function InsightsPage() {
   }, [blueprint.domainId]);
 
   const roi = useMemo(
-    () => computeHrRoi(inputs, blueprint.platformCostInr),
-    [inputs, blueprint.platformCostInr]
+    () => computeHrRoi(inputs, finComputed.totalInitialInvestment || blueprint.platformCostInr),
+    [inputs, finComputed.totalInitialInvestment, blueprint.platformCostInr]
   );
 
   const formatInr = (val: number) => {
-    if (val >= 10000000) return `₹${(val / 10000000).toFixed(2)} Cr`;
-    if (val >= 100000) return `₹${(val / 100000).toFixed(2)} L`;
-    return `₹${val.toLocaleString("en-IN")}`;
+    return activeCurrency.format(val);
   };
 
+  const handleUpdateFinInputs = (updater: (prev: FinancialBudgetInputs) => FinancialBudgetInputs) => {
+    const updatedInputs = updater(finInputs);
+    const updated = saveFinancialModel(updatedInputs);
+    setFinModel(updated);
+  };
+
+  const handleToggleLock = (shouldLock: boolean) => {
+    const updatedInputs: FinancialBudgetInputs = {
+      ...finInputs,
+      isLocked: shouldLock,
+      lockedAt: shouldLock ? new Date().toISOString() : undefined,
+    };
+    const updated = saveFinancialModel(updatedInputs);
+    setFinModel(updated);
+
+    if (shouldLock) {
+      toast.success("Financial ROI & CapEx Runway Locked!", {
+        description: "Blueprint confidence score updated to 100% (Audit Ready).",
+      });
+    } else {
+      toast.info("Financial Model unlocked for adjustments.");
+    }
+  };
+
+  const rawCapExUsage = Math.round(
+    (finComputed.totalInitialInvestment / (finInputs.allocatedCapExCeiling || 1)) * 100
+  );
+  const visualCapExUsage = Math.min(100, Math.max(0, rawCapExUsage));
+
   const copyExecutiveSummary = () => {
-    const summary = `EXECUTIVE ROI SUMMARY — ${blueprint.scenarioName}
+    const summary = `EXECUTIVE ROI & FINANCIAL RUNWAY SUMMARY — ${blueprint.scenarioName}
 ==================================================
-• Net Annual Savings: ${formatInr(roi.netAnnualSavingsInr)}
-• Total Annual Business Value: ${formatInr(roi.totalAnnualBenefitInr)}
-• Payback Period: ${roi.paybackPeriodMonths} Months
+• Initial CapEx Build: ${formatInr(finComputed.totalInitialInvestment)} (Approved Ceiling: ${formatInr(finInputs.allocatedCapExCeiling)})
+• Annual OpEx Runway: ${formatInr(finComputed.totalAnnualOpEx)} (${formatInr(finComputed.totalMonthlyOpEx)}/mo)
+• Net Year-1 Value: ${formatInr(finComputed.netAnnualBenefitYear1)}
+• Gross Annual Business Benefit: ${formatInr(finComputed.totalGrossAnnualBenefit)}
+• Payback Period: ${finComputed.paybackPeriodMonths} Months (Ceiling: ${finInputs.targetPaybackMonthsCeiling} Mo)
+• Year-1 Net ROI: ${finComputed.roiPercentYear1}%
 • 3-Year ROI Multiple: ${roi.threeYearRoiMultiplePct}%
-• Specialist Hours Reclaimed: ${roi.annualHoursSaved.toLocaleString()} hrs/year (${roi.fullTimeEquivalentsReclaimed} FTE equivalent)
-• Cycle Acceleration: ${roi.turnaroundDropPct}%
-• Annual Platform Investment: ${formatInr(roi.annualPlatformInvestmentInr)}
+• Specialist Hours Reclaimed: ${finInputs.manualHoursSavedPerMonth * 12} hrs/year
+• Audit Readiness Status: ${finComputed.isAuditReady ? "100% Audit Ready (Locked)" : "Draft Runway (Unlocked)"}
 
 Generated by BizzMitra-AI Transformation Cockpit`;
 
     navigator.clipboard.writeText(summary);
-    toast.success("Executive ROI summary copied to clipboard!");
+    toast.success("Executive ROI & Financial summary copied to clipboard!");
   };
 
   const downloadRoiReport = () => {
-    const report = `# ${blueprint.scenarioName}\n\nExecutive Subtitle: ${blueprint.executiveSubtitle}\n\n## Key Financial Metrics:\n- Net Annual Savings: ${formatInr(roi.netAnnualSavingsInr)}\n- Gross Annual Value: ${formatInr(roi.totalAnnualBenefitInr)}\n- Payback Velocity: ${roi.paybackPeriodMonths} Months\n- 3-Year ROI Multiple: ${roi.threeYearRoiMultiplePct}%\n- Labor Hours Saved: ${roi.annualHoursSaved} hrs/year (${roi.fullTimeEquivalentsReclaimed} FTE)\n- Platform Investment: ${formatInr(roi.annualPlatformInvestmentInr)}\n\n## Operational Benchmarks:\n${blueprint.benchmarks.map((b) => `- ${b.metric}: Before ${b.before} -> After ${b.after} (${b.change})`).join("\n")}\n\n## Readiness Scores:\n${blueprint.readinessRadar.map((r) => `- ${r.dimension}: ${r.score}% (Industry Benchmark: ${r.benchmark}%)`).join("\n")}`;
+    const report = `# ${blueprint.scenarioName} — Financial ROI & Readiness Engine\n\nExecutive Subtitle: ${blueprint.executiveSubtitle}\n\n## 1. Capital Expenditure (CapEx) & Operational Expenditure (OpEx)\n- Initial CapEx Investment: ${formatInr(finComputed.totalInitialInvestment)}\n- CapEx Approved Ceiling: ${formatInr(finInputs.allocatedCapExCeiling)} (${rawCapExUsage}% utilized)\n- Sprint Effort: ${finInputs.estimatedPersonDays} Person-Days @ ${formatInr(finInputs.developerRatePerDay)}/day\n- Contingency Buffer: ${finInputs.contingencyBufferPercent}% (+${formatInr(finComputed.contingencyAmount)})\n- Monthly Cloud & Infrastructure OpEx: ${formatInr(finComputed.totalMonthlyOpEx)}/month (${formatInr(finComputed.totalAnnualOpEx)}/yr)\n\n## 2. Business Value & Payback Model\n- Gross Annual Value: ${formatInr(finComputed.totalGrossAnnualBenefit)}\n- Direct Labor Savings: ${formatInr(finComputed.grossAnnualLaborSavings)}\n- Direct Revenue Uplift: ${formatInr(finInputs.directRevenueUpliftAnnual)}\n- Net Year-1 Benefit: ${formatInr(finComputed.netAnnualBenefitYear1)}\n- Payback Velocity: ${finComputed.paybackPeriodMonths} Months (Ceiling Target: ${finInputs.targetPaybackMonthsCeiling} Mo)\n- Year-1 ROI Multiple: ${finComputed.roiPercentYear1}%\n- 3-Year ROI Multiple: ${roi.threeYearRoiMultiplePct}%\n- Model Status: ${finComputed.isAuditReady ? "LOCKED & 100% AUDIT READY" : "DRAFT"}\n\n## 3. Operational Benchmarks:\n${blueprint.benchmarks.map((b) => `- ${b.metric}: Before ${b.before} -> After ${b.after} (${b.change})`).join("\n")}\n\n## 4. Readiness Scores:\n${blueprint.readinessRadar.map((r) => `- ${r.dimension}: ${r.score}% (Industry Benchmark: ${r.benchmark}%)`).join("\n")}`;
     const filename = `${blueprint.domainId || "domain"}_roi_readiness_report.md`;
     void saveAndShareFile(filename, report, "text/markdown");
     toast.success("Financial ROI report downloaded!");
@@ -157,13 +229,24 @@ Generated by BizzMitra-AI Transformation Cockpit`;
           <span className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
             {blueprint.domainTitle}
           </span>
+          {finInputs.isLocked ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+              <Lock className="size-2.5" />
+              100% Audit Ready · Budget Locked
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+              <Unlock className="size-2.5" />
+              Draft Runway (Lock to reach 100%)
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <Link to="/workspace/roadmap" className="font-medium text-muted-foreground hover:text-primary transition-colors">
             Roadmap →
           </Link>
-          <Link to="/workspace/map" className="font-medium text-primary hover:underline">
-            Artifact Map →
+          <Link to="/dashboard" className="font-medium text-primary hover:underline">
+            Command Center →
           </Link>
         </div>
       </div>
@@ -176,11 +259,16 @@ Generated by BizzMitra-AI Transformation Cockpit`;
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                   <TrendingUp className="size-3.5" />
-                  Live Dynamic ROI Model · Validated Formula
+                  Live Dynamic ROI & CapEx Model
                 </span>
                 <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                  Payback: {roi.paybackPeriodMonths} mo
+                  Payback: {finComputed.paybackPeriodMonths} mo
                 </span>
+                {finInputs.isLocked && (
+                  <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                    Audit Ready (100%)
+                  </span>
+                )}
               </div>
               <h1 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
                 Transformation Economics: {blueprint.scenarioName}
@@ -193,11 +281,40 @@ Generated by BizzMitra-AI Transformation Cockpit`;
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
+                onClick={() => handleToggleLock(!finInputs.isLocked)}
+                className={`neu-press flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all shadow-sm ${
+                  finInputs.isLocked
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                    : "bg-primary text-primary-foreground glow-primary hover:brightness-105"
+                }`}
+              >
+                {finInputs.isLocked ? (
+                  <>
+                    <Lock className="size-3.5" />
+                    <span>Locked (100% Audit Ready)</span>
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="size-3.5" />
+                    <span>Lock Budget & Complete Audit (100%)</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFinModalOpen(true)}
+                className="neu-sm neu-press flex items-center gap-2 px-3.5 py-2 text-xs font-semibold hover:text-primary"
+              >
+                <Sliders className="size-3.5" />
+                Configure Model
+              </button>
+              <button
+                type="button"
                 onClick={copyExecutiveSummary}
                 className="neu-sm neu-press flex items-center gap-2 px-3.5 py-2 text-xs font-semibold hover:text-primary"
               >
                 <Copy className="size-3.5" />
-                Copy Executive Case
+                Copy Summary
               </button>
               <button
                 type="button"
@@ -207,67 +324,62 @@ Generated by BizzMitra-AI Transformation Cockpit`;
                 <Download className="size-3.5" />
                 Download Report
               </button>
-              <Link
-                to="/workspace/map"
-                className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"
-              >
-                Inspect Artifact Map
-                <ArrowRight className="size-3.5" />
-              </Link>
             </div>
           </div>
 
-          {/* Key Executive KPI Cards - standard grid without viewport unmount bugs */}
+          {/* Key Executive KPI Cards - dynamically linked to CapEx / OpEx */}
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="neu-inset p-4">
               <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-                <span>Net Annual Value</span>
-                <IndianRupee className="size-4 text-emerald-500" />
+                <span>Total CapEx Build</span>
+                <ShieldCheck className="size-4 text-emerald-500" />
               </div>
-              <p className="mt-1 font-display text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                {formatInr(roi.netAnnualSavingsInr)}
+              <p className="mt-1 font-display text-2xl font-extrabold text-foreground">
+                {formatInr(finComputed.totalInitialInvestment)}
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Gross: {formatInr(roi.totalAnnualBenefitInr)}
+                Ceiling: {formatInr(finInputs.allocatedCapExCeiling)} ({rawCapExUsage}%)
+              </p>
+            </div>
+
+            <div className="neu-inset p-4">
+              <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+                <span>Annual OpEx Runway</span>
+                <DollarSign className="size-4 text-primary" />
+              </div>
+              <p className="mt-1 font-display text-2xl font-extrabold text-foreground">
+                {formatInr(finComputed.totalAnnualOpEx)}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {formatInr(finComputed.totalMonthlyOpEx)} / month
+              </p>
+            </div>
+
+            <div className="neu-inset p-4">
+              <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+                <span>Year-1 Net ROI</span>
+                <Flame className="size-4 text-amber-500" />
+              </div>
+              <p className={`mt-1 font-display text-2xl font-extrabold ${
+                finComputed.roiPercentYear1 >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"
+              }`}>
+                {finComputed.roiPercentYear1 > 0 ? `+${finComputed.roiPercentYear1}%` : `${finComputed.roiPercentYear1}%`}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Net Value: {formatInr(finComputed.netAnnualBenefitYear1)}
               </p>
             </div>
 
             <div className="neu-inset p-4">
               <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
                 <span>Payback Velocity</span>
-                <Clock className="size-4 text-primary" />
+                <Clock className="size-4 text-blue-500" />
               </div>
-              <p className="mt-1 font-display text-2xl font-extrabold">
-                {roi.paybackPeriodMonths} <span className="text-base font-normal text-muted-foreground">Months</span>
+              <p className="mt-1 font-display text-2xl font-extrabold text-foreground">
+                {finComputed.paybackPeriodMonths} <span className="text-base font-normal text-muted-foreground">Months</span>
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Break-even within Q1
-              </p>
-            </div>
-
-            <div className="neu-inset p-4">
-              <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-                <span>3-Year Cumulative ROI</span>
-                <Flame className="size-4 text-amber-500" />
-              </div>
-              <p className="mt-1 font-display text-2xl font-extrabold text-amber-600 dark:text-amber-400">
-                {roi.threeYearRoiMultiplePct}%
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Net gain on platform cost
-              </p>
-            </div>
-
-            <div className="neu-inset p-4">
-              <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-                <span>Hours Reclaimed / Yr</span>
-                <Users className="size-4 text-blue-500" />
-              </div>
-              <p className="mt-1 font-display text-2xl font-extrabold">
-                <CountUp to={roi.annualHoursSaved} /> <span className="text-base font-normal text-muted-foreground">hrs</span>
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Equiv. to {roi.fullTimeEquivalentsReclaimed} FTE specialists
+                Target: {finInputs.targetPaybackMonthsCeiling} Mo threshold
               </p>
             </div>
           </div>
@@ -289,6 +401,17 @@ Generated by BizzMitra-AI Transformation Cockpit`;
             </button>
             <button
               type="button"
+              onClick={() => setActiveTab("capex_opex")}
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
+                activeTab === "capex_opex"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "neu hover:bg-accent/40 text-foreground"
+              }`}
+            >
+              CapEx & OpEx Runway
+            </button>
+            <button
+              type="button"
               onClick={() => setActiveTab("calculator")}
               className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
                 activeTab === "calculator"
@@ -296,7 +419,7 @@ Generated by BizzMitra-AI Transformation Cockpit`;
                   : "neu hover:bg-accent/40 text-foreground"
               }`}
             >
-              ROI Input Variables
+              Domain ROI Variables
             </button>
             <button
               type="button"
@@ -307,7 +430,7 @@ Generated by BizzMitra-AI Transformation Cockpit`;
                   : "neu hover:bg-accent/40 text-foreground"
               }`}
             >
-              36-Month Trajectory & Sensitivity
+              36-Month Trajectory
             </button>
             <button
               type="button"
@@ -321,12 +444,269 @@ Generated by BizzMitra-AI Transformation Cockpit`;
               Readiness Radar & Benchmarks
             </button>
           </div>
-          <span className="text-xs text-muted-foreground font-mono">
-            Interactive Calculator Active
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-mono">
+              Currency: <strong>{finInputs.currency}</strong>
+            </span>
+          </div>
         </div>
 
-        {/* Main Grid: Calculator & Trajectory */}
+        {/* ═══ Section: CapEx & OpEx Interactive Controls ═══ */}
+        {(activeTab === "all" || activeTab === "capex_opex") && (
+          <motion.div
+            key="section-capex-opex"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-6"
+          >
+            <div className="neu p-6 md:p-7 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-border/60 pb-4 gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-display text-lg font-bold text-foreground">
+                      CapEx Build Costs & Recurring OpEx Modeler
+                    </h3>
+                    <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                      Live Dynamic Sync
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Adjust CapEx runway, monthly cloud OpEx, and recovery velocity. Changes reflect immediately on the dashboard.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleLock(!finInputs.isLocked)}
+                    className={`neu-press flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition ${
+                      finInputs.isLocked
+                        ? "bg-emerald-600 text-white"
+                        : "bg-primary text-primary-foreground glow-primary"
+                    }`}
+                  >
+                    {finInputs.isLocked ? (
+                      <>
+                        <Lock className="size-3.5" />
+                        <span>Budget Locked (100% Audit Ready)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Unlock className="size-3.5" />
+                        <span>Lock ROI Model</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* CapEx & OpEx Input Grid */}
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {/* 1. CapEx Ceiling */}
+                <div className="space-y-2 rounded-xl border border-border/60 bg-accent/20 p-4">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-foreground">Allocated CapEx Ceiling</span>
+                    <span className="font-mono text-primary">{formatInr(finInputs.allocatedCapExCeiling)}</span>
+                  </div>
+                  <input
+                    type="number"
+                    value={finInputs.allocatedCapExCeiling}
+                    onChange={(e) =>
+                      handleUpdateFinInputs((prev) => ({
+                        ...prev,
+                        allocatedCapExCeiling: Number(e.target.value) || 0,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none font-mono"
+                  />
+                  <input
+                    type="range"
+                    min="500000"
+                    max="10000000"
+                    step="100000"
+                    value={finInputs.allocatedCapExCeiling}
+                    onChange={(e) =>
+                      handleUpdateFinInputs((prev) => ({
+                        ...prev,
+                        allocatedCapExCeiling: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full accent-primary cursor-pointer"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Maximum leadership-approved build runway ceiling.
+                  </p>
+                </div>
+
+                {/* 2. Developer Rate Per Day */}
+                <div className="space-y-2 rounded-xl border border-border/60 bg-accent/20 p-4">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-foreground">Developer Daily Rate</span>
+                    <span className="font-mono text-primary">{formatInr(finInputs.developerRatePerDay)}/day</span>
+                  </div>
+                  <input
+                    type="number"
+                    value={finInputs.developerRatePerDay}
+                    onChange={(e) =>
+                      handleUpdateFinInputs((prev) => ({
+                        ...prev,
+                        developerRatePerDay: Number(e.target.value) || 0,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none font-mono"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Blended rate across engineering squad ({finInputs.estimatedPersonDays} person-days).
+                  </p>
+                </div>
+
+                {/* 3. Contingency Buffer */}
+                <div className="space-y-2 rounded-xl border border-border/60 bg-accent/20 p-4">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-foreground">Contingency Buffer ({finInputs.contingencyBufferPercent}%)</span>
+                    <span className="font-mono text-primary">+{formatInr(finComputed.contingencyAmount)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="30"
+                    step="5"
+                    value={finInputs.contingencyBufferPercent}
+                    onChange={(e) =>
+                      handleUpdateFinInputs((prev) => ({
+                        ...prev,
+                        contingencyBufferPercent: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full accent-primary cursor-pointer"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Buffer for complex API integrations & scope variance.
+                  </p>
+                </div>
+
+                {/* 4. Monthly Cloud Hosting OpEx */}
+                <div className="space-y-2 rounded-xl border border-border/60 bg-accent/20 p-4">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-foreground">Monthly Cloud Hosting (OpEx)</span>
+                    <span className="font-mono text-primary">{formatInr(finInputs.monthlyCloudHosting)}/mo</span>
+                  </div>
+                  <input
+                    type="number"
+                    value={finInputs.monthlyCloudHosting}
+                    onChange={(e) =>
+                      handleUpdateFinInputs((prev) => ({
+                        ...prev,
+                        monthlyCloudHosting: Number(e.target.value) || 0,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none font-mono"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Supabase database, CDN, and edge compute infrastructure.
+                  </p>
+                </div>
+
+                {/* 5. Monthly AI Token Costs */}
+                <div className="space-y-2 rounded-xl border border-border/60 bg-accent/20 p-4">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-foreground">Monthly AI Token Estimate</span>
+                    <span className="font-mono text-primary">{formatInr(finInputs.monthlyAiTokenEstimate)}/mo</span>
+                  </div>
+                  <input
+                    type="number"
+                    value={finInputs.monthlyAiTokenEstimate}
+                    onChange={(e) =>
+                      handleUpdateFinInputs((prev) => ({
+                        ...prev,
+                        monthlyAiTokenEstimate: Number(e.target.value) || 0,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none font-mono"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    LLM token invocations and model runtime fees.
+                  </p>
+                </div>
+
+                {/* 6. DevOps & Maintenance Retainer */}
+                <div className="space-y-2 rounded-xl border border-border/60 bg-accent/20 p-4">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-foreground">DevOps & Maintenance (OpEx)</span>
+                    <span className="font-mono text-primary">{formatInr(finInputs.monthlyMaintenanceRetainer)}/mo</span>
+                  </div>
+                  <input
+                    type="number"
+                    value={finInputs.monthlyMaintenanceRetainer}
+                    onChange={(e) =>
+                      handleUpdateFinInputs((prev) => ({
+                        ...prev,
+                        monthlyMaintenanceRetainer: Number(e.target.value) || 0,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none font-mono"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Security patches, ongoing SLA monitoring, and retainer.
+                  </p>
+                </div>
+              </div>
+
+              {/* CapEx Budget Ceiling Utilization Progress Bar */}
+              <div className="rounded-xl border border-border/70 bg-card/60 p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-foreground flex items-center gap-1.5">
+                    <span>CapEx Ceiling Utilization</span>
+                    <span className="text-muted-foreground font-normal">
+                      ({formatInr(finComputed.totalInitialInvestment)} / {formatInr(finInputs.allocatedCapExCeiling)})
+                    </span>
+                  </span>
+                  <span className={`font-mono font-bold ${
+                    rawCapExUsage > 100 ? "text-rose-500" : "text-emerald-600 dark:text-emerald-400"
+                  }`}>
+                    {rawCapExUsage}% utilized
+                  </span>
+                </div>
+
+                <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${visualCapExUsage}%` }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className={`h-full rounded-full ${
+                      rawCapExUsage > 100
+                        ? "bg-rose-500"
+                        : rawCapExUsage > 80
+                          ? "bg-amber-500"
+                          : "bg-emerald-500"
+                    }`}
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between pt-1 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    {finComputed.isBudgetUnderCeiling ? (
+                      <span className="text-emerald-500 font-bold flex items-center gap-1">
+                        <CheckCircle2 className="size-3" />
+                        CapEx is within approved budget ceiling
+                      </span>
+                    ) : (
+                      <span className="text-rose-500 font-bold flex items-center gap-1">
+                        <AlertTriangle className="size-3" />
+                        CapEx exceeds ceiling by {formatInr(finComputed.totalInitialInvestment - finInputs.allocatedCapExCeiling)}
+                      </span>
+                    )}
+                  </span>
+                  <span>
+                    Gross Annual Value: <strong className="text-emerald-500">+{formatInr(finComputed.totalGrossAnnualBenefit)}/yr</strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ═══ Main Grid: Domain Calculator & 36-Month Trajectory ═══ */}
         {(activeTab === "all" || activeTab === "calculator" || activeTab === "projection") && (
           <motion.div
             key={`section-main-${activeTab}`}
@@ -347,7 +727,7 @@ Generated by BizzMitra-AI Transformation Cockpit`;
                 <div className="neu p-6 space-y-6">
                   <div className="flex items-center justify-between border-b border-border/40 pb-4">
                     <div>
-                      <h3 className="font-display text-base font-bold">Dynamic ROI Input Variables</h3>
+                      <h3 className="font-display text-base font-bold">Domain ROI Input Variables</h3>
                       <p className="text-xs text-muted-foreground">
                         Adjust parameters to recalculate savings instantly in real time.
                       </p>
@@ -404,8 +784,8 @@ Generated by BizzMitra-AI Transformation Cockpit`;
                       <span className="text-primary">{formatInr(roi.totalAnnualBenefitInr)}</span>
                     </div>
                     <div className="flex justify-between text-[11px] text-muted-foreground">
-                      <span>Less Platform & Integration:</span>
-                      <span>- {formatInr(roi.annualPlatformInvestmentInr)}</span>
+                      <span>Initial CapEx Build Cost:</span>
+                      <span>- {formatInr(finComputed.totalInitialInvestment)}</span>
                     </div>
                   </div>
                 </div>
@@ -421,14 +801,14 @@ Generated by BizzMitra-AI Transformation Cockpit`;
                     <div>
                       <h3 className="font-display text-base font-bold">36-Month Cumulative Financial Trajectory</h3>
                       <p className="text-xs text-muted-foreground">
-                        Intersection point illustrates the rapid break-even within {roi.paybackPeriodMonths} months.
+                        Break-even intersection point is reached within {finComputed.paybackPeriodMonths} months.
                       </p>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
                       <span className="inline-block size-2 rounded-full bg-emerald-500" />
                       <span className="font-semibold text-emerald-600 dark:text-emerald-400">Net Value</span>
                       <span className="inline-block size-2 rounded-full bg-muted-foreground ml-2" />
-                      <span className="text-muted-foreground">Investment</span>
+                      <span className="text-muted-foreground">CapEx + OpEx</span>
                     </div>
                   </div>
 
@@ -459,7 +839,7 @@ Generated by BizzMitra-AI Transformation Cockpit`;
                               ? "Gross Benefit"
                               : name === "netCashflow"
                                 ? "Net Cashflow"
-                                : "Platform Cost",
+                                : "Investment (CapEx+OpEx)",
                           ]}
                           labelFormatter={(lbl) => `Timeline: ${lbl}`}
                           contentStyle={{
@@ -508,7 +888,7 @@ Generated by BizzMitra-AI Transformation Cockpit`;
                         <tr className="border-b border-border/40 text-muted-foreground">
                           <th className="pb-2 font-bold">Scenario</th>
                           <th className="pb-2 font-bold">Automation %</th>
-                          <th className="pb-2 font-bold">Net Annual (₹)</th>
+                          <th className="pb-2 font-bold">Net Annual</th>
                           <th className="pb-2 font-bold">Payback</th>
                           <th className="pb-2 font-bold">3-Yr ROI</th>
                         </tr>
@@ -632,6 +1012,13 @@ Generated by BizzMitra-AI Transformation Cockpit`;
 
         <StageNextButton currentStageId="insights" label="Proceed to Artifact Map" />
       </div>
+
+      <FinancialConfigModal
+        isOpen={isFinModalOpen}
+        onClose={() => setIsFinModalOpen(false)}
+        workspaceContext={workspaceContext}
+        onSaved={() => setFinModel(loadFinancialModel(workspaceContext))}
+      />
     </AppShell>
   );
 }

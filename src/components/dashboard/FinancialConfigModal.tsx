@@ -29,7 +29,7 @@ import {
 interface FinancialConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
-  workspaceContext?: { id?: string; name?: string; budget?: number } | null;
+  workspaceContext?: { id?: string; name?: string; budget?: number; [key: string]: any } | null | undefined;
   onSaved?: () => void;
 }
 

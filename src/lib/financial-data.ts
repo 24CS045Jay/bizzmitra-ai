@@ -72,7 +72,7 @@ export interface FinancialBudgetInputs {
   // Estimated Person Days (from roadmap or default)
   estimatedPersonDays: number;
   isLocked: boolean;
-  lockedAt?: string;
+  lockedAt?: string | undefined;
 }
 
 export interface ComputedFinancials {
@@ -168,10 +168,6 @@ export function loadFinancialModel(workspaceContext?: { id?: string; name?: stri
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed?.inputs) {
-          // Sync with budget if provided in workspaceContext
-          if (workspaceContext?.budget && workspaceContext.budget !== parsed.inputs.allocatedCapExCeiling) {
-            parsed.inputs.allocatedCapExCeiling = workspaceContext.budget;
-          }
           return {
             inputs: parsed.inputs,
             computed: computeFinancials(parsed.inputs),
@@ -206,6 +202,19 @@ export function saveFinancialModel(inputs: FinancialBudgetInputs): FullFinancial
   try {
     if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(model));
+
+      // Synchronize workspaceContext budget & lock state
+      try {
+        const rawCtx = localStorage.getItem("bizzmitra.workspaceContext");
+        if (rawCtx) {
+          const ctx = JSON.parse(rawCtx);
+          ctx.budget = inputs.allocatedCapExCeiling;
+          ctx.financialsLocked = inputs.isLocked;
+          localStorage.setItem("bizzmitra.workspaceContext", JSON.stringify(ctx));
+          window.dispatchEvent(new CustomEvent("bizzmitra:workspace-updated", { detail: ctx }));
+        }
+      } catch {}
+
       window.dispatchEvent(new CustomEvent("bizzmitra:financials-updated", { detail: model }));
     }
   } catch (err) {

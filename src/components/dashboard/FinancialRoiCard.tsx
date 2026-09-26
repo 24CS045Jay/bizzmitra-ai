@@ -20,7 +20,7 @@ import {
 import { FinancialConfigModal } from "./FinancialConfigModal";
 
 interface FinancialRoiCardProps {
-  workspaceContext?: { id?: string; name?: string; budget?: number } | null;
+  workspaceContext?: { id?: string; name?: string; budget?: number; [key: string]: any } | null | undefined;
   className?: string;
   variant?: "full" | "compact";
 }
@@ -52,10 +52,10 @@ export function FinancialRoiCard({
   const { inputs, computed } = model;
   const currency = CURRENCIES[inputs.currency] || CURRENCIES.INR;
 
-  const capExUsagePercent = Math.min(
-    100,
-    Math.round((computed.totalInitialInvestment / (inputs.allocatedCapExCeiling || 1)) * 100)
+  const rawCapExUsagePercent = Math.round(
+    (computed.totalInitialInvestment / (inputs.allocatedCapExCeiling || 1)) * 100
   );
+  const capExUsagePercent = Math.min(100, Math.max(0, rawCapExUsagePercent));
 
   if (variant === "compact") {
     return (
@@ -231,21 +231,21 @@ export function FinancialRoiCard({
               </span>
             </span>
             <span className={`font-mono font-bold ${
-              capExUsagePercent > 100 ? "text-rose-500" : "text-emerald-600 dark:text-emerald-400"
+              rawCapExUsagePercent > 100 ? "text-rose-500" : "text-emerald-600 dark:text-emerald-400"
             }`}>
-              {capExUsagePercent}% utilized
+              {rawCapExUsagePercent}% utilized
             </span>
           </div>
 
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: `${Math.min(100, capExUsagePercent)}%` }}
+              animate={{ width: `${capExUsagePercent}%` }}
               transition={{ duration: 0.8, ease: "easeOut" }}
               className={`h-full rounded-full ${
-                capExUsagePercent > 100
+                rawCapExUsagePercent > 100
                   ? "bg-rose-500"
-                  : capExUsagePercent > 80
+                  : rawCapExUsagePercent > 80
                     ? "bg-amber-500"
                     : "bg-emerald-500"
               }`}

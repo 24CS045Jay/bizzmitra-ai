@@ -403,14 +403,28 @@ function DashboardPage() {
     [blueprint, effectiveBusinessName, effectiveProblemStatement, activeContext, financialVersion],
   );
 
-  const currentMaturity =
-    typeof activeWorkspace?.maturity_score === "number" && activeWorkspace.maturity_score > 0
-      ? activeWorkspace.maturity_score
-      : scoreResult.score;
+  const currentMaturity = scoreResult.score;
+
+  // Keep workspace maturity score in Supabase and state synchronized dynamically
+  useEffect(() => {
+    if (activeWorkspace?.id && scoreResult.score > 0 && activeWorkspace.maturity_score !== scoreResult.score) {
+      void supabase
+        .from("workspaces")
+        .update({ maturity_score: scoreResult.score })
+        .eq("id", activeWorkspace.id)
+        .then(() => {
+          setWorkspaces((prev) =>
+            prev.map((w) =>
+              w.id === activeWorkspace.id ? { ...w, maturity_score: scoreResult.score } : w
+            )
+          );
+        });
+    }
+  }, [activeWorkspace?.id, activeWorkspace?.maturity_score, scoreResult.score]);
 
   const averageMaturity = workspaces.length
     ? Math.round(
-        workspaces.reduce((total, workspace) => total + workspace.maturity_score, 0) /
+        workspaces.reduce((total, workspace) => total + (workspace.id === activeWorkspace?.id ? currentMaturity : workspace.maturity_score), 0) /
           workspaces.length,
       )
     : currentMaturity;
