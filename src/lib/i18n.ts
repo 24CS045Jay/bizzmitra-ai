@@ -840,3 +840,59 @@ export function getAiLanguageInstruction(): string {
   if (!opt || opt.code === "en") return "";
   return `\nIMPORTANT: Please generate all recommendations, explanations, and blueprint descriptions in ${opt.name} (${opt.nativeName}) language.`;
 }
+
+export {
+  translateDynamicTextAsync,
+  getCachedDynamicTranslation,
+  setCachedDynamicTranslation,
+} from "./dynamic-translator";
+
+import {
+  translateDynamicTextAsync,
+  getCachedDynamicTranslation,
+} from "./dynamic-translator";
+
+/**
+ * React hook to translate dynamic/live data (e.g. AI-generated responses, live blueprint items).
+ */
+export function useDynamicTranslation(text: string): { translated: string; loading: boolean } {
+  const { lang } = useTranslation();
+  const [translated, setTranslated] = useState<string>(() => {
+    if (lang === "en" || !text) return text;
+    return getCachedDynamicTranslation(text, lang) || text;
+  });
+  const [loading, setLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (lang === "en" || !text) {
+      setTranslated(text);
+      return;
+    }
+
+    const cached = getCachedDynamicTranslation(text, lang);
+    if (cached) {
+      setTranslated(cached);
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+
+    translateDynamicTextAsync(text, lang)
+      .then((res) => {
+        if (active) {
+          setTranslated(res);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [text, lang]);
+
+  return { translated, loading };
+}

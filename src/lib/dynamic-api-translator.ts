@@ -165,52 +165,45 @@ export async function translatePageViaApi(targetLang: SupportedLanguage = getCur
 
     walk(document.body);
 
-    // If there are newly discovered dynamic strings, fetch them via /api/translate
+    // If there are newly discovered dynamic strings, translate them via free translation engine
     if (uniqueTextsToFetch.size > 0 && !pendingApiCall) {
       pendingApiCall = true;
-      const textsArray = Array.from(uniqueTextsToFetch).slice(0, 45); // Batch chunks
+      const textsArray = Array.from(uniqueTextsToFetch).slice(0, 50); // Batch chunks
 
       void (async () => {
         try {
-          const res = await fetch("/api/translate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              texts: textsArray,
-              targetLang,
-            }),
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            const translations: string[] = data.translations || [];
-
-            textsArray.forEach((original, idx) => {
-              const trans = translations[idx];
-              if (trans && trans !== original) {
-                cache.set(original, trans);
-              }
-            });
-
-            saveMemoryCache(targetLang);
-
-            // Apply newly fetched translations to queued DOM nodes
-            untranslatedQueue.forEach((item) => {
-              const trans = cache.get(item.originalText);
-              if (trans) {
-                if (item.type === "text" && item.node.nodeType === Node.TEXT_NODE) {
-                  const origFull = originalTextMap.get(item.node) || item.originalText;
-                  item.node.nodeValue = origFull.replace(item.originalText, trans);
-                } else if (item.type === "placeholder") {
-                  (item.node as HTMLInputElement).placeholder = trans;
-                } else if (item.type === "title") {
-                  (item.node as HTMLElement).title = trans;
+          const { translateDynamicTextAsync } = await import("./dynamic-translator");
+          await Promise.all(
+            textsArray.map(async (origText) => {
+              try {
+                const trans = await translateDynamicTextAsync(origText, targetLang);
+                if (trans && trans !== origText) {
+                  cache.set(origText, trans);
                 }
+              } catch {
+                // Ignore individual translation failures
               }
-            });
-          }
+            })
+          );
+
+          saveMemoryCache(targetLang);
+
+          // Apply newly fetched translations to queued DOM nodes
+          untranslatedQueue.forEach((item) => {
+            const trans = cache.get(item.originalText);
+            if (trans) {
+              if (item.type === "text" && item.node.nodeType === Node.TEXT_NODE) {
+                const origFull = originalTextMap.get(item.node) || item.originalText;
+                item.node.nodeValue = origFull.replace(item.originalText, trans);
+              } else if (item.type === "placeholder") {
+                (item.node as HTMLInputElement).placeholder = trans;
+              } else if (item.type === "title") {
+                (item.node as HTMLElement).title = trans;
+              }
+            }
+          });
         } catch (apiErr) {
-          console.warn("[dynamic-api-translator] API translation error:", apiErr);
+          console.warn("[dynamic-api-translator] translation error:", apiErr);
         } finally {
           pendingApiCall = false;
         }

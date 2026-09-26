@@ -1,4 +1,9 @@
 import { SupportedLanguage, getCurrentLanguage } from "./i18n";
+import {
+  getCachedDynamicTranslation,
+  queueDomNodeForDynamicTranslation,
+  translateDynamicTextAsync,
+} from "./dynamic-translator";
 
 /**
  * Universal In-App Phrase Dictionary mapping English text to 7 other languages.
@@ -741,7 +746,7 @@ export function runUniversalDomTranslation(targetLang: SupportedLanguage): void 
         }
       }
 
-      // 1. Handle TEXT_NODE
+      // 1. Handle TEXT_NODE (Static Dictionary + Real-Time Dynamic Live Translation)
       if (node.nodeType === Node.TEXT_NODE) {
         const currentVal = node.nodeValue || "";
         if (!currentVal.trim()) return;
@@ -757,9 +762,23 @@ export function runUniversalDomTranslation(targetLang: SupportedLanguage): void 
             node.nodeValue = original;
           }
         } else {
-          const translated = translateText(original, targetLang);
-          if (translated !== node.nodeValue) {
-            node.nodeValue = translated;
+          // Check static phrase dictionary first
+          const staticTranslated = translateText(original, targetLang);
+          if (staticTranslated !== original) {
+            if (node.nodeValue !== staticTranslated) {
+              node.nodeValue = staticTranslated;
+            }
+          } else {
+            // Not in static dictionary: Dynamic Live Data
+            const dynamicCached = getCachedDynamicTranslation(original, targetLang);
+            if (dynamicCached) {
+              if (node.nodeValue !== dynamicCached) {
+                node.nodeValue = dynamicCached;
+              }
+            } else {
+              // Queue for background translation via free API and update node live
+              queueDomNodeForDynamicTranslation(node as Text, original, targetLang);
+            }
           }
         }
       }
@@ -780,7 +799,23 @@ export function runUniversalDomTranslation(targetLang: SupportedLanguage): void 
           if (input.placeholder) {
             if (!cache["placeholder"]) cache["placeholder"] = input.placeholder;
             const origPl = cache["placeholder"];
-            input.placeholder = isEnglish ? origPl : translateText(origPl, targetLang);
+            if (isEnglish) {
+              input.placeholder = origPl;
+            } else {
+              const tr = translateText(origPl, targetLang);
+              if (tr !== origPl) {
+                input.placeholder = tr;
+              } else {
+                const cachedDyn = getCachedDynamicTranslation(origPl, targetLang);
+                if (cachedDyn) {
+                  input.placeholder = cachedDyn;
+                } else {
+                  translateDynamicTextAsync(origPl, targetLang).then((res) => {
+                    if (getCurrentLanguage() === targetLang) input.placeholder = res;
+                  });
+                }
+              }
+            }
           }
 
           // Input button values
@@ -797,7 +832,23 @@ export function runUniversalDomTranslation(targetLang: SupportedLanguage): void 
         if (el.title) {
           if (!cache["title"]) cache["title"] = el.title;
           const origTitle = cache["title"];
-          el.title = isEnglish ? origTitle : translateText(origTitle, targetLang);
+          if (isEnglish) {
+            el.title = origTitle;
+          } else {
+            const tr = translateText(origTitle, targetLang);
+            if (tr !== origTitle) {
+              el.title = tr;
+            } else {
+              const cachedDyn = getCachedDynamicTranslation(origTitle, targetLang);
+              if (cachedDyn) {
+                el.title = cachedDyn;
+              } else {
+                translateDynamicTextAsync(origTitle, targetLang).then((res) => {
+                  if (getCurrentLanguage() === targetLang) el.title = res;
+                });
+              }
+            }
+          }
         }
 
         // Aria-labels

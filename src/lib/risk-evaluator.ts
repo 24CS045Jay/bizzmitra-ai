@@ -37,7 +37,7 @@ export interface ActionItem {
 
 export function evaluateBlueprintRisks(
   blueprint?: RoadmapBlueprint | null,
-  workspaceContext?: { name?: string; problemStatement?: string; budget?: number } | null,
+  workspaceContext?: { id?: string; name?: string; businessName?: string; industry?: string; problemStatement?: string; budget?: number; [key: string]: any } | null | undefined,
 ): {
   flaggedRisks: FlaggedRisk[];
   topRisks: FlaggedRisk[];
@@ -108,31 +108,35 @@ export function evaluateBlueprintRisks(
     });
   }
 
-  // 4. Compliance & DPDP/GDPR Data Governance check
-  risks.push({
-    id: "risk-compliance",
-    category: "compliance",
-    severity: "medium",
-    title: "DPDP / PII Consent Controls Pending Security Audit",
-    detail: "Data pipeline integration requires consent tokenization before production go-live.",
-    badgeText: "⚠️ Compliance Signoff Needed",
-    remediation: "Review Consent Architecture in Governance & Review tab.",
-    section: "Governance & Review",
-  });
+  // 4. Compliance & DPDP/GDPR Data Governance check (cleared when financial/governance baseline is locked)
+  if (!finModel.inputs.isLocked) {
+    risks.push({
+      id: "risk-compliance",
+      category: "compliance",
+      severity: "medium",
+      title: "DPDP / PII Consent Controls Pending Security Audit",
+      detail: "Data pipeline integration requires consent tokenization before production go-live.",
+      badgeText: "⚠️ Compliance Signoff Needed",
+      remediation: "Review Consent Architecture in Governance & Review tab.",
+      section: "Governance & Review",
+    });
+  }
 
   // 5. Technical integration bottleneck check
-  const highRiskItem = bp.riskRegister.find((r) => r.impact === "High" || r.likelihood === "High");
-  if (highRiskItem) {
-    risks.push({
-      id: "risk-tech",
-      category: "architecture",
-      severity: "high",
-      title: highRiskItem.title,
-      detail: highRiskItem.mitigationStrategy,
-      badgeText: `⚠️ ${highRiskItem.category} Risk`,
-      remediation: highRiskItem.mitigationStrategy,
-      section: "Risk Register",
-    });
+  if (!finModel.inputs.isLocked) {
+    const highRiskItem = bp.riskRegister.find((r) => r.impact === "High" || r.likelihood === "High");
+    if (highRiskItem) {
+      risks.push({
+        id: "risk-tech",
+        category: "architecture",
+        severity: "medium",
+        title: highRiskItem.title,
+        detail: highRiskItem.mitigationStrategy,
+        badgeText: `⚠️ ${highRiskItem.category} Risk`,
+        remediation: highRiskItem.mitigationStrategy,
+        section: "Risk Register",
+      });
+    }
   }
 
   // Calculate completeness & confidence score breakdown
