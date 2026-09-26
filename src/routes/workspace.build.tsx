@@ -49,6 +49,7 @@ import { CloudCredentials, loadCloudCredentials } from "@/lib/builder/cloud-cred
 import { cn } from "@/lib/utils";
 import { Cloud, Settings } from "lucide-react";
 import { useStageGate, isStageUnlocked, isDiscoveryCompleted } from "@/lib/workspace-stage-gate";
+import { deductFeatureCredits } from "@/lib/admin-rbac-data";
 
 export const Route = createFileRoute("/workspace/build")({
   head: () => ({
@@ -463,7 +464,17 @@ function WorkspaceBuildPage() {
           createdAt: ctx.createdAt || ctx.created_at,
         }, uiCustomization)
       );
-      toast.success("Application code synthesized cleanly!");
+
+      try {
+        const deduction = deductFeatureCredits("solution_studio_regenerate");
+        if (deduction.success) {
+          toast.success(`⚡ 5 Credits deducted for code synthesis · Balance: ${deduction.newBalance} Credits`);
+        } else {
+          toast.success("Application code synthesized cleanly!");
+        }
+      } catch {
+        toast.success("Application code synthesized cleanly!");
+      }
     }, 600);
   };
 

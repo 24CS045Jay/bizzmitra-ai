@@ -40,6 +40,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DocumentIngestionModal } from "@/components/DocumentIngestionModal";
 import { completeDiscoveryAndUnlockAll, isDiscoveryCompleted, StageNextButton } from "@/lib/workspace-stage-gate";
+import { deductFeatureCredits } from "@/lib/admin-rbac-data";
 
 export const Route = createFileRoute("/workspace/discovery")({
   head: () => ({
@@ -502,6 +503,14 @@ function DiscoveryPage() {
 
   function submitAnswer(textToSubmit: string) {
     if (!textToSubmit.trim()) return;
+
+    try {
+      const deduction = deductFeatureCredits("discovery_chat_turn");
+      if (deduction.success) {
+        toast.info(`⚡ 2 Credits deducted for Discovery Q&A · Balance: ${deduction.newBalance} Credits`);
+      }
+    } catch {}
+
     const currentQ = step < script.length ? script[step] : null;
 
     if (workspaceId && !workspaceId.startsWith("ws-")) {
